@@ -1,27 +1,38 @@
 local addonName, ns = ...
 
 ns.defaults = {
+    damageMeter = true,
+    characterPanel = false,
+    -- Off by default: a player who installed this for the meter did not ask
+    -- for entries in every unit menu.
+    logLink = false,
+
     format = true,
     snap = true,
     snapThreshold = 50,
     idleAlpha = 0.4,
     strata = "MEDIUM",
-    -- Off by default: this addon is about the meter, and a player who installed
-    -- it for window snapping did not ask for entries in every unit menu.
-    logLink = false,
 }
 
 ns.charDefaults = {
     links = {},
 }
 
+-- One page per module, in this order. Each page opens with the module's own
+-- switch, so a module that is off still has a page to turn it back on from.
+ns.MODULES = {
+    { key = "damageMeter", label = "Damage meter", switch = "Damage meter tweaks", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
+    { key = "characterPanel", label = "Character panel", switch = "Spec and loot spec bars", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
+    { key = "logLink", label = "Mythic+ log link", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
+}
+
 local modules = {}
 local moduleOrder = {}
 
 -- Modules register themselves at file scope and are enabled at PLAYER_LOGIN,
--- after the saved variables and the Blizzard damage meter both exist. Enable
--- order follows registration order, which follows the TOC. Windows.lua loads
--- second and so is enabled first, before anything walks the registry.
+-- after the saved variables exist. Enable order follows registration order,
+-- which follows the TOC. A module names the switch it belongs to; the switch
+-- is read once at login, so flipping one takes a reload.
 function ns.RegisterModule(name, module)
     if modules[name] then
         return
@@ -32,7 +43,7 @@ function ns.RegisterModule(name, module)
 end
 
 function ns.Print(message)
-    print("|cff33ff99DamageMeterCompanion|r: " .. message)
+    print("|cff33ff99LittleThings|r: " .. message)
 end
 
 -- One reload prompt per session. A lock, a size or a show that goes through
@@ -42,8 +53,8 @@ end
 -- not get worse, and the popup would otherwise follow every keystroke.
 local reloadRequested = false
 
-StaticPopupDialogs["DAMAGEMETERCOMPANION_RELOAD"] = {
-    text = "DamageMeterCompanion changed a window's %s through Blizzard's code. Until the UI is reloaded the meter carries the addon's taint and logs a warning per row in combat. Reload now?",
+StaticPopupDialogs["LITTLETHINGS_RELOAD"] = {
+    text = "LittleThings changed a window's %s through Blizzard's code. Until the UI is reloaded the meter carries the addon's taint and logs a warning per row in combat. Reload now?",
     button1 = RELOADUI,
     button2 = CANCEL,
     OnAccept = function() ReloadUI() end,
@@ -59,7 +70,7 @@ function ns.RequestReload(what)
     end
 
     reloadRequested = true
-    StaticPopup_Show("DAMAGEMETERCOMPANION_RELOAD", what)
+    StaticPopup_Show("LITTLETHINGS_RELOAD", what)
 end
 
 function ns.IsAvailable()
@@ -118,6 +129,10 @@ function ns.OnFrame(func)
 end
 
 local function StartSweeps()
+    if #sweeps == 0 and #frameSweeps == 0 then
+        return
+    end
+
     local elapsed = 0
     local driver = CreateFrame("Frame", nil, UIParent)
 
@@ -150,7 +165,7 @@ local function StartSweeps()
     driver:SetScript("OnUpdate", OnUpdate)
 end
 
-local function ApplyDefaults(target, defaults)
+function ns.ApplyDefaults(target, defaults)
     for key, value in pairs(defaults) do
         if target[key] == nil then
             target[key] = (type(value) == "table") and {} or value
@@ -158,23 +173,25 @@ local function ApplyDefaults(target, defaults)
     end
 end
 
--- The addon shipped nothing under its old name, but it did run under it here,
--- so a player who used it before the rename would otherwise lose every window,
--- link and size. Adopt the old tables once, then drop the old ones so the
--- migration cannot run twice.
+-- The addon has run under two earlier names here, so a player who used it
+-- before a rename would otherwise lose every window, link and size. Adopt the
+-- newest old table once, then drop the old ones so the migration cannot run
+-- twice.
 --
--- Both old variables are still declared in the TOC, because a SavedVariable
+-- The old variables are still declared in the TOC, because a SavedVariable
 -- that is not declared is not loaded. Once a release has shipped under the new
--- name for a while, both declarations and this function come out.
+-- name for a while, the declarations and this function come out.
 local function AdoptOldSavedVariables()
-    if DamageMeterCompanionDB == nil and DamageMeterTweaksDB ~= nil then
-        DamageMeterCompanionDB = DamageMeterTweaksDB
+    if LittleThingsDB == nil then
+        LittleThingsDB = DamageMeterCompanionDB or DamageMeterTweaksDB
     end
 
-    if DamageMeterCompanionCharDB == nil and DamageMeterTweaksCharDB ~= nil then
-        DamageMeterCompanionCharDB = DamageMeterTweaksCharDB
+    if LittleThingsCharDB == nil then
+        LittleThingsCharDB = DamageMeterCompanionCharDB or DamageMeterTweaksCharDB
     end
 
+    DamageMeterCompanionDB = nil
+    DamageMeterCompanionCharDB = nil
     DamageMeterTweaksDB = nil
     DamageMeterTweaksCharDB = nil
 end
@@ -182,26 +199,147 @@ end
 local function InitializeSavedVariables()
     AdoptOldSavedVariables()
 
-    DamageMeterCompanionDB = DamageMeterCompanionDB or {}
-    DamageMeterCompanionCharDB = DamageMeterCompanionCharDB or {}
+    LittleThingsDB = LittleThingsDB or {}
+    LittleThingsCharDB = LittleThingsCharDB or {}
 
-    ApplyDefaults(DamageMeterCompanionDB, ns.defaults)
-    ApplyDefaults(DamageMeterCompanionCharDB, ns.charDefaults)
+    ns.ApplyDefaults(LittleThingsDB, ns.defaults)
+    ns.ApplyDefaults(LittleThingsCharDB, ns.charDefaults)
 
     -- The snap distance default moved from 15 to 50 after the first version
     -- shipped. ApplyDefaults only fills nils, so a profile that already carries
     -- the old default would never see the new one. Move it once, and only when
     -- it is still exactly the old default - a value the player chose is theirs.
-    if not DamageMeterCompanionDB.snapThresholdDefaultMoved then
-        DamageMeterCompanionDB.snapThresholdDefaultMoved = true
+    if not LittleThingsDB.snapThresholdDefaultMoved then
+        LittleThingsDB.snapThresholdDefaultMoved = true
 
-        if DamageMeterCompanionDB.snapThreshold == 15 then
-            DamageMeterCompanionDB.snapThreshold = ns.defaults.snapThreshold
+        if LittleThingsDB.snapThreshold == 15 then
+            LittleThingsDB.snapThreshold = ns.defaults.snapThreshold
         end
     end
 
-    ns.db = DamageMeterCompanionDB
-    ns.charDb = DamageMeterCompanionCharDB
+    ns.db = LittleThingsDB
+    ns.charDb = LittleThingsCharDB
+end
+
+-- A module whose hooks cannot be undone takes a reload to switch; the popup
+-- offers one now and otherwise leaves the switch saved for the next login.
+StaticPopupDialogs["LITTLETHINGS_MODULE_RELOAD"] = {
+    text = "%s is switched %s. It takes effect after the UI is reloaded. Reload now?",
+    button1 = RELOADUI,
+    button2 = "Later",
+    OnAccept = function() ReloadUI() end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+local function AddModuleSwitch(page, module)
+    local setting = Settings.RegisterProxySetting(page.category, "LT_module_" .. module.key,
+        Settings.VarType.Boolean, module.switch, ns.defaults[module.key],
+        function() return ns.db[module.key] end,
+        function(value)
+            ns.db[module.key] = value
+
+            for _, registered in ipairs(moduleOrder) do
+                if registered.key == module.key and registered.OnSwitch then
+                    registered.OnSwitch(value)
+                end
+            end
+
+            if not module.live then
+                StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", module.label, value and "on" or "off")
+            end
+        end)
+
+    local tooltip = module.tooltip
+    if not module.live then
+        tooltip = tooltip .. "|n|n|cff808080Takes effect after /reload.|r"
+    end
+    page.switch = Settings.CreateCheckbox(page.category, setting, tooltip)
+end
+
+-- Every option on a module page hangs under the module's switch: indented
+-- beneath it, and gone from the page while the switch is off, so the page
+-- shows only what is in effect.
+function ns.AddToPage(page, initializer)
+    initializer:SetParentInitializer(page.switch)
+    initializer:AddShownPredicate(function() return ns.db[page.key] == true end)
+    return initializer
+end
+
+function ns.AddHeader(page, text)
+    if page.layout and CreateSettingsListSectionHeaderInitializer then
+        local initializer = CreateSettingsListSectionHeaderInitializer(text)
+        page.layout:AddInitializer(initializer)
+        return ns.AddToPage(page, initializer)
+    end
+end
+
+function ns.RegisterSubcategory(name)
+    local category, layout = Settings.RegisterVerticalLayoutSubcategory(ns.category, name)
+    Settings.RegisterAddOnCategory(category)
+    return category, layout
+end
+
+local function IsEnabled(module)
+    if not ns.db[module.key] then
+        return false
+    end
+
+    if module.key == "damageMeter" and not ns.IsAvailable() then
+        return false
+    end
+
+    return true
+end
+
+-- The root page carries nothing but the addon's one-line description; the
+-- three module pages under it each open with that module's switch. Pages are
+-- built here, before any module is enabled, so a module that is off is still
+-- reachable. A module adds its options to its page from Pages, which runs
+-- right after the switch whether the module is on or off, so the page always
+-- says what the switch does; a page of its own (a canvas) registered there
+-- sits right under the switch page in the list.
+local function RegisterSettings()
+    local layout
+    ns.category, layout = Settings.RegisterVerticalLayoutCategory("LittleThings")
+    -- A section header is the only plain-text initializer Blizzard's settings
+    -- list offers, and it is guarded because a client without it should lose
+    -- the text rather than the panel.
+    if layout and CreateSettingsListSectionHeaderInitializer then
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Small touches on the default UI. One page per touch, each with its own switch."))
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("|cFF0057B7Made|r |cFFFFD700in Ukraine|r"))
+    end
+    Settings.RegisterAddOnCategory(ns.category)
+
+    ns.pages = {}
+    for _, module in ipairs(ns.MODULES) do
+        local page = {}
+        page.key = module.key
+        page.category, page.layout = ns.RegisterSubcategory(module.label)
+        ns.pages[module.key] = page
+        AddModuleSwitch(page, module)
+
+        for _, registered in ipairs(moduleOrder) do
+            if registered.key == module.key and registered.Pages then
+                registered.Pages(page)
+            end
+        end
+    end
+end
+
+-- Settings.OpenToCategory reaches the protected OpenSettingsPanel, which an
+-- addon may not call in combat. Blizzard's own entries work because their
+-- code is not tainted; ours is blocked and would otherwise fail silently
+-- apart from a line in the error log.
+function ns.OpenSettings(category)
+    if InCombatLockdown() then
+        ns.Print("the settings panel cannot be opened in combat")
+        return
+    end
+
+    Settings.OpenToCategory((category or ns.category):GetID())
 end
 
 -- Prints what the design assumes about secrecy and CVar access so the
@@ -295,21 +433,27 @@ end
 
 local function HandleSlashCommand(input)
     local command = string.lower(string.trim(input or ""))
+    local meter = ns.db.damageMeter and ns.IsAvailable()
 
-    if command == "probe" then
+    if command == "" then
+        ns.OpenSettings()
+    elseif not meter then
+        ns.Print("the damage meter module is off, nothing else takes commands")
+    elseif command == "probe" then
         ns.Probe()
     elseif command == "diag" then
         ns.Diagnose()
     elseif command == "snap" or command == "format" then
         ns.db[command] = not ns.db[command]
         ns.Print(command .. ": " .. tostring(ns.db[command]))
-    elseif command == "" then
-        ns.Config.Open()
     else
         ns.Print("commands: diag, probe, format, snap")
     end
 end
 
+-- Binding names and the functions they call keep the old addon's names on
+-- purpose: a key is saved against the binding name, and renaming it would
+-- unbind every player's keys.
 BINDING_NAME_DAMAGEMETERCOMPANION_TOGGLE = "Show or hide the damage meter"
 BINDING_NAME_DAMAGEMETERCOMPANION_HIDEALL = "Hide all extra windows"
 BINDING_NAME_DAMAGEMETERCOMPANION_RESET = "Reset damage meter data"
@@ -337,7 +481,7 @@ end
 -- setup inside our taint and poisons that window until /reload. Bringing one
 -- back is the meter's own gear menu, Show new window - untainted.
 function DamageMeterCompanion_HideAll()
-    if not ns.IsAvailable() then
+    if not ns.IsAvailable() or not ns.Windows then
         return
     end
 
@@ -353,27 +497,30 @@ function DamageMeterCompanion_ResetData()
     end
 end
 
+
 local bootstrap = CreateFrame("Frame")
 bootstrap:RegisterEvent("PLAYER_LOGIN")
 bootstrap:SetScript("OnEvent", function()
     InitializeSavedVariables()
+    RegisterSettings()
 
-    if not ns.IsAvailable() then
-        ns.Print("Blizzard Damage Meter not found, nothing was installed.")
-        return
+    if ns.db.damageMeter and not ns.IsAvailable() then
+        ns.Print("Blizzard Damage Meter not found, the damage meter module was not installed.")
     end
 
     for _, module in ipairs(moduleOrder) do
-        if module.Enable then
+        if module.Enable and IsEnabled(module) then
             module.Enable()
         end
     end
 
-    -- /dmt stays as the second alias: it is what the addon answered to before
-    -- the rename, and muscle memory outlives a name change.
     StartSweeps()
 
-    SLASH_DAMAGEMETERCOMPANION1 = "/dmc"
-    SLASH_DAMAGEMETERCOMPANION2 = "/dmt"
-    SlashCmdList["DAMAGEMETERCOMPANION"] = HandleSlashCommand
+    -- /dmc and /dmt are what the addon answered to under its earlier names,
+    -- and muscle memory outlives a name change.
+    SLASH_LITTLETHINGS1 = "/littlethings"
+    SLASH_LITTLETHINGS2 = "/lt"
+    SLASH_LITTLETHINGS3 = "/dmc"
+    SLASH_LITTLETHINGS4 = "/dmt"
+    SlashCmdList["LITTLETHINGS"] = HandleSlashCommand
 end)

@@ -142,4 +142,5 @@ function Presence.Enable()
     Presence.ApplyStrata()
 end
 
+Presence.key = "damageMeter"
 ns.RegisterModule("Presence", Presence)

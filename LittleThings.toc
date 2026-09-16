@@ -1,0 +1,26 @@
+## Interface: 120100
+## Title: LittleThings
+## Notes: Small touches on the default UI, the bits that were missing. Nothing replaced, nothing heavy: readable numbers and snapping for the built-in damage meter, one-click spec and loot spec, a Warcraft Logs link in player menus.
+## Author: AqueGen
+# x-release-please-start-version
+## Version: 0.8.0
+## X-Curse-Version: 0.8.0
+# x-release-please-end
+## X-License: All Rights Reserved
+## X-Website: https://github.com/AqueGen/LittleThings
+## X-Curse-Project-ID: 1686059
+## SavedVariables: LittleThingsDB, DamageMeterCompanionDB, DamageMeterTweaksDB
+## SavedVariablesPerCharacter: LittleThingsCharDB, DamageMeterCompanionCharDB, DamageMeterTweaksCharDB
+## X-Category: Miscellaneous
+
+Core.lua
+Modules/DamageMeter/Windows.lua
+Modules/DamageMeter/Format.lua
+Modules/DamageMeter/Snap.lua
+Modules/DamageMeter/Preview.lua
+Modules/DamageMeter/Presence.lua
+Modules/DamageMeter/Config.lua
+Modules/LogLink/LogLinkRealms.lua
+Modules/LogLink/LogLinkUrl.lua
+Modules/LogLink/LogLink.lua
+Modules/CharacterPanel.lua

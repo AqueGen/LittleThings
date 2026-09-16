@@ -27,7 +27,7 @@ _G.CreateAbbreviateConfig = function() return {} end
 _G.Round = function(value) return math.floor(value + 0.5) end
 _G.CreateFrame = function() return { SetScript = function() end } end
 
-assert(loadfile("Format.lua"))("DamageMeterCompanion", ns)
+assert(loadfile("Modules/DamageMeter/Format.lua"))("LittleThings", ns)
 
 local Format = ns.Format
 ns.db = { format = true }

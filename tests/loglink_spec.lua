@@ -1,4 +1,4 @@
-package.path = "./?.lua;" .. package.path
+package.path = "./Modules/LogLink/?.lua;" .. package.path
 
 local Realms = require("LogLinkRealms")
 local Link = require("LogLinkUrl")

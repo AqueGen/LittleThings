@@ -19,6 +19,6 @@ jobs:
       - name: Install busted
         run: luarocks install busted
       - name: Syntax-check every shipped file
-        run: luac -p Core.lua Windows.lua Format.lua Snap.lua Preview.lua Presence.lua Config.lua
+        run: find . -type f -name '*.lua' -not -path './tests/*' -not -path './.lua/*' -not -path './.luarocks/*' -print0 | xargs -0 luac -p
       - name: Unit tests
         run: busted tests

@@ -5,6 +5,20 @@ local Config = ns.Config
 
 local category
 local categoryLayout
+local page
+
+-- The options are on the page whether the module is running or not, so a
+-- change made before the reload that starts it must not reach into modules
+-- that were never enabled.
+local active = false
+
+local function Wrap(onChange)
+    return function()
+        if active and onChange then
+            onChange()
+        end
+    end
+end
 
 local function AddCheckbox(variableKey, name, tooltip, onChange)
     local setting = Settings.RegisterProxySetting(category, "DMC_" .. variableKey,
@@ -12,12 +26,10 @@ local function AddCheckbox(variableKey, name, tooltip, onChange)
         function() return ns.db[variableKey] end,
         function(value)
             ns.db[variableKey] = value
-            if onChange then
-                onChange()
-            end
+            Wrap(onChange)()
         end)
 
-    return Settings.CreateCheckbox(category, setting, tooltip)
+    return ns.AddToPage(page, Settings.CreateCheckbox(category, setting, tooltip))
 end
 
 -- labelFormat is a format string, applied to the value shown beside the slider.
@@ -28,9 +40,7 @@ local function AddSlider(variableKey, name, tooltip, minimum, maximum, step, lab
         function() return ns.db[variableKey] end,
         function(value)
             ns.db[variableKey] = value
-            if onChange then
-                onChange()
-            end
+            Wrap(onChange)()
         end)
 
     local options = Settings.CreateSliderOptions(minimum, maximum, step)
@@ -41,7 +51,7 @@ local function AddSlider(variableKey, name, tooltip, minimum, maximum, step, lab
         return labelFormat:format(value)
     end or nil)
 
-    Settings.CreateSlider(category, setting, options, tooltip)
+    ns.AddToPage(page, Settings.CreateSlider(category, setting, options, tooltip))
 end
 
 -- The game's own two damage meter switches, mirrored so that everything about
@@ -64,20 +74,18 @@ local function AddBlizzardCVarCheckbox(cvar, variableKey, label, tooltip)
             end
         end)
 
-    Settings.CreateCheckbox(category, setting, function()
+    ns.AddToPage(page, Settings.CreateCheckbox(category, setting, function()
         local isAvailable, failureReason = C_DamageMeter.IsDamageMeterAvailable()
         local text = tooltip .. "|n|n|cff808080The game's own setting, from Gameplay Enhancements. Shown here so the meter is configured in one place.|r"
         if not isAvailable then
             text = text .. "|n|n" .. failureReason
         end
         return text
-    end)
+    end))
 end
 
 local function BuildBlizzardOptions()
-    if categoryLayout and CreateSettingsListSectionHeaderInitializer then
-        categoryLayout:AddInitializer(CreateSettingsListSectionHeaderInitializer(DAMAGE_METER_LABEL .. " (Blizzard)"))
-    end
+    ns.AddHeader(page, DAMAGE_METER_LABEL .. " (Blizzard)")
 
     AddBlizzardCVarCheckbox("damageMeterEnabled", "enabled", ENABLE_DAMAGE_METER, ENABLE_DAMAGE_METER_TOOLTIP)
     AddBlizzardCVarCheckbox("damageMeterResetOnNewInstance", "autoReset", AUTO_RESET_DAMAGE_METER, AUTO_RESET_DAMAGE_METER_TOOLTIP)
@@ -97,11 +105,6 @@ local function BuildBehaviourOptions()
     AddCheckbox("snap", "Snap windows together",
         "Dragging a window near another attaches it, and they move and resize together.")
 
-    AddCheckbox("logLink", "Warcraft Logs link in player menus",
-        "Off by default. Switch it on to right-click a player - in a unit frame, chat, the guild roster or the group finder - "
-            .. "and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu "
-            .. "exactly as Blizzard built it. The /wcl command works either way.")
-
     AddSlider("snapThreshold", "Snap distance",
         "How close an edge must be, in pixels, before it snaps.", 5, 50, 1)
 
@@ -119,26 +122,18 @@ local function BuildBehaviourOptions()
         function() return ns.Presence.ResolveStrata(ns.db.strata) end,
         function(value)
             ns.db.strata = value
-            ns.Presence.ApplyStrata()
+            Wrap(ns.Presence.ApplyStrata)()
         end)
 
-    Settings.CreateDropdown(category, strataSetting, function()
+    ns.AddToPage(page, Settings.CreateDropdown(category, strataSetting, function()
         local container = Settings.CreateControlTextContainer()
         for _, strata in ipairs(ns.Presence.STRATA_ORDER) do
             container:Add(strata, strata)
         end
         return container:GetData()
-    end, "Which layer the meter draws on. Raise it if another addon covers it.")
+    end, "Which layer the meter draws on. Raise it if another addon covers it."))
 
     BuildBlizzardOptions()
-
-    -- Author's mark, last thing in the category. A section header is the only
-    -- plain-text initializer Blizzard's settings list offers, and it is guarded
-    -- because a client without it should lose the mark rather than the panel.
-    if categoryLayout and CreateSettingsListSectionHeaderInitializer then
-        categoryLayout:AddInitializer(
-            CreateSettingsListSectionHeaderInitializer("|cFF0057B7Made|r |cFFFFD700in Ukraine|r"))
-    end
 end
 
 -- The gear dropdown on every meter window is tagged, which is Blizzard's own
@@ -162,32 +157,19 @@ local function AddSettingsToWindowDropdown()
         end
 
         rootDescription:CreateDivider()
-        rootDescription:CreateButton("DamageMeterCompanion settings", function()
+        rootDescription:CreateButton("LittleThings settings", function()
             ns.Config.Open()
         end)
     end)
 end
 
--- Settings.OpenToCategory reaches the protected OpenSettingsPanel, which an
--- addon may not call in combat. Blizzard's own entry in the same dropdown works
--- because their code is not tainted; ours is blocked and would otherwise fail
--- silently apart from a line in the error log.
 function Config.Open()
-    if InCombatLockdown() then
-        ns.Print("the settings panel cannot be opened in combat")
-        return
-    end
-
-    Settings.OpenToCategory(category:GetID())
+    ns.OpenSettings(category)
 end
 
 function Config.Enable()
-    category, categoryLayout = Settings.RegisterVerticalLayoutCategory("DamageMeterCompanion")
-    BuildBehaviourOptions()
-    Settings.RegisterAddOnCategory(category)
-
+    active = true
     AddSettingsToWindowDropdown()
-    ns.Config.BuildWindowPanel()
 end
 
 local windowPanel
@@ -501,7 +483,17 @@ end
 -- The panel deliberately offers no way to attach a window: snapping is a drag
 -- gesture, and a control duplicating it would be a second way to do the same
 -- thing. The page shows the link, its gap, its match flags and a Detach button.
-function Config.BuildWindowPanel()
+function Config.Pages(modulePage)
+    page = modulePage
+    category, categoryLayout = page.category, page.layout
+    BuildBehaviourOptions()
+
+    -- The window page reads the meter's windows, so without the module there
+    -- is nothing for it to show.
+    if not ns.db.damageMeter or not ns.IsAvailable() then
+        return
+    end
+
     -- A plain frame, not SettingsListTemplate: the canvas subcategory sizes the
     -- frame to fill the panel, and the template would add a list we do not use.
     windowPanel = CreateFrame("Frame")
@@ -563,11 +555,9 @@ function Config.BuildWindowPanel()
         end
     end)
 
-    -- The parent category is registered before this runs, so the category list
-    -- has already been built; registering the subcategory is what rebuilds it
-    -- and makes the page appear.
-    local subcategory = Settings.RegisterCanvasLayoutSubcategory(category, windowPanel, "Windows")
+    local subcategory = Settings.RegisterCanvasLayoutSubcategory(ns.category, windowPanel, "Damage meter windows")
     Settings.RegisterAddOnCategory(subcategory)
 end
 
+Config.key = "damageMeter"
 ns.RegisterModule("Config", Config)

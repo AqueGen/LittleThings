@@ -19,7 +19,7 @@ end
 -- no way to launch anything, by design - which is why every addon that offers a
 -- link offers it the same way: a box with the text already selected, for one
 -- Ctrl+C.
-local POPUP = "DAMAGEMETERCOMPANION_LOGLINK_COPY"
+local POPUP = "LITTLETHINGS_LOGLINK_COPY"
 StaticPopupDialogs[POPUP] = {
     text = "%s\n\nCtrl+C to copy, Escape to close.",
     button1 = CLOSE or "Close",
@@ -203,8 +203,10 @@ end
 function LogLink.Enable()
     install()
 
-    SLASH_DAMAGEMETERCOMPANIONLOGLINK1 = "/wcl"
-    SlashCmdList["DAMAGEMETERCOMPANIONLOGLINK"] = ns.HandleLogLinkCommand
+    SLASH_LITTLETHINGSLOGLINK1 = "/wcl"
+    SlashCmdList["LITTLETHINGSLOGLINK"] = ns.HandleLogLinkCommand
 end
 
+-- No key: the module is always loaded, and wanted() reads the switch per
+-- menu, so it goes on and off without a reload and /wcl works either way.
 ns.RegisterModule("LogLink", LogLink)
