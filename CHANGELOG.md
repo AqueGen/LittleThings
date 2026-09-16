@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/AqueGen/LittleThings/compare/v0.8.0...v0.9.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* become LittleThings, a suite of small touches, and add the Spec row module ([#10](https://github.com/AqueGen/LittleThings/issues/10))
+
+### Features
+
+* become LittleThings, a suite of small touches, and add the Spec row module ([#10](https://github.com/AqueGen/LittleThings/issues/10)) ([0bb40bc](https://github.com/AqueGen/LittleThings/commit/0bb40bc97396aab7614e13efe6196953e7fa5c42))
+
 ## [0.8.0](https://github.com/AqueGen/DamageMeterCompanion/compare/v0.7.0...v0.8.0) (2026-09-12)
 
 
