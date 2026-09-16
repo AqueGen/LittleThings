@@ -304,8 +304,12 @@ end
 local function RegisterSettings()
     local layout
     ns.category, layout = Settings.RegisterVerticalLayoutCategory("LittleThings")
+    -- A section header is the only plain-text initializer Blizzard's settings
+    -- list offers, and it is guarded because a client without it should lose
+    -- the text rather than the panel.
     if layout and CreateSettingsListSectionHeaderInitializer then
         layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Small touches on the default UI. One page per touch, each with its own switch."))
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("|cFF0057B7Made|r |cFFFFD700in Ukraine|r"))
     end
     Settings.RegisterAddOnCategory(ns.category)
 
