@@ -16,7 +16,7 @@ ns.Windows = {
     end,
 }
 
-assert(loadfile("Snap.lua"))("DamageMeterCompanion", ns)
+assert(loadfile("Modules/DamageMeter/Snap.lua"))("LittleThings", ns)
 
 local Snap = ns.Snap
 

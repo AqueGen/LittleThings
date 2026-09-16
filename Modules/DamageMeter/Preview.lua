@@ -150,4 +150,5 @@ function Preview.BarRects(rect, target, result, thickness)
         { left = targetLeft, bottom = bottom, width = thickness, height = height }
 end
 
+Preview.key = "damageMeter"
 ns.RegisterModule("Preview", Preview)

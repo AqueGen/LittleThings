@@ -206,4 +206,5 @@ function Format.Enable()
     ns.OnFrame(Format.Sweep)
 end
 
+Format.key = "damageMeter"
 ns.RegisterModule("Format", Format)

@@ -1,11 +1,11 @@
 <Bindings>
-    <Binding name="DAMAGEMETERCOMPANION_TOGGLE" category="DamageMeterCompanion">
+    <Binding name="DAMAGEMETERCOMPANION_TOGGLE" category="LittleThings">
         DamageMeterCompanion_ToggleMeter()
     </Binding>
-    <Binding name="DAMAGEMETERCOMPANION_HIDEALL" category="DamageMeterCompanion">
+    <Binding name="DAMAGEMETERCOMPANION_HIDEALL" category="LittleThings">
         DamageMeterCompanion_HideAll()
     </Binding>
-    <Binding name="DAMAGEMETERCOMPANION_RESET" category="DamageMeterCompanion">
+    <Binding name="DAMAGEMETERCOMPANION_RESET" category="LittleThings">
         DamageMeterCompanion_ResetData()
     </Binding>
 </Bindings>

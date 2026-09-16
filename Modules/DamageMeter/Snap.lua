@@ -568,4 +568,5 @@ function Snap.Enable()
     end)
 end
 
+Snap.key = "damageMeter"
 ns.RegisterModule("Snap", Snap)

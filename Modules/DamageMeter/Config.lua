@@ -162,29 +162,19 @@ local function AddSettingsToWindowDropdown()
         end
 
         rootDescription:CreateDivider()
-        rootDescription:CreateButton("DamageMeterCompanion settings", function()
+        rootDescription:CreateButton("LittleThings settings", function()
             ns.Config.Open()
         end)
     end)
 end
 
--- Settings.OpenToCategory reaches the protected OpenSettingsPanel, which an
--- addon may not call in combat. Blizzard's own entry in the same dropdown works
--- because their code is not tainted; ours is blocked and would otherwise fail
--- silently apart from a line in the error log.
 function Config.Open()
-    if InCombatLockdown() then
-        ns.Print("the settings panel cannot be opened in combat")
-        return
-    end
-
-    Settings.OpenToCategory(category:GetID())
+    ns.OpenSettings(category)
 end
 
 function Config.Enable()
-    category, categoryLayout = Settings.RegisterVerticalLayoutCategory("DamageMeterCompanion")
+    category, categoryLayout = ns.RegisterSubcategory("Damage meter")
     BuildBehaviourOptions()
-    Settings.RegisterAddOnCategory(category)
 
     AddSettingsToWindowDropdown()
     ns.Config.BuildWindowPanel()
@@ -566,8 +556,9 @@ function Config.BuildWindowPanel()
     -- The parent category is registered before this runs, so the category list
     -- has already been built; registering the subcategory is what rebuilds it
     -- and makes the page appear.
-    local subcategory = Settings.RegisterCanvasLayoutSubcategory(category, windowPanel, "Windows")
+    local subcategory = Settings.RegisterCanvasLayoutSubcategory(ns.category, windowPanel, "Damage meter windows")
     Settings.RegisterAddOnCategory(subcategory)
 end
 
+Config.key = "damageMeter"
 ns.RegisterModule("Config", Config)

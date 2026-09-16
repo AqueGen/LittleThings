@@ -174,4 +174,5 @@ function Windows.Enable()
     -- SetupSessionWindow hook re-applies the link at that moment.
 end
 
+Windows.key = "damageMeter"
 ns.RegisterModule("Windows", Windows)
