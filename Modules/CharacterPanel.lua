@@ -215,6 +215,20 @@ function CharacterPanel.Pages(page)
         page.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Two bars next to the character panel: your specializations, and the loot specialization. One click switches. Drag a bar on the panel to move it; the corner and offsets below are the same position in numbers."))
     end
 
+    -- Locked bars ignore the mouse, so they cannot be dragged off the spot
+    -- the sliders put them on; the icons are frames of their own and keep
+    -- working.
+    local lock = Settings.RegisterProxySetting(category, "LT_characterPanel_locked", Settings.VarType.Boolean,
+        "Lock bars", false,
+        function() return ns.db.characterPanelLocked == true end,
+        function(value)
+            ns.db.characterPanelLocked = value
+            for _, bar in pairs(bars) do
+                bar:EnableMouse(not value)
+            end
+        end)
+    Settings.CreateCheckbox(category, lock, "Stop the bars from being dragged. Place them roughly by dragging, fine-tune with the offsets below, then lock.")
+
     for _, bar in ipairs(BARS) do
         if page.layout and CreateSettingsListSectionHeaderInitializer then
             page.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(bar.label))
@@ -241,8 +255,11 @@ local function CreateBar(spec)
     bar.buttons = {}
     bar.onClick = spec.key == "specBar" and OnSpecClick or OnLootClick
     bar:SetSize(SIZE, SIZE)
+    -- The item slots sit at level 100 inside the same panel; anything below
+    -- that is drawn under them once the bar is dragged over the panel.
+    bar:SetFrameLevel(200)
     bar:SetMovable(true)
-    bar:EnableMouse(true)
+    bar:EnableMouse(not ns.db.characterPanelLocked)
     bar:RegisterForDrag("LeftButton")
     bar:SetScript("OnDragStart", bar.StartMoving)
     bar:SetScript("OnDragStop", function(self)
