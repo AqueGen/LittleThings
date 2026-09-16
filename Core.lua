@@ -21,9 +21,9 @@ ns.charDefaults = {
 -- One page per module, in this order. Each page opens with the module's own
 -- switch, so a module that is off still has a page to turn it back on from.
 ns.MODULES = {
-    { key = "damageMeter", label = "Damage meter", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
-    { key = "characterPanel", label = "Character panel", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
-    { key = "logLink", label = "Mythic+ log link", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
+    { key = "damageMeter", label = "Damage meter", switch = "Damage meter tweaks", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
+    { key = "characterPanel", label = "Character panel", switch = "Spec and loot spec bars", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
+    { key = "logLink", label = "Mythic+ log link", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
 }
 
 local modules = {}
@@ -236,7 +236,7 @@ StaticPopupDialogs["LITTLETHINGS_MODULE_RELOAD"] = {
 
 local function AddModuleSwitch(page, module)
     local setting = Settings.RegisterProxySetting(page.category, "LT_module_" .. module.key,
-        Settings.VarType.Boolean, "Enable", ns.defaults[module.key],
+        Settings.VarType.Boolean, module.switch, ns.defaults[module.key],
         function() return ns.db[module.key] end,
         function(value)
             ns.db[module.key] = value
