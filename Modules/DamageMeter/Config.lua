@@ -486,6 +486,12 @@ end
 -- gesture, and a control duplicating it would be a second way to do the same
 -- thing. The page shows the link, its gap, its match flags and a Detach button.
 function Config.Pages()
+    -- The window page reads the meter's windows, so without the module there
+    -- is nothing for it to show.
+    if not ns.db.damageMeter or not ns.IsAvailable() then
+        return
+    end
+
     -- A plain frame, not SettingsListTemplate: the canvas subcategory sizes the
     -- frame to fill the panel, and the template would add a list we do not use.
     windowPanel = CreateFrame("Frame")

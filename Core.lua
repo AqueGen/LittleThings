@@ -22,7 +22,7 @@ ns.charDefaults = {
 -- switch, so a module that is off still has a page to turn it back on from.
 ns.MODULES = {
     { key = "damageMeter", label = "Damage meter", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
-    { key = "characterPanel", label = "Character panel", tooltip = "One-click specialization and loot specialization icons next to the character panel." },
+    { key = "characterPanel", label = "Character panel", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
     { key = "logLink", label = "Mythic+ log link", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
 }
 
@@ -221,14 +221,34 @@ local function InitializeSavedVariables()
     ns.charDb = LittleThingsCharDB
 end
 
+-- A module whose hooks cannot be undone takes a reload to switch; the popup
+-- offers one now and otherwise leaves the switch saved for the next login.
+StaticPopupDialogs["LITTLETHINGS_MODULE_RELOAD"] = {
+    text = "%s is switched %s. It takes effect after the UI is reloaded. Reload now?",
+    button1 = RELOADUI,
+    button2 = "Later",
+    OnAccept = function() ReloadUI() end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
 local function AddModuleSwitch(page, module)
     local setting = Settings.RegisterProxySetting(page.category, "LT_module_" .. module.key,
         Settings.VarType.Boolean, "Enable", ns.defaults[module.key],
         function() return ns.db[module.key] end,
         function(value)
             ns.db[module.key] = value
+
+            for _, registered in ipairs(moduleOrder) do
+                if registered.key == module.key and registered.OnSwitch then
+                    registered.OnSwitch(value)
+                end
+            end
+
             if not module.live then
-                ns.Print(module.label .. (value and " on" or " off") .. ", takes effect after /reload")
+                StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", module.label, value and "on" or "off")
             end
         end)
 
@@ -260,9 +280,10 @@ end
 -- The root page carries nothing but the addon's one-line description; the
 -- three module pages under it each open with that module's switch. Pages are
 -- built here, before any module is enabled, so a module that is off is still
--- reachable. A module adds its own options to ns.pages[key] from Enable, and
--- a module that needs a page of its own (a canvas) adds it from Pages, which
--- runs right after its switch page so the two sit together in the list.
+-- reachable. A module adds its options to its page from Pages, which runs
+-- right after the switch whether the module is on or off, so the page always
+-- says what the switch does; a page of its own (a canvas) registered there
+-- sits right under the switch page in the list.
 local function RegisterSettings()
     local layout
     ns.category, layout = Settings.RegisterVerticalLayoutCategory("LittleThings")
@@ -279,7 +300,7 @@ local function RegisterSettings()
         AddModuleSwitch(page, module)
 
         for _, registered in ipairs(moduleOrder) do
-            if registered.key == module.key and registered.Pages and IsEnabled(registered) then
+            if registered.key == module.key and registered.Pages then
                 registered.Pages(page)
             end
         end

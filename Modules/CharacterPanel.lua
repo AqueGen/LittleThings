@@ -114,12 +114,24 @@ local function Proxy(category, key, varType, label)
         function() return db[key] end,
         function(value)
             db[key] = value
-            Anchor()
+            if row then
+                Anchor()
+            end
         end)
 end
 
-local function RegisterSettings()
-    local category = ns.pages.characterPanel.category
+-- The options exist whether or not the module is on: the page is where the
+-- module is switched on, and a page with one checkbox says nothing about
+-- what it switches.
+function CharacterPanel.Pages(page)
+    ns.db.specRowLayout = ns.db.specRowLayout or {}
+    db = ns.db.specRowLayout
+    ns.ApplyDefaults(db, DEFAULTS)
+
+    local category = page.category
+    if page.layout and CreateSettingsListSectionHeaderInitializer then
+        page.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Spec row: your specializations and loot specialization as icons next to the character panel, one click to switch."))
+    end
 
     local corner = Proxy(category, "corner", Settings.VarType.String, "Anchor corner")
     Settings.CreateDropdown(category, corner, function()
@@ -140,9 +152,10 @@ local function RegisterSettings()
 end
 
 function CharacterPanel.Enable()
-    ns.db.specRowLayout = ns.db.specRowLayout or {}
-    db = ns.db.specRowLayout
-    ns.ApplyDefaults(db, DEFAULTS)
+    if row then
+        row:Show()
+        return
+    end
 
     row = CreateFrame("Frame", nil, PaperDollFrame)
     row:SetHeight(SIZE + 12)
@@ -153,16 +166,31 @@ function CharacterPanel.Enable()
     lootLabel:SetText(SELECT_LOOT_SPECIALIZATION)
 
     Anchor()
-    RegisterSettings()
 
     local events = CreateFrame("Frame")
     events:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     events:RegisterEvent("PLAYER_LOOT_SPEC_UPDATED")
     events:SetScript("OnEvent", function(_, event, unit)
         if event == "PLAYER_SPECIALIZATION_CHANGED" and unit ~= "player" then return end
-        if PaperDollFrame:IsShown() then Refresh() end
+        if row:IsShown() and PaperDollFrame:IsShown() then Refresh() end
     end)
-    PaperDollFrame:HookScript("OnShow", Refresh)
+    PaperDollFrame:HookScript("OnShow", function()
+        if row:IsShown() then Refresh() end
+    end)
+
+    if PaperDollFrame:IsShown() then
+        Refresh()
+    end
+end
+
+-- Nothing here hooks anything of Blizzard's, so the switch works live: on
+-- builds the row (or shows it again), off hides it.
+function CharacterPanel.OnSwitch(enabled)
+    if enabled then
+        CharacterPanel.Enable()
+    elseif row then
+        row:Hide()
+    end
 end
 
 CharacterPanel.key = "characterPanel"
