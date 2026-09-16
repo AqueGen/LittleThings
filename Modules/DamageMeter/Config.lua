@@ -172,7 +172,6 @@ function Config.Enable()
     BuildBehaviourOptions()
 
     AddSettingsToWindowDropdown()
-    ns.Config.BuildWindowPanel()
 end
 
 local windowPanel
@@ -486,7 +485,7 @@ end
 -- The panel deliberately offers no way to attach a window: snapping is a drag
 -- gesture, and a control duplicating it would be a second way to do the same
 -- thing. The page shows the link, its gap, its match flags and a Detach button.
-function Config.BuildWindowPanel()
+function Config.Pages()
     -- A plain frame, not SettingsListTemplate: the canvas subcategory sizes the
     -- frame to fill the panel, and the template would add a list we do not use.
     windowPanel = CreateFrame("Frame")
@@ -548,10 +547,7 @@ function Config.BuildWindowPanel()
         end
     end)
 
-    -- The parent category is registered before this runs, so the category list
-    -- has already been built; registering the subcategory is what rebuilds it
-    -- and makes the page appear.
-    local subcategory = Settings.RegisterCanvasLayoutSubcategory(ns.category, windowPanel, "Damage meter: windows")
+    local subcategory = Settings.RegisterCanvasLayoutSubcategory(ns.category, windowPanel, "Damage meter windows")
     Settings.RegisterAddOnCategory(subcategory)
 end
 

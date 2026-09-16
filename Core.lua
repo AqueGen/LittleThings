@@ -245,10 +245,24 @@ function ns.RegisterSubcategory(name)
     return category, layout
 end
 
+local function IsEnabled(module)
+    if not ns.db[module.key] then
+        return false
+    end
+
+    if module.key == "damageMeter" and not ns.IsAvailable() then
+        return false
+    end
+
+    return true
+end
+
 -- The root page carries nothing but the addon's one-line description; the
 -- three module pages under it each open with that module's switch. Pages are
 -- built here, before any module is enabled, so a module that is off is still
--- reachable. A module adds its own options to ns.pages[key] from Enable.
+-- reachable. A module adds its own options to ns.pages[key] from Enable, and
+-- a module that needs a page of its own (a canvas) adds it from Pages, which
+-- runs right after its switch page so the two sit together in the list.
 local function RegisterSettings()
     local layout
     ns.category, layout = Settings.RegisterVerticalLayoutCategory("LittleThings")
@@ -263,6 +277,12 @@ local function RegisterSettings()
         page.category, page.layout = ns.RegisterSubcategory(module.label)
         ns.pages[module.key] = page
         AddModuleSwitch(page, module)
+
+        for _, registered in ipairs(moduleOrder) do
+            if registered.key == module.key and registered.Pages and IsEnabled(registered) then
+                registered.Pages(page)
+            end
+        end
     end
 end
 
@@ -434,17 +454,6 @@ function DamageMeterCompanion_ResetData()
     end
 end
 
-local function IsEnabled(module)
-    if not ns.db[module.key] then
-        return false
-    end
-
-    if module.key == "damageMeter" and not ns.IsAvailable() then
-        return false
-    end
-
-    return true
-end
 
 local bootstrap = CreateFrame("Frame")
 bootstrap:RegisterEvent("PLAYER_LOGIN")
