@@ -23,6 +23,23 @@ local function Anchor()
     row:SetPoint(points[1], CharacterFrame, points[2], db.x, db.y)
 end
 
+local function Edge(frame, point, axis)
+    if axis == "x" then
+        return point:find("RIGHT") and frame:GetRight() or frame:GetLeft()
+    end
+    return point:find("TOP") and frame:GetTop() or frame:GetBottom()
+end
+
+-- After a drag the row sits wherever the mouse left it; the saved offsets
+-- are that spot measured from the chosen corner, so the sliders on the
+-- settings page and the drag describe the same position.
+local function SaveDraggedPosition()
+    local points = CORNERS[db.corner] or CORNERS.bottomleft
+    db.x = math.floor(Edge(row, points[1], "x") - Edge(CharacterFrame, points[2], "x") + 0.5)
+    db.y = math.floor(Edge(row, points[1], "y") - Edge(CharacterFrame, points[2], "y") + 0.5)
+    Anchor()
+end
+
 local function NewButton(list, index)
     local b = list[index]
     if b then return b end
@@ -130,7 +147,7 @@ function CharacterPanel.Pages(page)
 
     local category = page.category
     if page.layout and CreateSettingsListSectionHeaderInitializer then
-        page.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Spec row: your specializations and loot specialization as icons next to the character panel, one click to switch."))
+        page.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Spec row: your specializations and loot specialization as icons next to the character panel, one click to switch. Drag the row on the panel to move it; the corner and offsets below are the same position in numbers."))
     end
 
     local corner = Proxy(category, "corner", Settings.VarType.String, "Anchor corner")
@@ -159,6 +176,20 @@ function CharacterPanel.Enable()
 
     row = CreateFrame("Frame", nil, PaperDollFrame)
     row:SetHeight(SIZE + 12)
+    row:SetMovable(true)
+    row:EnableMouse(true)
+    row:RegisterForDrag("LeftButton")
+    row:SetScript("OnDragStart", row.StartMoving)
+    row:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        SaveDraggedPosition()
+    end)
+    row:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Drag to move", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    row:SetScript("OnLeave", GameTooltip_Hide)
 
     specLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     specLabel:SetText(SPECIALIZATION)

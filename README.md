@@ -32,7 +32,7 @@ No parsing, no storage, no analysis, no skins, no report-to-chat. Blizzard's met
 
 ### Character panel
 
-Off by default. Spec row: two rows of icons next to the character panel: your specializations on the left, loot specialization on the right (the first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. The row hangs from a corner of the panel you choose, with an X and Y offset, so it stays out of whatever other addons draw on the panel.
+Off by default. Spec row: two rows of icons next to the character panel: your specializations on the left, loot specialization on the right (the first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. Drag the row to wherever it stays out of whatever other addons draw on the panel; the settings page shows the same position as a corner and an X and Y offset.
 
 ### Mythic+ log link
 
