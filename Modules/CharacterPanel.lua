@@ -105,6 +105,9 @@ local function Layout(bar, count)
         bar.label:SetPoint("LEFT", bar, "LEFT", 0, 0)
         x = labelWidth + LABEL_GAP
         bar:SetSize(x + iconsWidth, SIZE)
+    elseif header == "right" then
+        bar.label:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
+        bar:SetSize(iconsWidth + LABEL_GAP + labelWidth, SIZE)
     elseif header == "top" then
         bar.label:SetPoint("TOP", bar, "TOP", 0, 0)
         y = -(bar.label:GetStringHeight() + 2)
@@ -114,7 +117,7 @@ local function Layout(bar, count)
         bar:SetSize(math.max(iconsWidth, labelWidth), SIZE + bar.label:GetStringHeight() + 2)
     end
 
-    if header ~= "left" then
+    if header == "top" or header == "bottom" then
         x = (bar:GetWidth() - iconsWidth) / 2
     end
 
@@ -187,6 +190,7 @@ local function HeaderOptions()
     container:Add("bottom", "Below the icons")
     container:Add("top", "Above the icons")
     container:Add("left", "Left of the icons")
+    container:Add("right", "Right of the icons")
     return container:GetData()
 end
 
