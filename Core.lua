@@ -2,7 +2,7 @@ local addonName, ns = ...
 
 ns.defaults = {
     damageMeter = true,
-    specRow = false,
+    characterPanel = false,
     -- Off by default: a player who installed this for the meter did not ask
     -- for entries in every unit menu.
     logLink = false,
@@ -18,10 +18,12 @@ ns.charDefaults = {
     links = {},
 }
 
+-- One page per module, in this order. Each page opens with the module's own
+-- switch, so a module that is off still has a page to turn it back on from.
 ns.MODULES = {
     { key = "damageMeter", label = "Damage meter", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
-    { key = "specRow", label = "Spec row", tooltip = "One-click specialization and loot specialization icons next to the character panel." },
-    { key = "logLink", label = "Warcraft Logs link", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
+    { key = "characterPanel", label = "Character panel", tooltip = "One-click specialization and loot specialization icons next to the character panel." },
+    { key = "logLink", label = "Mythic+ log link", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
 }
 
 local modules = {}
@@ -219,36 +221,49 @@ local function InitializeSavedVariables()
     ns.charDb = LittleThingsCharDB
 end
 
--- The root page: one switch per module. Every module's own page is a
--- subcategory of this one, registered by the module when it is enabled.
-local function RegisterRootSettings()
-    ns.category = Settings.RegisterVerticalLayoutCategory("LittleThings")
+local function AddModuleSwitch(page, module)
+    local setting = Settings.RegisterProxySetting(page.category, "LT_module_" .. module.key,
+        Settings.VarType.Boolean, "Enable", ns.defaults[module.key],
+        function() return ns.db[module.key] end,
+        function(value)
+            ns.db[module.key] = value
+            if not module.live then
+                ns.Print(module.label .. (value and " on" or " off") .. ", takes effect after /reload")
+            end
+        end)
 
-    for _, module in ipairs(ns.MODULES) do
-        local setting = Settings.RegisterProxySetting(ns.category, "LT_module_" .. module.key,
-            Settings.VarType.Boolean, module.label, ns.defaults[module.key],
-            function() return ns.db[module.key] end,
-            function(value)
-                ns.db[module.key] = value
-                if not module.live then
-                    ns.Print(module.label .. (value and " on" or " off") .. ", takes effect after /reload")
-                end
-            end)
-
-        local tooltip = module.tooltip
-        if not module.live then
-            tooltip = tooltip .. "|n|n|cff808080Takes effect after /reload.|r"
-        end
-        Settings.CreateCheckbox(ns.category, setting, tooltip)
+    local tooltip = module.tooltip
+    if not module.live then
+        tooltip = tooltip .. "|n|n|cff808080Takes effect after /reload.|r"
     end
-
-    Settings.RegisterAddOnCategory(ns.category)
+    Settings.CreateCheckbox(page.category, setting, tooltip)
 end
 
 function ns.RegisterSubcategory(name)
     local category, layout = Settings.RegisterVerticalLayoutSubcategory(ns.category, name)
     Settings.RegisterAddOnCategory(category)
     return category, layout
+end
+
+-- The root page carries nothing but the addon's one-line description; the
+-- three module pages under it each open with that module's switch. Pages are
+-- built here, before any module is enabled, so a module that is off is still
+-- reachable. A module adds its own options to ns.pages[key] from Enable.
+local function RegisterSettings()
+    local layout
+    ns.category, layout = Settings.RegisterVerticalLayoutCategory("LittleThings")
+    if layout and CreateSettingsListSectionHeaderInitializer then
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Small touches on the default UI. One page per touch, each with its own switch."))
+    end
+    Settings.RegisterAddOnCategory(ns.category)
+
+    ns.pages = {}
+    for _, module in ipairs(ns.MODULES) do
+        local page = {}
+        page.category, page.layout = ns.RegisterSubcategory(module.label)
+        ns.pages[module.key] = page
+        AddModuleSwitch(page, module)
+    end
 end
 
 -- Settings.OpenToCategory reaches the protected OpenSettingsPanel, which an
@@ -435,7 +450,7 @@ local bootstrap = CreateFrame("Frame")
 bootstrap:RegisterEvent("PLAYER_LOGIN")
 bootstrap:SetScript("OnEvent", function()
     InitializeSavedVariables()
-    RegisterRootSettings()
+    RegisterSettings()
 
     if ns.db.damageMeter and not ns.IsAvailable() then
         ns.Print("Blizzard Damage Meter not found, the damage meter module was not installed.")

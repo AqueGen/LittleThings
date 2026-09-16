@@ -23,4 +23,4 @@ Modules/DamageMeter/Config.lua
 Modules/LogLink/LogLinkRealms.lua
 Modules/LogLink/LogLinkUrl.lua
 Modules/LogLink/LogLink.lua
-Modules/SpecRow.lua
+Modules/CharacterPanel.lua

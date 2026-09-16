@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-local SpecRow = {}
+local CharacterPanel = {}
 
 local SIZE, STEP, GAP = 20, 22, 10
 local BORDER = "Interface\\ContainerFrame\\UI-Icon-QuestBorder"
@@ -119,7 +119,7 @@ local function Proxy(category, key, varType, label)
 end
 
 local function RegisterSettings()
-    local category = ns.RegisterSubcategory("Spec row")
+    local category = ns.pages.characterPanel.category
 
     local corner = Proxy(category, "corner", Settings.VarType.String, "Anchor corner")
     Settings.CreateDropdown(category, corner, function()
@@ -139,7 +139,7 @@ local function RegisterSettings()
     end
 end
 
-function SpecRow.Enable()
+function CharacterPanel.Enable()
     ns.db.specRowLayout = ns.db.specRowLayout or {}
     db = ns.db.specRowLayout
     ns.ApplyDefaults(db, DEFAULTS)
@@ -165,5 +165,5 @@ function SpecRow.Enable()
     PaperDollFrame:HookScript("OnShow", Refresh)
 end
 
-SpecRow.key = "specRow"
-ns.RegisterModule("SpecRow", SpecRow)
+CharacterPanel.key = "characterPanel"
+ns.RegisterModule("CharacterPanel", CharacterPanel)

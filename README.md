@@ -1,6 +1,6 @@
 # LittleThings
 
-Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. Each module is a switch on one settings page, off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
+Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. Each module has its own settings page that opens with its switch, off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
 
 Retail only, patch 12.1. No libraries, no dependencies.
 
@@ -30,11 +30,11 @@ Three things on the window page do go through Blizzard's code and taint it the s
 
 No parsing, no storage, no analysis, no skins, no report-to-chat. Blizzard's meter is the meter. If you want a meter of your own, use Details.
 
-### Spec row
+### Character panel
 
-Off by default. Two rows of icons next to the character panel: your specializations on the left, loot specialization on the right (the first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. The row hangs from a corner of the panel you choose, with an X and Y offset, so it stays out of whatever other addons draw on the panel.
+Off by default. Spec row: two rows of icons next to the character panel: your specializations on the left, loot specialization on the right (the first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. The row hangs from a corner of the panel you choose, with an X and Y offset, so it stays out of whatever other addons draw on the panel.
 
-### Warcraft Logs link
+### Mythic+ log link
 
 Off by default. Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
 
@@ -50,4 +50,4 @@ Off by default. Right-click a player - in a unit frame, chat, the guild roster o
 
 `busted tests` runs the pure-logic suite - number composition, snap geometry, the drop preview and the transparency rules. Everything frame-bound is verified in game against `docs/IN-GAME-CHECKLIST.md`.
 
-A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key`; a switch is a row in `ns.MODULES` in `Core.lua`. Its settings go on a subcategory from `ns.RegisterSubcategory(name)`.
+A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key`; a switch is a row in `ns.MODULES` in `Core.lua`, which also gives the module its settings page as `ns.pages[key]`, opened with the switch. The module adds its own options to that page from `Enable`.

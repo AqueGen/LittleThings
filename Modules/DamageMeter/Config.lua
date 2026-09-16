@@ -173,7 +173,7 @@ function Config.Open()
 end
 
 function Config.Enable()
-    category, categoryLayout = ns.RegisterSubcategory("Damage meter")
+    category, categoryLayout = ns.pages.damageMeter.category, ns.pages.damageMeter.layout
     BuildBehaviourOptions()
 
     AddSettingsToWindowDropdown()
@@ -556,7 +556,7 @@ function Config.BuildWindowPanel()
     -- The parent category is registered before this runs, so the category list
     -- has already been built; registering the subcategory is what rebuilds it
     -- and makes the page appear.
-    local subcategory = Settings.RegisterCanvasLayoutSubcategory(ns.category, windowPanel, "Damage meter windows")
+    local subcategory = Settings.RegisterCanvasLayoutSubcategory(ns.category, windowPanel, "Damage meter: windows")
     Settings.RegisterAddOnCategory(subcategory)
 end
 
