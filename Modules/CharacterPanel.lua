@@ -215,9 +215,6 @@ function CharacterPanel.Pages(page)
     InitializeDb()
 
     local category = page.category
-    if page.layout and CreateSettingsListSectionHeaderInitializer then
-        page.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Two bars next to the character panel: your specializations, and the loot specialization. One click switches. Drag a bar on the panel to move it; the corner and offsets below are the same position in numbers."))
-    end
 
     -- Locked bars ignore the mouse, so they cannot be dragged off the spot
     -- the sliders put them on; the icons are frames of their own and keep
@@ -231,23 +228,24 @@ function CharacterPanel.Pages(page)
                 bar:EnableMouse(not value)
             end
         end)
-    Settings.CreateCheckbox(category, lock, "Stop the bars from being dragged. Place them roughly by dragging, fine-tune with the offsets below, then lock.")
+    ns.AddToPage(page, Settings.CreateCheckbox(category, lock,
+        "Drag a bar on the character panel to place it, fine-tune with the offsets below, then lock it so it cannot be dragged."))
 
     for _, bar in ipairs(BARS) do
-        if page.layout and CreateSettingsListSectionHeaderInitializer then
-            page.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(bar.label))
-        end
+        ns.AddHeader(page, bar.label)
 
-        Settings.CreateDropdown(category, Proxy(category, bar, "header", Settings.VarType.String, "Header", RefreshIfShown),
-            HeaderOptions, "Where the bar's title sits.")
-        Settings.CreateDropdown(category, Proxy(category, bar, "corner", Settings.VarType.String, "Anchor corner", Anchor),
-            CornerOptions, "Which corner of the character panel the bar hangs from.")
+        ns.AddToPage(page, Settings.CreateDropdown(category,
+            Proxy(category, bar, "header", Settings.VarType.String, "Header", RefreshIfShown),
+            HeaderOptions, "Where the bar's title sits."))
+        ns.AddToPage(page, Settings.CreateDropdown(category,
+            Proxy(category, bar, "corner", Settings.VarType.String, "Anchor corner", Anchor),
+            CornerOptions, "Which corner of the character panel the bar hangs from."))
 
         for _, key in ipairs({ "x", "y" }) do
             local setting = Proxy(category, bar, key, Settings.VarType.Number, key:upper() .. " offset", Anchor)
             local options = Settings.CreateSliderOptions(-400, 400, 1)
             options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-            Settings.CreateSlider(category, setting, options, "Pixels from the chosen corner.")
+            ns.AddToPage(page, Settings.CreateSlider(category, setting, options, "Pixels from the chosen corner."))
         end
     end
 end

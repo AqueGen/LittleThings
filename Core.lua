@@ -256,7 +256,24 @@ local function AddModuleSwitch(page, module)
     if not module.live then
         tooltip = tooltip .. "|n|n|cff808080Takes effect after /reload.|r"
     end
-    Settings.CreateCheckbox(page.category, setting, tooltip)
+    page.switch = Settings.CreateCheckbox(page.category, setting, tooltip)
+end
+
+-- Every option on a module page hangs under the module's switch: indented
+-- beneath it, and gone from the page while the switch is off, so the page
+-- shows only what is in effect.
+function ns.AddToPage(page, initializer)
+    initializer:SetParentInitializer(page.switch)
+    initializer:AddShownPredicate(function() return ns.db[page.key] == true end)
+    return initializer
+end
+
+function ns.AddHeader(page, text)
+    if page.layout and CreateSettingsListSectionHeaderInitializer then
+        local initializer = CreateSettingsListSectionHeaderInitializer(text)
+        page.layout:AddInitializer(initializer)
+        return ns.AddToPage(page, initializer)
+    end
 end
 
 function ns.RegisterSubcategory(name)
@@ -295,6 +312,7 @@ local function RegisterSettings()
     ns.pages = {}
     for _, module in ipairs(ns.MODULES) do
         local page = {}
+        page.key = module.key
         page.category, page.layout = ns.RegisterSubcategory(module.label)
         ns.pages[module.key] = page
         AddModuleSwitch(page, module)
