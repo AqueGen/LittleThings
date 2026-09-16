@@ -216,17 +216,11 @@ function CharacterPanel.Pages(page)
 
     local category = page.category
 
-    -- Locked bars ignore the mouse, so they cannot be dragged off the spot
-    -- the sliders put them on; the icons are frames of their own and keep
-    -- working.
     local lock = Settings.RegisterProxySetting(category, "LT_characterPanel_locked", Settings.VarType.Boolean,
         "Lock bars", false,
         function() return ns.db.characterPanelLocked == true end,
         function(value)
             ns.db.characterPanelLocked = value
-            for _, bar in pairs(bars) do
-                bar:EnableMouse(not value)
-            end
         end)
     ns.AddToPage(page, Settings.CreateCheckbox(category, lock,
         "Drag a bar on the character panel to place it, fine-tune with the offsets below, then lock it so it cannot be dragged."))
@@ -261,16 +255,25 @@ local function CreateBar(spec)
     -- that is drawn under them once the bar is dragged over the panel.
     bar:SetFrameLevel(200)
     bar:SetMovable(true)
-    bar:EnableMouse(not ns.db.characterPanelLocked)
+    bar:EnableMouse(true)
     bar:RegisterForDrag("LeftButton")
-    bar:SetScript("OnDragStart", bar.StartMoving)
+    -- The lock is checked at drag time, not by disabling the mouse: a drag
+    -- that starts on an icon is handed up to the bar whether or not the bar
+    -- itself listens to the mouse, so only the handler can refuse it.
+    bar:SetScript("OnDragStart", function(self)
+        if not ns.db.characterPanelLocked then
+            self:StartMoving()
+        end
+    end)
     bar:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        SaveDraggedPosition(self)
+        if self:IsMovable() and not ns.db.characterPanelLocked then
+            self:StopMovingOrSizing()
+            SaveDraggedPosition(self)
+        end
     end)
     bar:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("Drag to move", 1, 1, 1)
+        GameTooltip:SetText(ns.db.characterPanelLocked and "Locked (LittleThings settings)" or "Drag to move", 1, 1, 1)
         GameTooltip:Show()
     end)
     bar:SetScript("OnLeave", GameTooltip_Hide)
