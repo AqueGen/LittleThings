@@ -50,4 +50,4 @@ Off by default. Right-click a player - in a unit frame, chat, the guild roster o
 
 `busted tests` runs the pure-logic suite - number composition, snap geometry, the drop preview and the transparency rules. Everything frame-bound is verified in game against `docs/IN-GAME-CHECKLIST.md`.
 
-A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key`; a switch is a row in `ns.MODULES` in `Core.lua`, which also gives the module its settings page as `ns.pages[key]`, opened with the switch. The module adds its own options to that page from `Enable`.
+A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key` (a module with no key is always enabled and reads its switch itself); a switch is a row in `ns.MODULES` in `Core.lua`, which also gives the module its settings page as `ns.pages[key]`, opened with the switch. The module adds its own options to that page from `Enable`.
