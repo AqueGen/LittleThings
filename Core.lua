@@ -283,7 +283,7 @@ function ns.RegisterSubcategory(name)
 end
 
 local function IsEnabled(module)
-    if not ns.db[module.key] then
+    if module.key and not ns.db[module.key] then
         return false
     end
 
