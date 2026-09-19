@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/AqueGen/LittleThings/compare/v0.9.0...v0.9.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* enable the log link module again so its menu entries and /wcl come back ([#12](https://github.com/AqueGen/LittleThings/issues/12)) ([eb8334d](https://github.com/AqueGen/LittleThings/commit/eb8334dab92193ee0469ece29693140900d4d14c))
+
 ## [0.9.0](https://github.com/AqueGen/LittleThings/compare/v0.8.0...v0.9.0) (2026-09-16)
 
 
