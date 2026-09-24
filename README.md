@@ -40,7 +40,7 @@ Off by default. Right-click a player - in a unit frame, chat, the guild roster o
 
 ### Journal loot
 
-Off by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. The icons sit at the top right of the row or next to the armor type, 12 to 24 pixels.
+Off by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. The icons hang from any corner of the row: bottom right next to the armor type (the default), top right, or the top or bottom corner of the item's own icon. Size is 12 to 24 pixels.
 
 ## Commands
 

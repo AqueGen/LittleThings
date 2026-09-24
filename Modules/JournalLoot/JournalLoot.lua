@@ -12,7 +12,15 @@ local ROLE_ATLAS = {
     DAMAGER = "UI-LFG-RoleIcon-DPS-Micro-GroupFinder",
 }
 
-JournalLoot.defaults = { allClasses = false, corner = "topright", size = 16 }
+local CORNERS = {
+    topleft = { label = "Top left, on the item icon", point = "TOPLEFT", frame = "icon", x = 1, y = -1, grow = 1 },
+    bottomleft = { label = "Bottom left, on the item icon", point = "BOTTOMLEFT", frame = "icon", x = 1, y = 1, grow = 1 },
+    topright = { label = "Top right of the row", point = "TOPRIGHT", x = -4, y = -4, grow = -1 },
+    bottomright = { label = "Bottom right, next to the armor type", point = "RIGHT", frame = "armorType", relativePoint = "LEFT", x = -4, y = 0, grow = -1 },
+}
+local CORNER_ORDER = { "topleft", "topright", "bottomleft", "bottomright" }
+
+JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16 }
 
 local classes
 local cache = {}
@@ -104,12 +112,16 @@ end
 local function Place(texture, button, previous, size)
     texture:ClearAllPoints()
     texture:SetSize(size, size)
+    local corner = CORNERS[Options().corner] or CORNERS[JournalLoot.defaults.corner]
     if previous then
-        texture:SetPoint("RIGHT", previous, "LEFT", -1, 0)
-    elseif Options().corner == "bottomright" then
-        texture:SetPoint("RIGHT", button.armorType, "LEFT", -4, 0)
+        if corner.grow > 0 then
+            texture:SetPoint("LEFT", previous, "RIGHT", 1, 0)
+        else
+            texture:SetPoint("RIGHT", previous, "LEFT", -1, 0)
+        end
     else
-        texture:SetPoint("TOPRIGHT", button, "TOPRIGHT", -4, -4)
+        local relativeTo = corner.frame and button[corner.frame] or button
+        texture:SetPoint(corner.point, relativeTo, corner.relativePoint or corner.point, corner.x, corner.y)
     end
 end
 
@@ -191,8 +203,9 @@ function JournalLoot.Pages(page)
 
     local function CornerOptions()
         local container = Settings.CreateControlTextContainer()
-        container:Add("topright", "Top right of the item")
-        container:Add("bottomright", "Next to the armor type")
+        for _, key in ipairs(CORNER_ORDER) do
+            container:Add(key, CORNERS[key].label)
+        end
         return container:GetData()
     end
     ns.AddToPage(page, Settings.CreateDropdown(category, Proxy("corner", Settings.VarType.String, "Position"),
