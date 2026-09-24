@@ -16,7 +16,7 @@ local CORNERS = {
     topleft = { label = "Top left, on the item icon", point = "TOPLEFT", frame = "icon", x = 1, y = -1, grow = 1 },
     bottomleft = { label = "Bottom left, on the item icon", point = "BOTTOMLEFT", frame = "icon", x = 1, y = 1, grow = 1 },
     topright = { label = "Top right, on the name line", point = "TOPRIGHT", x = -22, y = -6, grow = -1 },
-    bottomright = { label = "Bottom right, next to the armor type", point = "RIGHT", frame = "armorType", relativePoint = "LEFT", x = -4, y = 0, grow = -1 },
+    bottomright = { label = "Bottom right, armor type moves left", point = "RIGHT", frame = "name", relativePoint = "TOPLEFT", x = 264, y = -24, grow = -1, pushesArmor = true },
 }
 local CORNER_ORDER = { "topleft", "topright", "bottomleft", "bottomright" }
 
@@ -109,10 +109,26 @@ local function SetEntry(texture, entry)
     end
 end
 
+local function Corner()
+    return CORNERS[Options().corner] or CORNERS[JournalLoot.defaults.corner]
+end
+
+local function PlaceArmorType(button, leftmost)
+    local armor = button.armorType
+    if not armor or not (leftmost or button.ltArmorMoved) then return end
+    armor:ClearAllPoints()
+    if leftmost then
+        armor:SetPoint("RIGHT", leftmost, "LEFT", -3, 0)
+    else
+        armor:SetPoint("BOTTOMRIGHT", button.name, "TOPLEFT", 264, -30)
+    end
+    button.ltArmorMoved = leftmost ~= nil
+end
+
 local function Place(texture, button, previous, size)
     texture:ClearAllPoints()
     texture:SetSize(size, size)
-    local corner = CORNERS[Options().corner] or CORNERS[JournalLoot.defaults.corner]
+    local corner = Corner()
     if previous then
         if corner.grow > 0 then
             texture:SetPoint("LEFT", previous, "RIGHT", 1, 0)
@@ -151,6 +167,8 @@ local function Paint(button)
     for i = count + 1, icons and #icons or 0 do
         icons[i]:Hide()
     end
+
+    PlaceArmorType(button, count > 0 and Corner().pushesArmor and icons[count] or nil)
 end
 
 local function ScrollBox()
