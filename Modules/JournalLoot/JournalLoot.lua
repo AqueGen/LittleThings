@@ -13,14 +13,12 @@ local ROLE_ATLAS = {
 }
 
 local CORNERS = {
-    topleft = { label = "Top left, on the item icon", point = "TOPLEFT", frame = "icon", x = 1, y = -1, grow = 1 },
-    bottomleft = { label = "Bottom left, on the item icon", point = "BOTTOMLEFT", frame = "icon", x = 1, y = 1, grow = 1 },
-    topright = { label = "Top right, on the name line", point = "TOPRIGHT", x = -22, y = -6, grow = -1 },
-    bottomright = { label = "Bottom right, armor type moves left", point = "RIGHT", frame = "name", relativePoint = "TOPLEFT", x = 264, y = -24, grow = -1, pushesArmor = true },
+    bottomright = { label = "Slot line, right edge", point = "RIGHT", frame = "name", relativePoint = "TOPLEFT", x = 264, y = -24, pushesArmor = true },
+    topright = { label = "Name line, right edge", point = "TOPRIGHT", x = -22, y = -6 },
 }
-local CORNER_ORDER = { "topleft", "topright", "bottomleft", "bottomright" }
+local CORNER_ORDER = { "bottomright", "topright" }
 
-JournalLoot.defaults = { allClasses = false, corner = "topright", size = 16 }
+JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16 }
 
 local classes
 local cache = {}
@@ -110,7 +108,7 @@ local function SetEntry(texture, entry)
 end
 
 local function Corner()
-    return CORNERS[Options().corner] or CORNERS[JournalLoot.defaults.corner]
+    return CORNERS[Options().corner]
 end
 
 local function PlaceArmorType(button, leftmost)
@@ -130,11 +128,7 @@ local function Place(texture, button, previous, size)
     texture:SetSize(size, size)
     local corner = Corner()
     if previous then
-        if corner.grow > 0 then
-            texture:SetPoint("LEFT", previous, "RIGHT", 1, 0)
-        else
-            texture:SetPoint("RIGHT", previous, "LEFT", -1, 0)
-        end
+        texture:SetPoint("RIGHT", previous, "LEFT", -1, 0)
     else
         local relativeTo = corner.frame and button[corner.frame] or button
         texture:SetPoint(corner.point, relativeTo, corner.relativePoint or corner.point, corner.x, corner.y)
@@ -204,6 +198,9 @@ end
 function JournalLoot.Pages(page)
     ns.db.journalLootOptions = ns.db.journalLootOptions or {}
     ns.ApplyDefaults(ns.db.journalLootOptions, JournalLoot.defaults)
+    if not CORNERS[Options().corner] then
+        Options().corner = JournalLoot.defaults.corner
+    end
 
     local category = page.category
     local function Proxy(key, varType, label)
@@ -227,7 +224,7 @@ function JournalLoot.Pages(page)
         return container:GetData()
     end
     ns.AddToPage(page, Settings.CreateDropdown(category, Proxy("corner", Settings.VarType.String, "Position"),
-        CornerOptions, "Where the icons sit on each loot row."))
+        CornerOptions, "Slot line: one column at the right edge of every row, the armor type moves left of it and nothing is covered. Name line: right of the item name, clear of a transmog addon's corner mark, but a long name can run under the icons."))
 
     local sizeOptions = Settings.CreateSliderOptions(12, 24, 1)
     sizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
