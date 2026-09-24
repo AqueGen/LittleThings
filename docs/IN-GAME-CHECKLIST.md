@@ -78,5 +78,5 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Pick another class in the journal's class filter: the icons follow that class. Clear the filter: back to yours.
 - [ ] Scroll the list and switch bosses, difficulty and the slot filter: icons stay on the right rows, none linger on header rows.
 - [ ] All classes on: trinkets and rings fold into role icons or the everyone icon, armor into class icons plus loose specs.
-- [ ] Default position is bottom right, left of the armor text, without covering the slot name. Each of the four corners places the icons live: left corners sit on the item icon and grow right, right corners grow left. The size slider resizes live.
+- [ ] Default position is top right on the name line, on its own line apart from the armor type, and clear of a transmog addon's corner mark. Bottom right sits left of the armor text without covering the slot name. Each of the four corners places the icons live: left corners sit on the item icon and grow right, right corners grow left. The size slider resizes live.
 - [ ] Switch off: icons disappear at once. BugSack stays empty throughout, and the journal's own class filter is unchanged after every step.

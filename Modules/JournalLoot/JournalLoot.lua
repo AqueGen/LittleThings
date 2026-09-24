@@ -15,12 +15,12 @@ local ROLE_ATLAS = {
 local CORNERS = {
     topleft = { label = "Top left, on the item icon", point = "TOPLEFT", frame = "icon", x = 1, y = -1, grow = 1 },
     bottomleft = { label = "Bottom left, on the item icon", point = "BOTTOMLEFT", frame = "icon", x = 1, y = 1, grow = 1 },
-    topright = { label = "Top right of the row", point = "TOPRIGHT", x = -4, y = -4, grow = -1 },
+    topright = { label = "Top right, on the name line", point = "TOPRIGHT", x = -22, y = -6, grow = -1 },
     bottomright = { label = "Bottom right, next to the armor type", point = "RIGHT", frame = "armorType", relativePoint = "LEFT", x = -4, y = 0, grow = -1 },
 }
 local CORNER_ORDER = { "topleft", "topright", "bottomleft", "bottomright" }
 
-JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16 }
+JournalLoot.defaults = { allClasses = false, corner = "topright", size = 16 }
 
 local classes
 local cache = {}
