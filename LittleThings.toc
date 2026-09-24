@@ -1,6 +1,6 @@
 ## Interface: 120100
 ## Title: LittleThings
-## Notes: Small touches on the default UI, the bits that were missing. Nothing replaced, nothing heavy: readable numbers and snapping for the built-in damage meter, one-click spec and loot spec, a Warcraft Logs link in player menus.
+## Notes: Small touches on the default UI, the bits that were missing. Nothing replaced, nothing heavy: readable numbers and snapping for the built-in damage meter, one-click spec and loot spec, a Warcraft Logs link in player menus, loot spec icons in the Adventure Guide.
 ## Author: AqueGen
 # x-release-please-start-version
 ## Version: 0.9.1
@@ -24,3 +24,5 @@ Modules/LogLink/LogLinkRealms.lua
 Modules/LogLink/LogLinkUrl.lua
 Modules/LogLink/LogLink.lua
 Modules/CharacterPanel.lua
+Modules/JournalLoot/JournalLootIcons.lua
+Modules/JournalLoot/JournalLoot.lua

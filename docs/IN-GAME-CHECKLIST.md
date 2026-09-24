@@ -71,3 +71,12 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Hide on a row hides the window; the row stays.
 - [ ] Snapping two windows and reopening the page shows the link, gap and match flags; Detach drops it.
 - [ ] **After typing a size for window 1, open Edit Mode and press Save**: no "Interface action failed because of an addon".
+
+## 7. Journal loot
+
+- [ ] Switch on Journal loot, open the Adventure Guide on a current dungeon boss, Loot tab: rows show your class's spec icons, and an item every spec of your class gets shows one class icon. No reload needed.
+- [ ] Pick another class in the journal's class filter: the icons follow that class. Clear the filter: back to yours.
+- [ ] Scroll the list and switch bosses, difficulty and the slot filter: icons stay on the right rows, none linger on header rows.
+- [ ] All classes on: trinkets and rings fold into role icons or the everyone icon, armor into class icons plus loose specs.
+- [ ] Position "Next to the armor type" sits left of the armor text without covering the slot name. The size slider resizes live.
+- [ ] Switch off: icons disappear at once. BugSack stays empty throughout, and the journal's own class filter is unchanged after every step.

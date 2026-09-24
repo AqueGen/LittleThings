@@ -6,6 +6,7 @@ ns.defaults = {
     -- Off by default: a player who installed this for the meter did not ask
     -- for entries in every unit menu.
     logLink = false,
+    journalLoot = false,
 
     format = true,
     snap = true,
@@ -24,6 +25,7 @@ ns.MODULES = {
     { key = "damageMeter", label = "Damage meter", switch = "Damage meter tweaks", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
     { key = "characterPanel", label = "Character panel", switch = "Spec and loot spec bars", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
     { key = "logLink", label = "Mythic+ log link", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
+    { key = "journalLoot", label = "Journal loot", switch = "Loot spec icons in the Adventure Guide", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
 }
 
 local modules = {}
