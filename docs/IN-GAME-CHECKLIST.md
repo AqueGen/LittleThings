@@ -63,7 +63,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## 6. Settings panel
 
 - [ ] The behaviour page has readable numbers, snapping, snap distance, idle transparency, layer, and at the bottom a Blizzard section with Enable Damage Meter and Auto Reset that mirror Gameplay Enhancements both ways.
-- [ ] The Windows page lists three rows. Ticking Shown on a hidden slot shows the window and offers a reload; after the reload the window is there and combat logs nothing. Window 1's size boxes route through Edit Mode; a size Edit Mode refuses prints a message.
+- [ ] The addon list has one Damage meter entry, with Windows nested under it. The Windows page lists three rows. Ticking Shown on a hidden slot shows the window and offers a reload; after the reload the window is there and combat logs nothing. Window 1's size boxes route through Edit Mode; a size Edit Mode refuses prints a message.
 - [ ] Typing an out-of-range width comes back clamped. A locked window's boxes are greyed.
 - [ ] Lock per row, Lock all and Unlock all agree with the gear menu's lock state; no reload prompt.
 - [ ] **Lock window 2 from the panel, reload, fight, open window 2's gear menu in combat**: it opens, BugSack stays empty. (Without the reload the gear menu errors in combat - known, accepted.)

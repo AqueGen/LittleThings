@@ -555,7 +555,7 @@ function Config.Pages(modulePage)
         end
     end)
 
-    local subcategory = Settings.RegisterCanvasLayoutSubcategory(ns.category, windowPanel, "Damage meter windows")
+    local subcategory = Settings.RegisterCanvasLayoutSubcategory(category, windowPanel, "Windows")
     Settings.RegisterAddOnCategory(subcategory)
 end
 
