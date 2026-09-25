@@ -13,10 +13,11 @@ local ROLE_ATLAS = {
 }
 
 local CORNERS = {
-    bottomright = { label = "Slot line, right edge", point = "RIGHT", frame = "name", relativePoint = "TOPLEFT", x = 264, y = -24, pushesArmor = true },
+    bottomright = { label = "Slot line, right edge", point = "RIGHT", relativePoint = "TOPRIGHT", x = -2, y = -24, pushesArmor = true },
     topright = { label = "Name line, right edge", point = "TOPRIGHT", x = -22, y = -6 },
 }
 local CORNER_ORDER = { "bottomright", "topright" }
+local ARMOR_RIGHT = 264
 
 JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16 }
 
@@ -111,14 +112,22 @@ local function Corner()
     return CORNERS[Options().corner]
 end
 
+local ARMOR_GAP = 3
+
+local function Overlaps(button, leftmost)
+    local nameLeft, iconsLeft = button.name:GetLeft(), leftmost:GetLeft()
+    if not nameLeft or not iconsLeft then return true end
+    return iconsLeft - ARMOR_GAP < nameLeft + ARMOR_RIGHT
+end
+
 local function PlaceArmorType(button, leftmost)
     local armor = button.armorType
     if not armor or not (leftmost or button.ltArmorMoved) then return end
     armor:ClearAllPoints()
     if leftmost then
-        armor:SetPoint("RIGHT", leftmost, "LEFT", -3, 0)
+        armor:SetPoint("RIGHT", leftmost, "LEFT", -ARMOR_GAP, 0)
     else
-        armor:SetPoint("BOTTOMRIGHT", button.name, "TOPLEFT", 264, -30)
+        armor:SetPoint("BOTTOMRIGHT", button.name, "TOPLEFT", ARMOR_RIGHT, -30)
     end
     button.ltArmorMoved = leftmost ~= nil
 end
@@ -162,7 +171,7 @@ local function Paint(button)
         icons[i]:Hide()
     end
 
-    PlaceArmorType(button, count > 0 and Corner().pushesArmor and icons[count] or nil)
+    PlaceArmorType(button, count > 0 and Corner().pushesArmor and Overlaps(button, icons[count]) and icons[count] or nil)
 end
 
 local function ScrollBox()
