@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/AqueGen/LittleThings/compare/v0.9.1...v0.10.0) (2026-09-25)
+
+
+### Features
+
+* show loot spec icons in the Adventure Guide ([#14](https://github.com/AqueGen/LittleThings/issues/14)) ([014affd](https://github.com/AqueGen/LittleThings/commit/014affd4199ad38f96e60ecb5b0aa9295a613ad1))
+
+
+### Bug Fixes
+
+* nest the damage meter windows page under Damage meter ([#15](https://github.com/AqueGen/LittleThings/issues/15)) ([fa6e642](https://github.com/AqueGen/LittleThings/commit/fa6e642f64d1bd0dbb4fc6f887d2960f90e0ce0c))
+
 ## [0.9.1](https://github.com/AqueGen/LittleThings/compare/v0.9.0...v0.9.1) (2026-09-19)
 
 
