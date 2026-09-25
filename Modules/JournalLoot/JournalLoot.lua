@@ -13,11 +13,11 @@ local ROLE_ATLAS = {
 }
 
 local CORNERS = {
-    bottomright = { label = "Slot line, right edge", point = "RIGHT", relativePoint = "TOPRIGHT", x = -2, y = -24, pushesArmor = true },
+    bottomright = { label = "Bottom right corner", point = "BOTTOMRIGHT", x = 0, y = 6, pushesArmor = true },
     topright = { label = "Name line, right edge", point = "TOPRIGHT", x = -22, y = -6 },
 }
 local CORNER_ORDER = { "bottomright", "topright" }
-local ARMOR_RIGHT = 264
+local ARMOR_X, ARMOR_Y = 264, -30
 
 JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16 }
 
@@ -114,22 +114,23 @@ end
 
 local ARMOR_GAP = 3
 
-local function Overlaps(button, leftmost)
-    local nameLeft, iconsLeft = button.name:GetLeft(), leftmost:GetLeft()
-    if not nameLeft or not iconsLeft then return true end
-    return iconsLeft - ARMOR_GAP < nameLeft + ARMOR_RIGHT
+local function ArmorShift(button, leftmost)
+    local name = button.name
+    local nameLeft, nameTop = name:GetLeft(), name:GetTop()
+    local iconsLeft, iconsTop = leftmost:GetLeft(), leftmost:GetTop()
+    if not (nameLeft and nameTop and iconsLeft and iconsTop) then return end
+    local clearOfIcons = iconsLeft - ARMOR_GAP - nameLeft
+    if clearOfIcons < ARMOR_X and iconsTop > nameTop + ARMOR_Y then
+        return clearOfIcons
+    end
 end
 
-local function PlaceArmorType(button, leftmost)
+local function PlaceArmorType(button, x)
     local armor = button.armorType
-    if not armor or not (leftmost or button.ltArmorMoved) then return end
+    if not armor or not (x or button.ltArmorMoved) then return end
     armor:ClearAllPoints()
-    if leftmost then
-        armor:SetPoint("RIGHT", leftmost, "LEFT", -ARMOR_GAP, 0)
-    else
-        armor:SetPoint("BOTTOMRIGHT", button.name, "TOPLEFT", ARMOR_RIGHT, -30)
-    end
-    button.ltArmorMoved = leftmost ~= nil
+    armor:SetPoint("BOTTOMRIGHT", button.name, "TOPLEFT", x or ARMOR_X, ARMOR_Y)
+    button.ltArmorMoved = x ~= nil
 end
 
 local function Place(texture, button, previous, size)
@@ -171,7 +172,7 @@ local function Paint(button)
         icons[i]:Hide()
     end
 
-    PlaceArmorType(button, count > 0 and Corner().pushesArmor and Overlaps(button, icons[count]) and icons[count] or nil)
+    PlaceArmorType(button, count > 0 and Corner().pushesArmor and ArmorShift(button, icons[count]) or nil)
 end
 
 local function ScrollBox()
@@ -233,7 +234,7 @@ function JournalLoot.Pages(page)
         return container:GetData()
     end
     ns.AddToPage(page, Settings.CreateDropdown(category, Proxy("corner", Settings.VarType.String, "Position"),
-        CornerOptions, "Slot line: one column at the right edge of every row, the armor type moves left of it and nothing is covered. Name line: right of the item name, clear of a transmog addon's corner mark, but a long name can run under the icons."))
+        CornerOptions, "Bottom right corner: one column at the right edge of every row, on the boss line where the row has one. Where the icons would cover the armor type it moves left of them. Name line: right of the item name, clear of a transmog addon's corner mark, but a long name can run under the icons."))
 
     local sizeOptions = Settings.CreateSliderOptions(12, 24, 1)
     sizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
