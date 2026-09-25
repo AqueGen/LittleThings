@@ -38,6 +38,10 @@ Off by default. Two bars of icons next to the character panel: your specializati
 
 Off by default. Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
 
+### Journal loot
+
+Off by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels.
+
 ## Commands
 
 - `/lt` (or `/littlethings`, `/dmc`) - settings

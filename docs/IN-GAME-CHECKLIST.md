@@ -71,3 +71,14 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Hide on a row hides the window; the row stays.
 - [ ] Snapping two windows and reopening the page shows the link, gap and match flags; Detach drops it.
 - [ ] **After typing a size for window 1, open Edit Mode and press Save**: no "Interface action failed because of an addon".
+
+## 7. Journal loot
+
+- [ ] Switch on Journal loot, open the Adventure Guide on a current dungeon boss, Loot tab: rows show your class's spec icons, and an item every spec of your class gets shows one class icon. No reload needed.
+- [ ] Pick another class in the journal's class filter: the icons follow that class. Clear the filter: back to yours.
+- [ ] Scroll the list and switch bosses, difficulty and the slot filter: icons stay on the right rows, none linger on header rows.
+- [ ] All classes on: trinkets and rings fold into role icons or the everyone icon, armor into class icons plus loose specs.
+- [ ] Default position "Bottom right corner": the icons form one column in the row's bottom right corner, as in EQoL. Dungeon rows put them on the boss line and the armor text never moves. Raid boss rows (no boss line): one icon fits right of the armor text, two or more push the armor text left at its own height. Nothing is covered. With the module off or on the name line the armor text is back in Blizzard's place.
+- [ ] "Name line, right edge" puts the icons right of the item name, clear of a transmog addon's corner mark. Switching between the two is live, and so is the size slider.
+- [ ] A profile saved with a position that no longer exists opens on the slot line.
+- [ ] Switch off: icons disappear at once. BugSack stays empty throughout, and the journal's own class filter is unchanged after every step.
