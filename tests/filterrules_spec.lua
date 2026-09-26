@@ -118,3 +118,67 @@ describe("Rules.CountClasses", function()
     assert.is_nil(counts.ROGUE)
   end)
 end)
+describe("Rules.Passes, roles", function()
+  local tankOnly = member("WARRIOR", { roles = { TANK = true, HEALER = false, DAMAGER = false } })
+  local tankOrDps = member("WARRIOR", { roles = { TANK = true, HEALER = false, DAMAGER = true } })
+  local healer = member("PRIEST", { roles = { TANK = false, HEALER = true, DAMAGER = false } })
+  local noTank = { open = { TANK = 0, HEALER = 1, DAMAGER = 3 }, hasBloodlust = false, hasBattleRes = false }
+
+  it("drops a member whose every offered role is toggled off", function()
+    assert.is_false(Rules.Passes(app(healer), OPEN_GROUP, settings({ roles = { TANK = true, HEALER = false, DAMAGER = true } })))
+  end)
+
+  it("hides a role the group already has only when asked to", function()
+    assert.is_true(Rules.Passes(app(tankOnly), noTank, settings()))
+    assert.is_false(Rules.Passes(app(tankOnly), noTank, settings({ hideFilledRoles = true })))
+    assert.is_true(Rules.Passes(app(tankOrDps), noTank, settings({ hideFilledRoles = true })))
+  end)
+
+  it("drops a group application that does not fit the open slots", function()
+    local oneDps = { open = { TANK = 0, HEALER = 0, DAMAGER = 1 }, hasBloodlust = false, hasBattleRes = false }
+    assert.is_false(Rules.Passes(app(member("MAGE"), member("ROGUE")), oneDps, settings({ hideFilledRoles = true })))
+  end)
+
+  it("never hides by role when the listing has no role slots", function()
+    local raid = { open = nil, hasBloodlust = false, hasBattleRes = false }
+    assert.is_true(Rules.Passes(app(tankOnly), raid, settings({ hideFilledRoles = true, bloodlustFit = true, battleResFit = true })))
+  end)
+end)
+
+describe("Rules.Passes, Bloodlust fit", function()
+  local lastDps = { open = { TANK = 0, HEALER = 0, DAMAGER = 1 }, hasBloodlust = false, hasBattleRes = false }
+  local s = settings({ bloodlustFit = true })
+
+  it("keeps anyone when the group already has Bloodlust", function()
+    local has = { open = lastDps.open, hasBloodlust = true, hasBattleRes = false }
+    assert.is_true(Rules.Passes(app(member("ROGUE")), has, s))
+  end)
+
+  it("keeps an applicant who brings Bloodlust into the last slot", function()
+    assert.is_true(Rules.Passes(app(member("MAGE")), lastDps, s))
+  end)
+
+  it("drops a non-Bloodlust applicant taking the last damage or healer slot", function()
+    assert.is_false(Rules.Passes(app(member("ROGUE")), lastDps, s))
+  end)
+
+  it("keeps a non-Bloodlust applicant when a slot stays open after them", function()
+    local twoDps = { open = { TANK = 0, HEALER = 0, DAMAGER = 2 }, hasBloodlust = false, hasBattleRes = false }
+    assert.is_true(Rules.Passes(app(member("ROGUE")), twoDps, s))
+  end)
+end)
+
+describe("Rules.Passes, battle res fit", function()
+  local s = settings({ battleResFit = true })
+  local lastDps = { open = { TANK = 0, HEALER = 0, DAMAGER = 1 }, hasBloodlust = false, hasBattleRes = false }
+
+  it("drops a non-res applicant taking the last slot and keeps a res class", function()
+    assert.is_false(Rules.Passes(app(member("ROGUE")), lastDps, s))
+    assert.is_true(Rules.Passes(app(member("DRUID")), lastDps, s))
+  end)
+
+  it("counts an open tank slot as room for a res class", function()
+    local tankOpen = { open = { TANK = 1, HEALER = 0, DAMAGER = 1 }, hasBloodlust = false, hasBattleRes = false }
+    assert.is_true(Rules.Passes(app(member("ROGUE")), tankOpen, s))
+  end)
+end)

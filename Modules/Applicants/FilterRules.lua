@@ -68,12 +68,60 @@ local function HasNeededClass(application, s)
     return false
 end
 
+local ALL_ROLES = { TANK = true, HEALER = true, DAMAGER = true }
+
+local function Leftovers(members, open, allowed, index, out)
+    index = index or 1
+    out = out or {}
+    if index > #members then
+        out[#out + 1] = { TANK = open.TANK, HEALER = open.HEALER, DAMAGER = open.DAMAGER }
+        return out
+    end
+    for _, role in ipairs(Rules.ROLES) do
+        if members[index].roles[role] and allowed[role] and open[role] > 0 then
+            open[role] = open[role] - 1
+            Leftovers(members, open, allowed, index + 1, out)
+            open[role] = open[role] + 1
+        end
+    end
+    return out
+end
+
+local function RoomAfter(members, open, roles)
+    for _, left in ipairs(Leftovers(members, open, ALL_ROLES)) do
+        for _, role in ipairs(roles) do
+            if left[role] > 0 then return true end
+        end
+    end
+    return false
+end
+
+local function Brings(application, classes)
+    for _, member in ipairs(application.members) do
+        if classes[member.class] then return true end
+    end
+    return false
+end
+
 function Rules.Passes(application, group, s)
     if application.pinned then return true end
     for _, member in ipairs(application.members) do
         if not MemberPasses(member, s) then return false end
     end
-    return HasNeededClass(application, s)
+    if not HasNeededClass(application, s) then return false end
+
+    local open = group.open
+    if not open then return true end
+    if s.hideFilledRoles and #Leftovers(application.members, open, s.roles) == 0 then return false end
+    if s.bloodlustFit and not (group.hasBloodlust or Brings(application, Rules.BLOODLUST))
+        and not RoomAfter(application.members, open, { "HEALER", "DAMAGER" }) then
+        return false
+    end
+    if s.battleResFit and not (group.hasBattleRes or Brings(application, Rules.BATTLE_RES))
+        and not RoomAfter(application.members, open, Rules.ROLES) then
+        return false
+    end
+    return true
 end
 
 function Rules.CountClasses(applications)
