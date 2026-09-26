@@ -19,7 +19,6 @@ ns.defaults = {
 
 ns.charDefaults = {
     links = {},
-    classFilter = {},
 }
 
 ns.MODULES = {
@@ -28,7 +27,7 @@ ns.MODULES = {
     { key = "logLink", label = "Mythic+ log link", page = "Mythic+", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "journalLoot", label = "Journal loot", switch = "Loot spec icons in the Adventure Guide", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
     { key = "applicantSort", label = "Mythic+ applicants", page = "Mythic+", switch = "Sort Mythic+ applicants by rating", live = true, tooltip = "When your group is listed for a Mythic+ dungeon, applicants are listed by Mythic+ rating, highest first. Applicants without a rating go to the bottom. Other listings keep Blizzard's order. Takes effect the next time the applicant list updates." },
-    { key = "classFilter", label = "Class filter", page = "Mythic+", switch = "Class filter for applicants", live = true, tooltip = "A row of class icons under the group finder while you look through applicants to your group, in every category. Click a class to need it (only applicants with at least one needed class stay), again to exclude it (applicants of that class are hidden), again to clear it. The picks are saved per character." },
+    { key = "classFilter", label = "Applicant filter", page = "Mythic+", switch = "Applicant filter panel", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum rating and item level, best key in this dungeon, Bloodlust and battle res fit. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
 }
 
 local modules = {}

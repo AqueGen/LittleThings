@@ -31,5 +31,4 @@ Modules/Applicants/ApplicantData.lua
 Modules/Applicants/Pipeline.lua
 Modules/Applicants/ApplicantOrder.lua
 Modules/Applicants/ApplicantSort.lua
-Modules/ClassFilter/ClassFilterRules.lua
-Modules/ClassFilter/ClassFilter.lua
+Modules/Applicants/ApplicantFilter.lua
