@@ -1,10 +1,12 @@
 local addonName, ns = ...
 
 local Rules = ns.FilterRules
+local Data = ns.ApplicantData
 local Filter = ns.ApplicantFilter
 
 local WIDTH = 214
 local PAD = 10
+local TITLE_HEIGHT = 26
 local ICON, ICON_STEP, PER_ROW = 22, 39, 5
 local CLASS_CIRCLES = "Interface\\TargetingFrame\\UI-Classes-Circles"
 local ROLE_ATLAS = {
@@ -25,17 +27,25 @@ local SIDE_ORDER = { "right", "left" }
 local POSITION_DEFAULTS = { side = "right", x = 0, y = 0 }
 
 local panel
+local rows = {}
 local classButtons, roleButtons, boxes, checks = {}, {}, {}, {}
 
 local function S()
     return Filter.Settings()
 end
 
-local function Heading(text, y)
-    local fs = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    fs:SetPoint("TOPLEFT", PAD, y)
+local function Row(height, fiveManOnly)
+    local row = CreateFrame("Frame", nil, panel)
+    row:SetSize(WIDTH, height)
+    row.fiveManOnly = fiveManOnly
+    rows[#rows + 1] = row
+    return row
+end
+
+local function Heading(row, text)
+    local fs = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    fs:SetPoint("TOPLEFT", PAD, 0)
     fs:SetText(text)
-    return y - 18
 end
 
 local function PaintClass(button)
@@ -68,42 +78,43 @@ local function ClassClick(button, mouseButton)
     Filter.Changed()
 end
 
-local function BuildClasses(y)
-    y = Heading("Classes", y)
-    local index = 0
+local function BuildClasses()
+    local classes = {}
     for i = 1, GetNumClasses() do
         local info = C_CreatureInfo.GetClassInfo(i)
-        if info and CLASS_ICON_TCOORDS[info.classFile] then
-            local column, row = index % PER_ROW, math.floor(index / PER_ROW)
-            local button = CreateFrame("Button", nil, panel)
-            button:SetSize(ICON, ICON)
-            button:SetPoint("TOPLEFT", PAD + 6 + column * ICON_STEP, y - row * 36)
-            button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-            button.border = button:CreateTexture(nil, "BACKGROUND")
-            button.border:SetPoint("TOPLEFT", -2, 2)
-            button.border:SetPoint("BOTTOMRIGHT", 2, -2)
-            button.icon = button:CreateTexture(nil, "ARTWORK")
-            button.icon:SetAllPoints()
-            button.icon:SetTexture(CLASS_CIRCLES)
-            button.icon:SetTexCoord(unpack(CLASS_ICON_TCOORDS[info.classFile]))
-            button.count = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            button.count:SetPoint("TOP", button, "BOTTOM", 0, -1)
-            button.class, button.name = info.classFile, info.className
-            button.color = RAID_CLASS_COLORS[info.classFile] or NORMAL_FONT_COLOR
-            button:SetScript("OnClick", ClassClick)
-            button:SetScript("OnEnter", ClassTooltip)
-            button:SetScript("OnLeave", GameTooltip_Hide)
-            classButtons[#classButtons + 1] = button
-            index = index + 1
-        end
+        if info and CLASS_ICON_TCOORDS[info.classFile] then classes[#classes + 1] = info end
     end
-    return y - math.ceil(index / PER_ROW) * 36 - 4
+
+    local row = Row(18 + math.ceil(#classes / PER_ROW) * 36 + 4)
+    Heading(row, "Classes")
+    for index, info in ipairs(classes) do
+        local column, line = (index - 1) % PER_ROW, math.floor((index - 1) / PER_ROW)
+        local button = CreateFrame("Button", nil, row)
+        button:SetSize(ICON, ICON)
+        button:SetPoint("TOPLEFT", PAD + 6 + column * ICON_STEP, -18 - line * 36)
+        button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        button.border = button:CreateTexture(nil, "BACKGROUND")
+        button.border:SetPoint("TOPLEFT", -2, 2)
+        button.border:SetPoint("BOTTOMRIGHT", 2, -2)
+        button.icon = button:CreateTexture(nil, "ARTWORK")
+        button.icon:SetAllPoints()
+        button.icon:SetTexture(CLASS_CIRCLES)
+        button.icon:SetTexCoord(unpack(CLASS_ICON_TCOORDS[info.classFile]))
+        button.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        button.count:SetPoint("TOP", button, "BOTTOM", 0, -1)
+        button.class, button.name = info.classFile, info.className
+        button.color = RAID_CLASS_COLORS[info.classFile] or NORMAL_FONT_COLOR
+        button:SetScript("OnClick", ClassClick)
+        button:SetScript("OnEnter", ClassTooltip)
+        button:SetScript("OnLeave", GameTooltip_Hide)
+        classButtons[#classButtons + 1] = button
+    end
 end
 
-local function Check(key, label, x, y)
-    local check = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+local function Check(row, key, label, y)
+    local check = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
     check:SetSize(24, 24)
-    check:SetPoint("TOPLEFT", x, y)
+    check:SetPoint("TOPLEFT", PAD, y)
     check.text:SetText(label)
     check.text:SetFontObject("GameFontHighlightSmall")
     check:SetScript("OnClick", function(self)
@@ -111,16 +122,15 @@ local function Check(key, label, x, y)
         Filter.Changed()
     end)
     checks[key] = check
-    return check
 end
 
-local function Box(key, label, y)
-    local fs = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    fs:SetPoint("TOPLEFT", PAD, y - 4)
+local function Box(row, key, label)
+    local fs = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    fs:SetPoint("TOPLEFT", PAD, -4)
     fs:SetText(label)
-    local box = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
+    local box = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
     box:SetSize(54, 18)
-    box:SetPoint("TOPRIGHT", -PAD - 4, y)
+    box:SetPoint("TOPRIGHT", -PAD - 4, 0)
     box:SetAutoFocus(false)
     box:SetNumeric(true)
     box:SetMaxLetters(4)
@@ -130,9 +140,7 @@ local function Box(key, label, y)
         Filter.Changed()
     end)
     box:SetScript("OnEnterPressed", EditBox_ClearFocus)
-    box.label = fs
     boxes[key] = box
-    return y - 24
 end
 
 local function RoleClick(button)
@@ -141,12 +149,13 @@ local function RoleClick(button)
     Filter.Changed()
 end
 
-local function BuildRoles(y)
-    y = Heading("Roles", y)
+local function BuildRoles()
+    local row = Row(18 + 30)
+    Heading(row, "Roles")
     for index, role in ipairs(Rules.ROLES) do
-        local button = CreateFrame("Button", nil, panel)
+        local button = CreateFrame("Button", nil, row)
         button:SetSize(22, 22)
-        button:SetPoint("TOPLEFT", PAD + 6 + (index - 1) * 30, y)
+        button:SetPoint("TOPLEFT", PAD + 6 + (index - 1) * 30, -20)
         button.icon = button:CreateTexture(nil, "ARTWORK")
         button.icon:SetAllPoints()
         button.icon:SetAtlas(ROLE_ATLAS[role])
@@ -154,13 +163,19 @@ local function BuildRoles(y)
         button:SetScript("OnClick", RoleClick)
         roleButtons[role] = button
     end
-    Check("hideFilledRoles", "Hide roles already filled", PAD, y - 26)
-    return y - 54
 end
 
-local function BuildMode(y)
-    local dropdown = CreateFrame("DropdownButton", nil, panel, "WowStyle1DropdownTemplate")
-    dropdown:SetPoint("TOPLEFT", PAD, y)
+local function BuildUtility()
+    local row = Row(18 + 24 + 30, true)
+    Heading(row, "Group utility")
+    Check(row, "needBloodlust", "Brings Bloodlust", -18)
+    Check(row, "needBattleRes", "Brings battle res", -42)
+end
+
+local function BuildMode()
+    local row = Row(30)
+    local dropdown = CreateFrame("DropdownButton", nil, row, "WowStyle1DropdownTemplate")
+    dropdown:SetPoint("TOPLEFT", PAD, 0)
     dropdown:SetWidth(WIDTH - 2 * PAD)
     dropdown:SetupMenu(function(_, root)
         local function IsSelected(mode) return S().mode == mode end
@@ -171,7 +186,22 @@ local function BuildMode(y)
         root:CreateRadio("Move down", IsSelected, Select, "down")
         root:CreateRadio("Hide", IsSelected, Select, "hide")
     end)
-    return y - 30
+end
+
+local function Layout()
+    local listing = Data.Listing()
+    local fiveMan = listing == nil or listing.fiveMan
+    local y = -PAD - TITLE_HEIGHT
+    for _, row in ipairs(rows) do
+        local shown = fiveMan or not row.fiveManOnly
+        row:SetShown(shown)
+        if shown then
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, y)
+            y = y - row:GetHeight()
+        end
+    end
+    panel:SetHeight(-y + PAD)
 end
 
 local function ResetAll()
@@ -200,14 +230,7 @@ local function Sync()
     for key, check in pairs(checks) do
         check:SetChecked(s[key] == true)
     end
-
-    local mythicPlus = state.listing ~= nil and state.listing.isMythicPlus
-    local dungeonBox = boxes.minDungeonLevel
-    dungeonBox:SetEnabled(mythicPlus)
-    dungeonBox:SetAlpha(mythicPlus and 1 or 0.4)
-    dungeonBox.label:SetAlpha(mythicPlus and 1 or 0.4)
-    checks.timedOnly:SetEnabled(mythicPlus)
-    checks.timedOnly:SetAlpha(mythicPlus and 1 or 0.4)
+    Layout()
 
     panel.reset:SetEnabled(Rules.IsActive(s))
     if state.paused then
@@ -266,40 +289,26 @@ local function Build()
     background:SetColorTexture(0.04, 0.04, 0.06, 0.96)
     panel.Sync = Sync
 
-    local y = -PAD
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", PAD, y)
+    title:SetPoint("TOPLEFT", PAD, -PAD)
     title:SetText("Applicant filter")
-    y = y - 26
 
-    y = BuildClasses(y)
-    y = BuildRoles(y)
-    y = Heading("Minimums", y)
-    y = Box("minRating", "Mythic+ rating", y)
-    y = Box("minItemLevel", "Item level", y)
-    y = Box("minOverallLevel", "Best key anywhere", y)
-    y = Heading("This dungeon", y)
-    y = Box("minDungeonLevel", "Best key at least", y)
-    Check("timedOnly", "Timed only", PAD, y)
-    y = y - 28
-    y = Heading("Group utility", y)
-    Check("needBloodlust", "Brings Bloodlust", PAD, y)
-    y = y - 24
-    Check("needBattleRes", "Brings battle res", PAD, y)
-    y = y - 30
-    y = BuildMode(y)
+    BuildClasses()
+    BuildRoles()
+    Box(Row(28), "minItemLevel", "Minimum item level")
+    BuildUtility()
+    BuildMode()
 
-    panel.reset = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    local footer = Row(22)
+    panel.reset = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
     panel.reset:SetSize(70, 22)
-    panel.reset:SetPoint("TOPLEFT", PAD, y)
+    panel.reset:SetPoint("TOPLEFT", PAD, 0)
     panel.reset:SetText(RESET)
     panel.reset:SetScript("OnClick", ResetAll)
 
-    panel.status = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    panel.status = footer:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     panel.status:SetPoint("LEFT", panel.reset, "RIGHT", 8, 0)
-    y = y - 22 - PAD
 
-    panel:SetHeight(-y)
     Filter.panel = panel
     Filter.OnChange(Sync)
     panel:SetScript("OnShow", function()

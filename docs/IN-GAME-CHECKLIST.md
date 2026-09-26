@@ -95,21 +95,19 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 9. Applicant filter
 
-- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background; it is gone on the search list and when the finder closes. Drag it by its background: it stays where dropped, the page's X/Y offsets show the new values, and the spot is kept after /reload. Panel side Left and the offsets move it at once.
+- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background and shows Classes, Roles, Minimum item level, Group utility, the mode and Reset; it is gone on the search list and when the finder closes. Drag it by its background: it stays where dropped, the page's X/Y offsets show the new values, and the spot is kept after /reload. Panel side Left and the offsets move it at once.
+- [ ] List a raid: the panel drops Group utility and gets shorter; nothing else changes.
 - [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's until you leave the instance.
-- [ ] Best key at least 10 set, then list a raid: nobody moves down because of it.
 - [ ] Class icons show counts, including applicants moved down or hidden; need, exclude and clear work as the tooltip says.
-- [ ] Minimum rating 2500: applicants below move to the bottom, dimmed; "Moved down: N" matches. Empty the box: back to normal. Type 0: nothing moves.
-- [ ] Best key at least 10 and Timed only: an applicant who never ran the dungeon moves down. In a raid listing both are greyed out.
-- [ ] Roles: tank toggled off moves tank-only applicants down; a tank/damage flex stays. Hide roles already filled with a tank in the group moves tank-only applicants down; when the tank leaves, they come back.
+- [ ] Minimum item level 300: applicants below move to the bottom, dimmed; "Moved down: N" matches. Empty the box: back to normal. Type 0: nothing moves.
+- [ ] Roles: tank toggled off moves tank-only applicants down; a tank/damage flex stays.
 - [ ] Brings Bloodlust with no Bloodlust class in the group: shamans, mages, hunters and evokers stay on top, everyone else moves down (Hide: disappears). Once a Bloodlust class joins, the list is back. Both boxes: only applications bringing both stay on top.
 - [ ] Mode Hide: failing applicants disappear, "Hidden: N". An invited applicant stays whatever the filters say.
 - [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top in blue, this dungeon below in green, each dimmed when not timed, label colours matching, clear of the invite buttons; nothing on cancelled rows. Sort by "This dungeon" orders by the lower one.
 - [ ] List a raid with Raider.IO installed: each row shows two small progress lines where the Rating column would be, best progress on top, this raid at this difficulty below, coloured N green / H blue / M purple; empty for players Raider.IO does not know. Without Raider.IO: no error, no text.
-- [ ] Best key anywhere at least 12: applicants whose best run is below +12 move down.
 - [ ] An applicant cancels, times out or is declined: the row leaves the list at once. Remove closed applications off: the row stays with its X, as Blizzard shows it.
 - [ ] Reset clears everything except the mode. Invite and decline from a filtered list work, BugSack stays empty.
-- [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them.
+- [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them. Values saved for the removed options (minimum rating, keys) have no effect.
 - [ ] Switch off: the panel disappears and the list is Blizzard's again at once.
 
 ## 10. Default playstyle

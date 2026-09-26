@@ -136,17 +136,6 @@ describe("Data.Group, unassigned roles", function()
   end)
 end)
 
-describe("Data.Application, best key anywhere", function()
-  it("reads the best run from any dungeon for every listing", function()
-    local fake = lfg({ { class = "MAGE", itemLevel = 290, tank = false, healer = false, damage = true, rating = 2000 } })
-    fake.GetApplicantBestDungeonScore = function() return { bestRunLevel = 13, finishedSuccess = false, mapScore = 330 } end
-    install({ units = {}, lfg = fake })
-    local m = load().Application(7, { activityID = 42, isMythicPlus = false }).members[1]
-    assert.equals(13, m.overallLevel)
-    assert.is_false(m.overallTimed)
-  end)
-end)
-
 describe("Data.Listing, raids", function()
   it("marks a raid listing and leaves PvP and dungeons out", function()
     local fake = lfg({})

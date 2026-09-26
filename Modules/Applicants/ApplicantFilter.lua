@@ -52,7 +52,7 @@ local function Filter(applicants)
 
         if not state.paused then
             state.counts = Rules.CountClasses(list)
-            local settings = Rules.Effective(ApplicantFilter.Settings(), state.listing.isMythicPlus)
+            local settings = ApplicantFilter.Settings()
             if Rules.IsActive(settings) then
                 state.failed, state.count = Rules.Apply(applicants, byId, Data.Group(state.listing), settings)
             end
@@ -69,7 +69,7 @@ end
 
 local function UsesGroup()
     local s = ApplicantFilter.Settings()
-    return s.hideFilledRoles or s.needBloodlust or s.needBattleRes
+    return s.needBloodlust or s.needBattleRes
 end
 
 function ApplicantFilter.Options()

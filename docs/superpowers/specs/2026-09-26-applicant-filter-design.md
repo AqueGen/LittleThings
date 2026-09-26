@@ -67,3 +67,7 @@ busted specs for `FilterRules.lua`: each filter alone, needed versus excluded cl
 ## Out of scope
 
 Group search filtering (PGF covers it), expression filters, sounds, spec icons, applicant notes, leaver marks.
+
+## Simplified 2026-09-26
+
+The panel was cut back to keep the addon light: minimum Mythic+ rating (the listing's own requirement does this), best key anywhere, the This dungeon block with Timed only, and Hide roles already filled (the role toggles do it in one click) are gone. What stays: classes with counts, role toggles, minimum item level, Brings Bloodlust / Brings battle res (5-player listings only, hidden otherwise), mode, Reset. Keys and raid progress are shown on each row, not filtered.

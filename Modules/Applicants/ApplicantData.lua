@@ -66,11 +66,6 @@ function Data.Application(applicantID, listing)
             rating = rating,
             roles = { TANK = tank == true, HEALER = healer == true, DAMAGER = damage == true },
         }
-        local overall = Data.OverallBest(applicantID, i)
-        if overall == false then return nil end
-        if overall then
-            member.overallLevel, member.overallTimed = overall.level, overall.timed
-        end
         if listing.isMythicPlus then
             local best = Data.DungeonBest(applicantID, i, listing.activityID)
             if best == false then return nil end

@@ -12,25 +12,11 @@ function Rules.Defaults()
     return {
         classes = {},
         roles = { TANK = true, HEALER = true, DAMAGER = true },
-        hideFilledRoles = false,
-        minRating = nil,
         minItemLevel = nil,
-        minDungeonLevel = nil,
-        minOverallLevel = nil,
-        timedOnly = false,
         needBloodlust = false,
         needBattleRes = false,
         mode = "down",
     }
-end
-
-function Rules.Effective(s, isMythicPlus)
-    if isMythicPlus then return s end
-    local copy = {}
-    for key, value in pairs(s) do copy[key] = value end
-    copy.minDungeonLevel = nil
-    copy.timedOnly = false
-    return copy
 end
 
 local FINISHED = {
@@ -59,17 +45,12 @@ function Rules.IsActive(s)
     for _, role in ipairs(Rules.ROLES) do
         if not s.roles[role] then return true end
     end
-    return s.hideFilledRoles or s.timedOnly or s.needBloodlust or s.needBattleRes
-        or s.minRating ~= nil or s.minItemLevel ~= nil or s.minDungeonLevel ~= nil or s.minOverallLevel ~= nil
+    return s.needBloodlust or s.needBattleRes or s.minItemLevel ~= nil
 end
 
 local function MemberPasses(member, s)
     if s.classes[member.class] == Rules.EXCLUDE then return false end
-    if s.minRating and (member.rating or 0) < s.minRating then return false end
     if s.minItemLevel and (member.itemLevel or 0) < s.minItemLevel then return false end
-    if s.minDungeonLevel and (member.dungeonLevel or 0) < s.minDungeonLevel then return false end
-    if s.minOverallLevel and (member.overallLevel or 0) < s.minOverallLevel then return false end
-    if s.timedOnly and not member.dungeonTimed then return false end
     for _, role in ipairs(Rules.ROLES) do
         if member.roles[role] and s.roles[role] then return true end
     end
@@ -88,23 +69,6 @@ local function HasNeededClass(application, s)
     return false
 end
 
-local function Leftovers(members, open, allowed, index, out)
-    index = index or 1
-    out = out or {}
-    if index > #members then
-        out[#out + 1] = { TANK = open.TANK, HEALER = open.HEALER, DAMAGER = open.DAMAGER }
-        return out
-    end
-    for _, role in ipairs(Rules.ROLES) do
-        if members[index].roles[role] and allowed[role] and open[role] > 0 then
-            open[role] = open[role] - 1
-            Leftovers(members, open, allowed, index + 1, out)
-            open[role] = open[role] + 1
-        end
-    end
-    return out
-end
-
 local function Brings(application, classes)
     for _, member in ipairs(application.members) do
         if classes[member.class] then return true end
@@ -119,9 +83,7 @@ function Rules.Passes(application, group, s)
     end
     if not HasNeededClass(application, s) then return false end
 
-    local open = group.open
-    if not open then return true end
-    if s.hideFilledRoles and #Leftovers(application.members, open, s.roles) == 0 then return false end
+    if not group.open then return true end
     if s.needBloodlust and not group.hasBloodlust and not Brings(application, Rules.BLOODLUST) then return false end
     if s.needBattleRes and not group.hasBattleRes and not Brings(application, Rules.BATTLE_RES) then return false end
     return true
