@@ -95,7 +95,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 9. Applicant filter
 
-- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background; it is gone on the search list and when the finder closes. Panel side Left and the X/Y offsets move it at once and are kept after /reload.
+- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background; it is gone on the search list and when the finder closes. Drag it by its background: it stays where dropped, the page's X/Y offsets show the new values, and the spot is kept after /reload. Panel side Left and the offsets move it at once.
 - [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's until you leave the instance.
 - [ ] Best key at least 10 set, then list a raid: nobody moves down because of it.
 - [ ] Class icons show counts, including applicants moved down or hidden; need, exclude and clear work as the tooltip says.

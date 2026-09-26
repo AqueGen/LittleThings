@@ -231,12 +231,35 @@ local function Place()
     panel:SetPoint(side.point, PVEFrame, side.relativePoint, side.x + position.x, position.y)
 end
 
+local OFFSET_LIMIT = 800
+
+local function Clamp(value)
+    return math.max(-OFFSET_LIMIT, math.min(OFFSET_LIMIT, Round(value)))
+end
+
+local function KeepDraggedPosition(self)
+    self:StopMovingOrSizing()
+    local position = Position()
+    local side = SIDES[position.side] or SIDES.right
+    local anchorX = position.side == "left" and PVEFrame:GetLeft() or PVEFrame:GetRight()
+    local panelX = position.side == "left" and self:GetRight() or self:GetLeft()
+    if anchorX and panelX then
+        position.x = Clamp(panelX - anchorX - side.x)
+        position.y = Clamp(self:GetTop() - PVEFrame:GetTop())
+    end
+    Place()
+end
+
 local function Build()
     local viewer = LFGListFrame.ApplicationViewer
     panel = CreateFrame("Frame", nil, viewer, "TooltipBackdropTemplate")
     panel:SetWidth(WIDTH)
     panel:SetClampedToScreen(true)
     panel:EnableMouse(true)
+    panel:SetMovable(true)
+    panel:RegisterForDrag("LeftButton")
+    panel:SetScript("OnDragStart", panel.StartMoving)
+    panel:SetScript("OnDragStop", KeepDraggedPosition)
     local background = panel:CreateTexture(nil, "BACKGROUND", nil, -8)
     background:SetPoint("TOPLEFT", 3, -3)
     background:SetPoint("BOTTOMRIGHT", -3, 3)
@@ -326,7 +349,7 @@ function Filter.Pages(page)
         local options = Settings.CreateSliderOptions(-800, 800, 1)
         options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
         ns.AddToPage(page, Settings.CreateSlider(category, Proxy(key, Settings.VarType.Number, "Panel " .. key:upper() .. " offset"),
-            options, "Pixels to move the panel from its side of the group finder. X moves it right, Y moves it up."))
+            options, "Pixels to move the panel from its side of the group finder. X moves it right, Y moves it up. Dragging the panel sets these for you."))
     end
 end
 
