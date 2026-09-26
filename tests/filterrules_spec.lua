@@ -1,0 +1,120 @@
+package.path = "./Modules/Applicants/?.lua;" .. package.path
+
+local Rules = require("FilterRules")
+
+local NEED, EXCLUDE = Rules.NEED, Rules.EXCLUDE
+local OPEN_GROUP = { open = { TANK = 1, HEALER = 1, DAMAGER = 3 }, hasBloodlust = false, hasBattleRes = false }
+
+local function member(class, fields)
+  local m = { class = class, roles = { TANK = false, HEALER = false, DAMAGER = true }, rating = 2500, itemLevel = 290 }
+  for k, v in pairs(fields or {}) do m[k] = v end
+  return m
+end
+
+local function app(...)
+  return { members = { ... } }
+end
+
+local function settings(fields)
+  local s = Rules.Defaults()
+  for k, v in pairs(fields or {}) do s[k] = v end
+  return s
+end
+
+describe("Rules.Next", function()
+  it("cycles neutral, need, exclude, neutral", function()
+    assert.equals(NEED, Rules.Next(nil))
+    assert.equals(EXCLUDE, Rules.Next(NEED))
+    assert.is_nil(Rules.Next(EXCLUDE))
+  end)
+end)
+
+describe("Rules.ParseNumber", function()
+  it("reads a whole number", function()
+    assert.equals(2500, Rules.ParseNumber("2500"))
+    assert.equals(0, Rules.ParseNumber("0"))
+  end)
+
+  it("treats empty or non-numeric text as no limit", function()
+    assert.is_nil(Rules.ParseNumber(""))
+    assert.is_nil(Rules.ParseNumber("abc"))
+    assert.is_nil(Rules.ParseNumber(nil))
+  end)
+end)
+
+describe("Rules.IsActive", function()
+  it("is off for the defaults", function()
+    assert.is_false(Rules.IsActive(settings()))
+  end)
+
+  it("is on for any class pick, role off, minimum or checkbox", function()
+    assert.is_true(Rules.IsActive(settings({ classes = { MAGE = NEED } })))
+    assert.is_true(Rules.IsActive(settings({ roles = { TANK = false, HEALER = true, DAMAGER = true } })))
+    assert.is_true(Rules.IsActive(settings({ minRating = 0 })))
+    assert.is_true(Rules.IsActive(settings({ timedOnly = true })))
+    assert.is_true(Rules.IsActive(settings({ bloodlustFit = true })))
+  end)
+
+  it("ignores the mode", function()
+    assert.is_false(Rules.IsActive(settings({ mode = "hide" })))
+  end)
+end)
+
+describe("Rules.Passes, classes", function()
+  it("drops an application with an excluded class in any member", function()
+    assert.is_false(Rules.Passes(app(member("MAGE"), member("PALADIN")), OPEN_GROUP, settings({ classes = { PALADIN = EXCLUDE } })))
+  end)
+
+  it("keeps an application with any one needed class", function()
+    local s = settings({ classes = { SHAMAN = NEED, MAGE = NEED } })
+    assert.is_true(Rules.Passes(app(member("WARRIOR"), member("MAGE")), OPEN_GROUP, s))
+    assert.is_false(Rules.Passes(app(member("WARRIOR")), OPEN_GROUP, s))
+  end)
+end)
+
+describe("Rules.Passes, minimums", function()
+  it("drops a member below the minimum rating or item level", function()
+    assert.is_false(Rules.Passes(app(member("MAGE", { rating = 2400 })), OPEN_GROUP, settings({ minRating = 2500 })))
+    assert.is_true(Rules.Passes(app(member("MAGE", { rating = 2500 })), OPEN_GROUP, settings({ minRating = 2500 })))
+    assert.is_false(Rules.Passes(app(member("MAGE", { itemLevel = 280 })), OPEN_GROUP, settings({ minItemLevel = 285 })))
+  end)
+
+  it("needs every member of a group application to meet the minimums", function()
+    local s = settings({ minRating = 2500 })
+    assert.is_false(Rules.Passes(app(member("MAGE", { rating = 3000 }), member("PRIEST", { rating = 1200 })), OPEN_GROUP, s))
+  end)
+
+  it("lets everyone through a minimum of zero", function()
+    assert.is_true(Rules.Passes(app(member("MAGE", { rating = 0 })), OPEN_GROUP, settings({ minRating = 0 })))
+  end)
+
+  it("drops a member with no run in this dungeon when a key minimum is set", function()
+    local s = settings({ minDungeonLevel = 10 })
+    assert.is_false(Rules.Passes(app(member("MAGE")), OPEN_GROUP, s))
+    assert.is_true(Rules.Passes(app(member("MAGE", { dungeonLevel = 10 })), OPEN_GROUP, s))
+    assert.is_false(Rules.Passes(app(member("MAGE", { dungeonLevel = 9 })), OPEN_GROUP, s))
+  end)
+
+  it("drops an untimed best run when timed only is on", function()
+    local s = settings({ timedOnly = true })
+    assert.is_false(Rules.Passes(app(member("MAGE", { dungeonLevel = 12, dungeonTimed = false })), OPEN_GROUP, s))
+    assert.is_true(Rules.Passes(app(member("MAGE", { dungeonLevel = 12, dungeonTimed = true })), OPEN_GROUP, s))
+  end)
+end)
+
+describe("Rules.Passes, invited applicants", function()
+  it("keeps an invited application whatever the filters say", function()
+    local invited = app(member("PALADIN", { rating = 100 }))
+    invited.pinned = true
+    assert.is_true(Rules.Passes(invited, OPEN_GROUP, settings({ minRating = 3000, classes = { PALADIN = EXCLUDE } })))
+  end)
+end)
+
+describe("Rules.CountClasses", function()
+  it("counts every member of every application", function()
+    local counts = Rules.CountClasses({ app(member("MAGE")), app(member("MAGE"), member("PRIEST")) })
+    assert.equals(2, counts.MAGE)
+    assert.equals(1, counts.PRIEST)
+    assert.is_nil(counts.ROGUE)
+  end)
+end)
