@@ -53,3 +53,17 @@ describe("Order.Sort, dungeon first", function()
     assert.equals("2 3 1", sorted({ 1, 2, 3 }, dungeon, rating))
   end)
 end)
+
+describe("Order.Sort, change report", function()
+  it("reports no change and keeps the list when it is already in order", function()
+    local applicants = { 2, 1 }
+    assert.is_false(Order.Sort(applicants, { { [1] = 10, [2] = 20 } }))
+    assert.same({ 2, 1 }, applicants)
+  end)
+
+  it("reports a change when the order moves", function()
+    local applicants = { 1, 2 }
+    assert.is_true(Order.Sort(applicants, { { [1] = 10, [2] = 20 } }))
+    assert.same({ 2, 1 }, applicants)
+  end)
+end)

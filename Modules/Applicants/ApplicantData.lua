@@ -11,10 +11,17 @@ local function AnySecret(...)
     return false
 end
 
+function Data.Locked()
+    return C_ChatInfo ~= nil and C_ChatInfo.InChatMessagingLockdown() == true
+end
+
 function Data.Listing()
+    if Data.Locked() then return nil end
     local entry = C_LFGList.GetActiveEntryInfo()
-    local activityID = entry and entry.activityIDs and entry.activityIDs[1]
-    local activity = activityID and C_LFGList.GetActivityInfoTable(activityID)
+    if not entry or issecretvalue(entry) or issecretvalue(entry.activityIDs) then return nil end
+    local activityID = entry.activityIDs and entry.activityIDs[1]
+    if activityID == nil or issecretvalue(activityID) then return nil end
+    local activity = C_LFGList.GetActivityInfoTable(activityID)
     if not activity then return nil end
     return {
         activityID = activityID,
@@ -41,6 +48,7 @@ function Data.Application(applicantID, listing)
     for i = 1, info.numMembers or 0 do
         local _, class, _, _, itemLevel, _, tank, healer, damage, _, _, rating = C_LFGList.GetApplicantMemberInfo(applicantID, i)
         if AnySecret(class, itemLevel, tank, healer, damage, rating) then return nil end
+        if class == nil then application.pinned = true end
         local member = {
             class = class,
             itemLevel = itemLevel,
@@ -72,6 +80,9 @@ function Data.Group(listing)
             if Rules.BLOODLUST[class] then group.hasBloodlust = true end
             if Rules.BATTLE_RES[class] then group.hasBattleRes = true end
             local role = UnitGroupRolesAssigned(unit)
+            if role == "NONE" then
+                role = unit == "player" and GetSpecializationRole(GetSpecialization()) or "DAMAGER"
+            end
             if group.open and group.open[role] then
                 group.open[role] = math.max(0, group.open[role] - 1)
             end

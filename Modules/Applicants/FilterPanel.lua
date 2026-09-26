@@ -212,11 +212,45 @@ local function Sync()
     end
 end
 
+local function Place()
+    panel:ClearAllPoints()
+    local saved = ns.db.applicantPanelPos
+    if saved then
+        panel:SetPoint(saved.point, UIParent, saved.relativePoint, saved.x, saved.y)
+        return
+    end
+    local left = PVEFrame:GetLeft()
+    if left and left >= WIDTH + 4 then
+        panel:SetPoint("TOPRIGHT", PVEFrame, "TOPLEFT", -2, 0)
+    else
+        panel:SetPoint("TOPLEFT", PVEFrame, "TOPRIGHT", 2, 0)
+    end
+end
+
+local function SavePosition(self)
+    self:StopMovingOrSizing()
+    local point, _, relativePoint, x, y = self:GetPoint(1)
+    ns.db.applicantPanelPos = { point = point, relativePoint = relativePoint, x = x, y = y }
+end
+
+local function Redock(self, mouseButton)
+    if mouseButton == "RightButton" then
+        ns.db.applicantPanelPos = nil
+        Place()
+    end
+end
+
 local function Build()
     local viewer = LFGListFrame.ApplicationViewer
     panel = CreateFrame("Frame", nil, viewer, "TooltipBackdropTemplate")
     panel:SetWidth(WIDTH)
-    panel:SetPoint("TOPRIGHT", PVEFrame, "TOPLEFT", -2, 0)
+    panel:SetClampedToScreen(true)
+    panel:SetMovable(true)
+    panel:EnableMouse(true)
+    panel:RegisterForDrag("LeftButton")
+    panel:SetScript("OnDragStart", panel.StartMoving)
+    panel:SetScript("OnDragStop", SavePosition)
+    panel:SetScript("OnMouseUp", Redock)
     panel.Sync = Sync
 
     local y = -PAD
@@ -253,8 +287,12 @@ local function Build()
     panel:SetHeight(-y)
     Filter.panel = panel
     Filter.OnChange(Sync)
-    panel:SetScript("OnShow", Sync)
+    panel:SetScript("OnShow", function()
+        Place()
+        Sync()
+    end)
     panel:SetShown(ns.db.classFilter == true)
+    Place()
     Sync()
 end
 

@@ -1,5 +1,7 @@
 local addonName, ns = ...
 
+local Data = ns.ApplicantData
+
 local Pipeline = {}
 
 Pipeline.SORT = 1
@@ -9,7 +11,7 @@ local steps = {}
 local hooked = false
 
 local function Run(applicants)
-    if type(applicants) ~= "table" or issecretvalue(applicants) then return end
+    if type(applicants) ~= "table" or issecretvalue(applicants) or Data.Locked() then return end
     for _, step in ipairs(steps) do
         step.run(applicants)
     end
@@ -26,7 +28,7 @@ end
 
 function Pipeline.Refresh()
     local viewer = LFGListFrame and LFGListFrame.ApplicationViewer
-    if viewer and viewer:IsVisible() then
+    if viewer and viewer:IsVisible() and not Data.Locked() then
         LFGListApplicationViewer_UpdateResultList(viewer)
         LFGListApplicationViewer_UpdateResults(viewer)
     end

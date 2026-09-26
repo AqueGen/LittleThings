@@ -96,3 +96,40 @@ describe("Data.Group", function()
     assert.is_false(group.hasBloodlust)
   end)
 end)
+
+describe("Data.Listing", function()
+  it("reads nothing during chat messaging lockdown", function()
+    install({ units = {}, lfg = lfg({}) })
+    _G.C_ChatInfo = { InChatMessagingLockdown = function() return true end }
+    assert.is_nil(load().Listing())
+    _G.C_ChatInfo = nil
+  end)
+
+  it("reads nothing when the activity id is Secret", function()
+    local fake = lfg({})
+    fake.GetActiveEntryInfo = function() return { activityIDs = { SECRET } } end
+    install({ units = {}, lfg = fake })
+    assert.is_nil(load().Listing())
+  end)
+end)
+
+describe("Data.Application, members still loading", function()
+  it("keeps an application whose member class has not arrived yet", function()
+    install({ units = {}, lfg = lfg({ { class = nil, itemLevel = 0, tank = false, healer = false, damage = true, rating = 0 } }) })
+    local application = load().Application(7, { activityID = 42, isMythicPlus = false })
+    assert.is_true(application.pinned)
+  end)
+end)
+
+describe("Data.Group, unassigned roles", function()
+  it("counts an unassigned party member as damage and the player by their spec role", function()
+    install({ lfg = lfg({}), units = {
+      player = { class = "PALADIN", role = "NONE" },
+      party1 = { class = "ROGUE", role = "NONE" },
+    } })
+    _G.GetSpecialization = function() return 2 end
+    _G.GetSpecializationRole = function(index) return index == 2 and "TANK" or nil end
+    local group = load().Group({ fiveMan = true })
+    assert.same({ TANK = 0, HEALER = 1, DAMAGER = 2 }, group.open)
+  end)
+end)

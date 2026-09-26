@@ -10,18 +10,33 @@ local function Compare(scoreA, scoreB)
 end
 
 function Order.Sort(applicants, keys)
-    local position = {}
+    local position, sorted = {}, {}
     for index, applicantID in ipairs(applicants) do
         position[applicantID] = index
+        sorted[index] = applicantID
     end
 
-    table.sort(applicants, function(a, b)
+    table.sort(sorted, function(a, b)
         for _, scores in ipairs(keys) do
             local before = Compare(scores[a], scores[b])
             if before ~= nil then return before end
         end
         return position[a] < position[b]
     end)
+
+    local changed = false
+    for index, applicantID in ipairs(sorted) do
+        if applicants[index] ~= applicantID then
+            changed = true
+            break
+        end
+    end
+    if changed then
+        for index, applicantID in ipairs(sorted) do
+            applicants[index] = applicantID
+        end
+    end
+    return changed
 end
 
 if ns then ns.ApplicantOrder = Order end

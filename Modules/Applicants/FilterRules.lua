@@ -23,6 +23,15 @@ function Rules.Defaults()
     }
 end
 
+function Rules.Effective(s, isMythicPlus)
+    if isMythicPlus then return s end
+    local copy = {}
+    for key, value in pairs(s) do copy[key] = value end
+    copy.minDungeonLevel = nil
+    copy.timedOnly = false
+    return copy
+end
+
 function Rules.Next(state)
     if state == nil then return Rules.NEED end
     if state == Rules.NEED then return Rules.EXCLUDE end
@@ -128,7 +137,9 @@ function Rules.CountClasses(applications)
     local counts = {}
     for _, application in ipairs(applications) do
         for _, member in ipairs(application.members) do
-            counts[member.class] = (counts[member.class] or 0) + 1
+            if member.class then
+                counts[member.class] = (counts[member.class] or 0) + 1
+            end
         end
     end
     return counts
@@ -144,6 +155,7 @@ function Rules.Apply(ids, byId, group, s)
             failed[id] = true
         end
     end
+    if #failing == 0 then return failed, 0 end
 
     for index = #ids, 1, -1 do
         ids[index] = nil

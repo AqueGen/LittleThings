@@ -52,8 +52,9 @@ local function Filter(applicants)
 
         if not state.paused then
             state.counts = Rules.CountClasses(list)
-            if Rules.IsActive(ApplicantFilter.Settings()) then
-                state.failed, state.count = Rules.Apply(applicants, byId, Data.Group(state.listing), ApplicantFilter.Settings())
+            local settings = Rules.Effective(ApplicantFilter.Settings(), state.listing.isMythicPlus)
+            if Rules.IsActive(settings) then
+                state.failed, state.count = Rules.Apply(applicants, byId, Data.Group(state.listing), settings)
             end
         end
     end

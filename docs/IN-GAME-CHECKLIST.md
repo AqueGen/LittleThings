@@ -95,7 +95,9 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 9. Applicant filter
 
-- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits left of the finder, clear of Raider.IO's frame on the right; it is gone on the search list and when the finder closes.
+- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: with the finder at the screen's left edge the panel sits right of it, otherwise left; it is gone on the search list and when the finder closes. Drag it clear of Raider.IO's frame: the spot is kept after /reload. Right-click it: it docks again.
+- [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's until you leave the instance.
+- [ ] Best key at least 10 set, then list a raid: nobody moves down because of it.
 - [ ] Class icons show counts, including applicants moved down or hidden; need, exclude and clear work as the tooltip says.
 - [ ] Minimum rating 2500: applicants below move to the bottom, dimmed; "Moved down: N" matches. Empty the box: back to normal. Type 0: nothing moves.
 - [ ] Best key at least 10 and Timed only: an applicant who never ran the dungeon moves down. In a raid listing both are greyed out.

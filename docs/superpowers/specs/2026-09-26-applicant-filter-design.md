@@ -10,7 +10,9 @@ Success: with the panel set once, the applicants worth inviting are at the top o
 
 ## Where it lives
 
-- A panel docked to the left edge of `PVEFrame`, shown only while `LFGListFrame.ApplicationViewer` is visible. Left, because Raider.IO's profile frame docks to the right edge in the user's setup.
+- A panel docked beside `PVEFrame`, shown only while `LFGListFrame.ApplicationViewer` is visible: left when there is room on screen, otherwise right (the default UI puts PVEFrame at the left edge). It can be dragged anywhere (kept in `LittleThingsDB.applicantPanelPos`, clamped to the screen) and right-click docks it again, which is how it gets clear of Raider.IO's frame on the right.
+- During chat messaging lockdown (inside dungeons and raids) the LFG reads are Secret, so the addon leaves the applicant list to Blizzard until the lockdown ends.
+- The "This dungeon" limits apply only to Mythic+ listings.
 - The bottom class bar is removed; its class icons move into the panel.
 - Settings: the existing `classFilter` switch on the Mythic+ page becomes "Applicant filter" (key unchanged, so saved class picks survive). Every filter value is saved per character in `LittleThingsCharDB.applicantFilter`; the existing `classFilter` picks table is adopted into it once.
 
