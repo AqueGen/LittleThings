@@ -7,6 +7,8 @@ ns.defaults = {
     -- for entries in every unit menu.
     logLink = false,
     journalLoot = false,
+    applicantSort = false,
+    classFilter = false,
 
     format = true,
     snap = true,
@@ -17,15 +19,16 @@ ns.defaults = {
 
 ns.charDefaults = {
     links = {},
+    classFilter = {},
 }
 
--- One page per module, in this order. Each page opens with the module's own
--- switch, so a module that is off still has a page to turn it back on from.
 ns.MODULES = {
     { key = "damageMeter", label = "Damage meter", switch = "Damage meter tweaks", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
     { key = "characterPanel", label = "Character panel", switch = "Spec and loot spec bars", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
-    { key = "logLink", label = "Mythic+ log link", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
+    { key = "logLink", label = "Mythic+ log link", page = "Mythic+", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "journalLoot", label = "Journal loot", switch = "Loot spec icons in the Adventure Guide", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
+    { key = "applicantSort", label = "Mythic+ applicants", page = "Mythic+", switch = "Sort Mythic+ applicants by rating", live = true, tooltip = "When your group is listed for a Mythic+ dungeon, applicants are listed by Mythic+ rating, highest first. Applicants without a rating go to the bottom. Other listings keep Blizzard's order. Takes effect the next time the applicant list updates." },
+    { key = "classFilter", label = "Class filter", page = "Mythic+", switch = "Class filter for applicants", live = true, tooltip = "A row of class icons under the group finder while you look through applicants to your group, in every category. Click a class to need it (only applicants with at least one needed class stay), again to exclude it (applicants of that class are hidden), again to clear it. The picks are saved per character." },
 }
 
 local modules = {}
@@ -316,10 +319,17 @@ local function RegisterSettings()
     Settings.RegisterAddOnCategory(ns.category)
 
     ns.pages = {}
+    local shared = {}
     for _, module in ipairs(ns.MODULES) do
-        local page = {}
-        page.key = module.key
-        page.category, page.layout = ns.RegisterSubcategory(module.label)
+        local title = module.page or module.label
+        local host = shared[title]
+        if not host then
+            host = {}
+            host.category, host.layout = ns.RegisterSubcategory(title)
+            shared[title] = host
+        end
+
+        local page = { key = module.key, category = host.category, layout = host.layout }
         ns.pages[module.key] = page
         AddModuleSwitch(page, module)
 

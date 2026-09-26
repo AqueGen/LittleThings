@@ -34,9 +34,15 @@ No parsing, no storage, no analysis, no skins, no report-to-chat. Blizzard's met
 
 Off by default. Two bars of icons next to the character panel: your specializations, and the loot specialization (its first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. Each bar is placed on its own: drag it to wherever it stays out of whatever other addons draw on the panel, and the settings page shows the same position as a corner and an X and Y offset, plus where the bar's title sits (above, below or left of the icons).
 
-### Mythic+ log link
+### Mythic+
 
-Off by default. Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
+One page, three switches, all off by default.
+
+**Warcraft Logs link.** Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
+
+**Applicants by rating.** When your group is listed for a Mythic+ dungeon, the applicant list is ordered by Mythic+ rating, highest first, with item level deciding between equal ratings. The page can swap the two: item level first, rating between equal item levels. A group that applies together is ranked by the player who sent the application. Applicants without a rating go to the bottom, and a full tie keeps Blizzard's order. Raids, PvP and other listings are left alone. The switch takes effect the next time the list updates, with no reload.
+
+**Class filter for applicants.** While your group is listed, a row of class icons hangs under the group finder, below its tabs, in every category. Click a class once to need it: only applicants with at least one needed class stay, so picking Shaman, Mage, Hunter and Evoker leaves the ones who bring Bloodlust. Click again to exclude it: applicants of that class are hidden. A third click, or a right-click, clears it. A group applying together counts every member's class. Under each icon is how many applicants of that class are in the list, hidden ones included. Reset clears every pick, and the row shows how many applicants are hidden. The group search list is left alone. The picks are saved per character.
 
 ### Journal loot
 
@@ -54,4 +60,4 @@ Off by default. Every loot row in the Adventure Guide gets small icons for the s
 
 `busted tests` runs the pure-logic suite - number composition, snap geometry, the drop preview and the transparency rules. Everything frame-bound is verified in game against `docs/IN-GAME-CHECKLIST.md`.
 
-A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key` (a module with no key is always enabled and reads its switch itself); a switch is a row in `ns.MODULES` in `Core.lua`, which also gives the module its settings page as `ns.pages[key]`, opened with the switch. The module adds its own options to that page from `Enable`.
+A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key` (a module with no key is always enabled and reads its switch itself); a switch is a row in `ns.MODULES` in `Core.lua`, which also gives the module its settings page as `ns.pages[key]`, opened with the switch. Rows that name the same `page` share one settings page, their switches in `ns.MODULES` order. The module adds its own options to that page from `Enable`.

@@ -82,3 +82,25 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] "Name line, right edge" puts the icons right of the item name, clear of a transmog addon's corner mark. Switching between the two is live, and so is the size slider.
 - [ ] A profile saved with a position that no longer exists opens on the slot line.
 - [ ] Switch off: icons disappear at once. BugSack stays empty throughout, and the journal's own class filter is unchanged after every step.
+
+## 8. Mythic+ applicants
+
+- [ ] Switch on Mythic+ applicants, list a Mythic+ key: applicants are ordered by the rating column, highest first. No reload needed.
+- [ ] Two applicants with the same rating: the higher item level is above. Sort by "Item level, then Mythic+ rating": the list follows the item level column at the next update.
+- [ ] A new applicant with a higher rating than the ones listed lands above them, not at the bottom.
+- [ ] A group applying together is placed by the rating of the player who applied.
+- [ ] List a raid or a custom group: the order is Blizzard's (oldest first, new applicants at the bottom).
+- [ ] Invite and decline still work from the sorted list, in and out of an instance, and BugSack stays empty.
+- [ ] Switch off: the next list update goes back to Blizzard's order.
+
+## 9. Class filter for applicants
+
+- [ ] Switch on Class filter, list a group, open its applicant list: a row of 13 dimmed class icons hangs under the finder, below the Dungeons & Raids / PvP / Mythic+ tabs, not over them. It is gone on the group search list and when the finder closes.
+- [ ] Left-click Mage: green frame, only mage applicants stay, "Hidden: N" appears. Left-click again: red frame, desaturated, mages are gone and the rest are back. Third click or right-click: dim, full list.
+- [ ] Need Shaman, Mage, Hunter and Evoker: every applicant left is one of them. A two-player application with one of them in it stays.
+- [ ] Hide every applicant: the list shows Blizzard's "no applicants" text. New applicants of a hidden class do not appear; of a needed class they do, sorted by the Mythic+ applicants order when that is on.
+- [ ] Under each icon: the number of applicants of that class, counting every member of a group application and the hidden ones too; empty for a class nobody applied as. Counts follow new and withdrawn applications.
+- [ ] Reset is greyed out with nothing picked. With picks, Reset clears every icon and the full list is back.
+- [ ] Invite and decline from a filtered list work, BugSack stays empty.
+- [ ] Reload: the picks are still there. On another character: none.
+- [ ] Switch off: the row disappears and the full list is back at once.
