@@ -24,7 +24,7 @@ end
 local function Sort(applicants)
     if not ns.db.applicantSort then return end
     local listing = Data.Listing()
-    if not listing or not listing.isMythicPlus then return end
+    if not listing or not (listing.isMythicPlus or listing.isRaid) then return end
 
     local rating, itemLevel, dungeon = {}, {}, {}
     for _, applicantID in ipairs(applicants) do
@@ -39,7 +39,7 @@ local function Sort(applicants)
     end
 
     local by = Options().by
-    if by == "itemLevel" then
+    if listing.isRaid or by == "itemLevel" then
         Order.Sort(applicants, { itemLevel, rating })
     elseif by == "dungeon" then
         Order.Sort(applicants, { dungeon, rating })
@@ -116,7 +116,7 @@ function ApplicantSort.Pages(page)
     end
 
     ns.AddToPage(page, Settings.CreateDropdown(page.category, setting, KeyOptions,
-        "What puts an applicant higher. The second value only decides between applicants who tie on the first. This dungeon is the applicant's rating in the listed dungeon. A group that applies together counts as the player who sent the application."))
+        "What puts a Mythic+ applicant higher; raid applicants always go by item level, then Mythic+ rating. The second value only decides between applicants who tie on the first. This dungeon is the applicant's rating in the listed dungeon. A group that applies together counts as the player who sent the application."))
 end
 
 function ApplicantSort.Enable()

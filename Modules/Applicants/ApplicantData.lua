@@ -27,6 +27,7 @@ function Data.Listing()
         activityID = activityID,
         isMythicPlus = activity.isMythicPlusActivity == true,
         fiveMan = activity.maxNumPlayers == 5,
+        isRaid = (activity.maxNumPlayers or 0) > 5 and not activity.isPvpActivity and not activity.isRatedPvpActivity,
     }
 end
 

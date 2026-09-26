@@ -25,11 +25,11 @@ ns.charDefaults = {
 ns.MODULES = {
     { key = "damageMeter", label = "Damage meter", switch = "Damage meter tweaks", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
     { key = "characterPanel", label = "Character panel", switch = "Spec and loot spec bars", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
-    { key = "logLink", label = "Mythic+ log link", page = "Mythic+", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
+    { key = "applicantSort", label = "Mythic+ applicants", page = "Group finder", section = "Applicants", switch = "Sort applicants", live = true, tooltip = "When your group is listed, applicants are ordered by the key chosen below for Mythic+, and by item level for raids, highest first. Applicants without a value go to the bottom. Other listings keep Blizzard's order." },
+    { key = "classFilter", label = "Applicant filter", page = "Group finder", section = "Applicants", switch = "Applicant filter panel", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum rating and item level, best key in this dungeon, Bloodlust and battle res fit. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
+    { key = "defaultPlaystyle", label = "Default playstyle", page = "Group finder", section = "Creating a group", switch = "Pick a playstyle when you list a group", live = true, tooltip = "Creating a Mythic+ listing opens with the playstyle below already picked instead of empty. The game only lets its own code create a listing, so a value the addon picked may get the listing blocked; if that happens this switch turns itself off and says so in chat. Picking the playstyle by hand afterwards always works." },
+    { key = "logLink", label = "Mythic+ log link", page = "Group finder", section = "Player menus", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "journalLoot", label = "Journal loot", switch = "Loot spec icons in the Adventure Guide", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
-    { key = "applicantSort", label = "Mythic+ applicants", page = "Mythic+", switch = "Sort Mythic+ applicants by rating", live = true, tooltip = "When your group is listed for a Mythic+ dungeon, applicants are listed by Mythic+ rating, highest first. Applicants without a rating go to the bottom. Other listings keep Blizzard's order. Takes effect the next time the applicant list updates." },
-    { key = "classFilter", label = "Applicant filter", page = "Mythic+", switch = "Applicant filter panel", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum rating and item level, best key in this dungeon, Bloodlust and battle res fit. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
-    { key = "defaultPlaystyle", label = "Default playstyle", page = "Mythic+", switch = "Pick a playstyle when you list a group", live = true, tooltip = "Creating a Mythic+ listing opens with the playstyle below already picked instead of empty. The game only lets its own code create a listing, so a value the addon picked may get the listing blocked; if that happens this switch turns itself off and says so in chat. Picking the playstyle by hand afterwards always works." },
 }
 
 local modules = {}
@@ -328,6 +328,11 @@ local function RegisterSettings()
             host = {}
             host.category, host.layout = ns.RegisterSubcategory(title)
             shared[title] = host
+        end
+
+        if module.section and module.section ~= host.section and host.layout and CreateSettingsListSectionHeaderInitializer then
+            host.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(module.section))
+            host.section = module.section
         end
 
         local page = { key = module.key, category = host.category, layout = host.layout }

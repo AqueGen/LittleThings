@@ -145,3 +145,16 @@ describe("Data.Application, best key anywhere", function()
     assert.is_false(m.overallTimed)
   end)
 end)
+
+describe("Data.Listing, raids", function()
+  it("marks a raid listing and leaves PvP and dungeons out", function()
+    local fake = lfg({})
+    install({ units = {}, lfg = fake })
+    fake.GetActivityInfoTable = function() return { isMythicPlusActivity = false, maxNumPlayers = 30 } end
+    assert.is_true(load().Listing().isRaid)
+    fake.GetActivityInfoTable = function() return { isMythicPlusActivity = false, isPvpActivity = true, maxNumPlayers = 10 } end
+    assert.is_false(load().Listing().isRaid)
+    fake.GetActivityInfoTable = function() return { isMythicPlusActivity = true, maxNumPlayers = 5 } end
+    assert.is_false(load().Listing().isRaid)
+  end)
+end)
