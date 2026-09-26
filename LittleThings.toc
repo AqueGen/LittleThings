@@ -33,3 +33,4 @@ Modules/Applicants/ApplicantOrder.lua
 Modules/Applicants/ApplicantSort.lua
 Modules/Applicants/ApplicantFilter.lua
 Modules/Applicants/FilterPanel.lua
+Modules/Applicants/DefaultPlaystyle.lua

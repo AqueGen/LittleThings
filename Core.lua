@@ -9,6 +9,7 @@ ns.defaults = {
     journalLoot = false,
     applicantSort = false,
     classFilter = false,
+    defaultPlaystyle = false,
 
     format = true,
     snap = true,
@@ -28,6 +29,7 @@ ns.MODULES = {
     { key = "journalLoot", label = "Journal loot", switch = "Loot spec icons in the Adventure Guide", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
     { key = "applicantSort", label = "Mythic+ applicants", page = "Mythic+", switch = "Sort Mythic+ applicants by rating", live = true, tooltip = "When your group is listed for a Mythic+ dungeon, applicants are listed by Mythic+ rating, highest first. Applicants without a rating go to the bottom. Other listings keep Blizzard's order. Takes effect the next time the applicant list updates." },
     { key = "classFilter", label = "Applicant filter", page = "Mythic+", switch = "Applicant filter panel", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum rating and item level, best key in this dungeon, Bloodlust and battle res fit. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
+    { key = "defaultPlaystyle", label = "Default playstyle", page = "Mythic+", switch = "Pick a playstyle when you list a group", live = true, tooltip = "Creating a Mythic+ listing opens with the playstyle below already picked instead of empty. The game only lets its own code create a listing, so a value the addon picked may get the listing blocked; if that happens this switch turns itself off and says so in chat. Picking the playstyle by hand afterwards always works." },
 }
 
 local modules = {}

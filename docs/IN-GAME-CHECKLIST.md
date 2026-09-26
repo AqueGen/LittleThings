@@ -110,3 +110,9 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Reset clears everything except the mode. Invite and decline from a filtered list work, BugSack stays empty.
 - [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them.
 - [ ] Switch off: the panel disappears and the list is Blizzard's again at once.
+
+## 10. Default playstyle
+
+- [ ] Switch on, Premade Groups > Dungeons > Create: the playstyle dropdown already says Competitive. List Group works, no "Interface action failed because of an addon".
+- [ ] If listing is blocked: chat says the default playstyle was turned off, the switch is off, and after /reload listing with a hand-picked playstyle works.
+- [ ] Pick Relaxed on the page: the next new listing opens with Relaxed. Editing an active listing keeps its own playstyle.
