@@ -26,7 +26,10 @@ Modules/LogLink/LogLink.lua
 Modules/CharacterPanel.lua
 Modules/JournalLoot/JournalLootIcons.lua
 Modules/JournalLoot/JournalLoot.lua
-Modules/ApplicantSort/ApplicantOrder.lua
-Modules/ApplicantSort/ApplicantSort.lua
+Modules/Applicants/FilterRules.lua
+Modules/Applicants/ApplicantData.lua
+Modules/Applicants/Pipeline.lua
+Modules/Applicants/ApplicantOrder.lua
+Modules/Applicants/ApplicantSort.lua
 Modules/ClassFilter/ClassFilterRules.lua
 Modules/ClassFilter/ClassFilter.lua

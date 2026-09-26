@@ -1,4 +1,4 @@
-package.path = "./Modules/ApplicantSort/?.lua;" .. package.path
+package.path = "./Modules/Applicants/?.lua;" .. package.path
 
 local Order = require("ApplicantOrder")
 
@@ -43,5 +43,13 @@ describe("Order.Sort, two keys", function()
 
   it("falls back to Blizzard's order when both keys tie", function()
     assert.equals("4 2", sorted({ 4, 2 }, { [4] = 2500, [2] = 2500 }, { [4] = 291, [2] = 291 }))
+  end)
+end)
+
+describe("Order.Sort, dungeon first", function()
+  it("orders by the dungeon score and breaks ties with the overall rating", function()
+    local dungeon = { [1] = 300, [2] = 310, [3] = 300 }
+    local rating = { [1] = 2400, [2] = 2000, [3] = 2600 }
+    assert.equals("2 3 1", sorted({ 1, 2, 3 }, dungeon, rating))
   end)
 end)
