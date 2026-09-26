@@ -201,11 +201,18 @@ describe("Rules.Passes, bring Bloodlust and battle res", function()
     assert.is_true(Rules.Passes(app(member("ROGUE")), has, settings({ needBloodlust = true })))
   end)
 
-  it("needs both when both are asked for", function()
+  it("passes an application that brings either when both are asked for", function()
     local s = settings({ needBloodlust = true, needBattleRes = true })
-    assert.is_true(Rules.Passes(app(member("SHAMAN"), member("DRUID")), noUtility, s))
-    assert.is_false(Rules.Passes(app(member("MAGE")), noUtility, s))
-    assert.is_false(Rules.Passes(app(member("DRUID")), noUtility, s))
+    assert.is_true(Rules.Passes(app(member("MAGE")), noUtility, s))
+    assert.is_true(Rules.Passes(app(member("DRUID")), noUtility, s))
+    assert.is_false(Rules.Passes(app(member("ROGUE")), noUtility, s))
+  end)
+
+  it("asks only for what the group still lacks", function()
+    local hasLust = { open = noUtility.open, hasBloodlust = true, hasBattleRes = false }
+    local s = settings({ needBloodlust = true, needBattleRes = true })
+    assert.is_false(Rules.Passes(app(member("MAGE")), hasLust, s))
+    assert.is_true(Rules.Passes(app(member("DRUID")), hasLust, s))
   end)
 
   it("asks nothing in a listing without role slots", function()

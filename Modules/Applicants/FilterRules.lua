@@ -84,9 +84,12 @@ function Rules.Passes(application, group, s)
     if not HasNeededClass(application, s) then return false end
 
     if not group.open then return true end
-    if s.needBloodlust and not group.hasBloodlust and not Brings(application, Rules.BLOODLUST) then return false end
-    if s.needBattleRes and not group.hasBattleRes and not Brings(application, Rules.BATTLE_RES) then return false end
-    return true
+    local wantsLust = s.needBloodlust and not group.hasBloodlust
+    local wantsRes = s.needBattleRes and not group.hasBattleRes
+    if not wantsLust and not wantsRes then return true end
+    return (wantsLust and Brings(application, Rules.BLOODLUST))
+        or (wantsRes and Brings(application, Rules.BATTLE_RES))
+        or false
 end
 
 function Rules.CountClasses(applications)
