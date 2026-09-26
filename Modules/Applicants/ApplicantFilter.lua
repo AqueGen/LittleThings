@@ -69,7 +69,7 @@ end
 
 local function UsesGroup()
     local s = ApplicantFilter.Settings()
-    return s.hideFilledRoles or s.bloodlustFit or s.battleResFit
+    return s.hideFilledRoles or s.needBloodlust or s.needBattleRes
 end
 
 function ApplicantFilter.Options()

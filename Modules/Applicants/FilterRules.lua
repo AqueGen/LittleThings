@@ -18,8 +18,8 @@ function Rules.Defaults()
         minDungeonLevel = nil,
         minOverallLevel = nil,
         timedOnly = false,
-        bloodlustFit = false,
-        battleResFit = false,
+        needBloodlust = false,
+        needBattleRes = false,
         mode = "down",
     }
 end
@@ -59,7 +59,7 @@ function Rules.IsActive(s)
     for _, role in ipairs(Rules.ROLES) do
         if not s.roles[role] then return true end
     end
-    return s.hideFilledRoles or s.timedOnly or s.bloodlustFit or s.battleResFit
+    return s.hideFilledRoles or s.timedOnly or s.needBloodlust or s.needBattleRes
         or s.minRating ~= nil or s.minItemLevel ~= nil or s.minDungeonLevel ~= nil or s.minOverallLevel ~= nil
 end
 
@@ -88,8 +88,6 @@ local function HasNeededClass(application, s)
     return false
 end
 
-local ALL_ROLES = { TANK = true, HEALER = true, DAMAGER = true }
-
 local function Leftovers(members, open, allowed, index, out)
     index = index or 1
     out = out or {}
@@ -105,15 +103,6 @@ local function Leftovers(members, open, allowed, index, out)
         end
     end
     return out
-end
-
-local function RoomAfter(members, open, roles)
-    for _, left in ipairs(Leftovers(members, open, ALL_ROLES)) do
-        for _, role in ipairs(roles) do
-            if left[role] > 0 then return true end
-        end
-    end
-    return false
 end
 
 local function Brings(application, classes)
@@ -133,14 +122,8 @@ function Rules.Passes(application, group, s)
     local open = group.open
     if not open then return true end
     if s.hideFilledRoles and #Leftovers(application.members, open, s.roles) == 0 then return false end
-    if s.bloodlustFit and not (group.hasBloodlust or Brings(application, Rules.BLOODLUST))
-        and not RoomAfter(application.members, open, { "HEALER", "DAMAGER" }) then
-        return false
-    end
-    if s.battleResFit and not (group.hasBattleRes or Brings(application, Rules.BATTLE_RES))
-        and not RoomAfter(application.members, open, Rules.ROLES) then
-        return false
-    end
+    if s.needBloodlust and not group.hasBloodlust and not Brings(application, Rules.BLOODLUST) then return false end
+    if s.needBattleRes and not group.hasBattleRes and not Brings(application, Rules.BATTLE_RES) then return false end
     return true
 end
 

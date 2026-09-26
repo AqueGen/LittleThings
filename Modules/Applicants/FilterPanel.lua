@@ -283,8 +283,9 @@ local function Build()
     Check("timedOnly", "Timed only", PAD, y)
     y = y - 28
     y = Heading("Group utility", y)
-    Check("bloodlustFit", "Bloodlust fit", PAD, y)
-    Check("battleResFit", "Battle res fit", PAD + 96, y)
+    Check("needBloodlust", "Brings Bloodlust", PAD, y)
+    y = y - 24
+    Check("needBattleRes", "Brings battle res", PAD, y)
     y = y - 30
     y = BuildMode(y)
 

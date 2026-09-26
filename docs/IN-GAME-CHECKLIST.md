@@ -102,7 +102,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Minimum rating 2500: applicants below move to the bottom, dimmed; "Moved down: N" matches. Empty the box: back to normal. Type 0: nothing moves.
 - [ ] Best key at least 10 and Timed only: an applicant who never ran the dungeon moves down. In a raid listing both are greyed out.
 - [ ] Roles: tank toggled off moves tank-only applicants down; a tank/damage flex stays. Hide roles already filled with a tank in the group moves tank-only applicants down; when the tank leaves, they come back.
-- [ ] Bloodlust fit with no Bloodlust class in the group and one damage slot left: a mage stays, a rogue moves down.
+- [ ] Brings Bloodlust with no Bloodlust class in the group: shamans, mages, hunters and evokers stay on top, everyone else moves down (Hide: disappears). Once a Bloodlust class joins, the list is back. Both boxes: only applications bringing both stay on top.
 - [ ] Mode Hide: failing applicants disappear, "Hidden: N". An invited applicant stays whatever the filters say.
 - [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top in blue, this dungeon below in green, each dimmed when not timed, label colours matching, clear of the invite buttons; nothing on cancelled rows. Sort by "This dungeon" orders by the lower one.
 - [ ] Best key anywhere at least 12: applicants whose best run is below +12 move down.
