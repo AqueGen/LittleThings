@@ -41,9 +41,8 @@ function DefaultPlaystyle.Pages(page)
 
     local function StyleOptions()
         local container = Settings.CreateControlTextContainer()
-        for _, key in ipairs(STYLES) do
-            local value = Enum.LFGEntryGeneralPlaystyle[key]
-            container:Add(key, value and GetGeneralPlaystyleString(value) or key)
+        for index, key in ipairs(STYLES) do
+            container:Add(key, _G["GROUP_FINDER_GENERAL_PLAYSTYLE" .. index] or key)
         end
         return container:GetData()
     end
