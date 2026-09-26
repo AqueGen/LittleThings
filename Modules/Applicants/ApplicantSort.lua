@@ -48,22 +48,45 @@ local function Sort(applicants)
     end
 end
 
-local function ShowKey(member, applicantID, memberIndex)
-    if not member.ltKey then
-        member.ltKey = member:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-        member.ltKey:SetPoint("LEFT", member.Rating, "RIGHT", 6, 0)
-    end
+local function KeyText(best)
+    if not best then return "" end
+    local color = best.timed and GREEN_FONT_COLOR or GRAY_FONT_COLOR
+    return color:WrapTextInColorCode("+" .. best.level)
+end
 
-    local text = ""
-    local listing = ns.db.applicantSort and not issecretvalue(applicantID) and Data.Listing()
-    if listing and listing.isMythicPlus then
-        local best = Data.DungeonBest(applicantID, memberIndex, listing.activityID)
-        if best then
-            local color = best.timed and GREEN_FONT_COLOR or GRAY_FONT_COLOR
-            text = color:WrapTextInColorCode("+" .. best.level)
-        end
+local function KeyLines(member)
+    if not member.ltKeys then
+        local overall = member:CreateFontString(nil, "ARTWORK", "GameFontNormalTiny")
+        overall:SetPoint("BOTTOMLEFT", member.Rating, "RIGHT", 3, 0)
+        local dungeon = member:CreateFontString(nil, "ARTWORK", "GameFontNormalTiny")
+        dungeon:SetPoint("TOPLEFT", member.Rating, "RIGHT", 3, 0)
+        member.ltKeys = { overall = overall, dungeon = dungeon }
     end
-    member.ltKey:SetText(text)
+    return member.ltKeys
+end
+
+local function ShowKey(member, applicantID, memberIndex)
+    local lines = KeyLines(member)
+    local overallText, dungeonText = "", ""
+    local listing = ns.db.applicantSort and member.Rating:IsShown() and not issecretvalue(applicantID) and Data.Listing()
+    if listing and listing.isMythicPlus then
+        overallText = KeyText(Data.OverallBest(applicantID, memberIndex) or nil)
+        dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil)
+    end
+    lines.overall:SetText(overallText)
+    lines.dungeon:SetText(dungeonText)
+end
+
+local function ShowColumnLabel()
+    local header = LFGApplicationViewerRatingColumnHeader
+    if not header then return end
+    if not header.ltKeyLabel then
+        header.ltKeyLabel = header:CreateFontString(nil, "OVERLAY", "GameFontNormalTiny")
+        header.ltKeyLabel:SetPoint("LEFT", header, "RIGHT", 3, 0)
+        header.ltKeyLabel:SetJustifyH("LEFT")
+        header.ltKeyLabel:SetText("Best|nHere")
+    end
+    header.ltKeyLabel:SetShown(ns.db.applicantSort == true)
 end
 
 function ApplicantSort.Pages(page)
@@ -98,10 +121,12 @@ function ApplicantSort.Enable()
     enabled = true
     Pipeline.Add(Pipeline.SORT, Sort)
     hooksecurefunc("LFGListApplicationViewer_UpdateApplicantMember", ShowKey)
+    ShowColumnLabel()
 end
 
 function ApplicantSort.OnSwitch(on)
     if on then ApplicantSort.Enable() end
+    ShowColumnLabel()
     Pipeline.Refresh()
 end
 

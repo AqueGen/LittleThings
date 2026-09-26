@@ -95,7 +95,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 9. Applicant filter
 
-- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: with the finder at the screen's left edge the panel sits right of it, otherwise left; it is gone on the search list and when the finder closes. Drag it clear of Raider.IO's frame: the spot is kept after /reload. Right-click it: it docks again.
+- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background; it is gone on the search list and when the finder closes. Panel side Left and the X/Y offsets move it at once and are kept after /reload.
 - [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's until you leave the instance.
 - [ ] Best key at least 10 set, then list a raid: nobody moves down because of it.
 - [ ] Class icons show counts, including applicants moved down or hidden; need, exclude and clear work as the tooltip says.
@@ -104,7 +104,9 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Roles: tank toggled off moves tank-only applicants down; a tank/damage flex stays. Hide roles already filled with a tank in the group moves tank-only applicants down; when the tank leaves, they come back.
 - [ ] Bloodlust fit with no Bloodlust class in the group and one damage slot left: a mage stays, a rogue moves down.
 - [ ] Mode Hide: failing applicants disappear, "Hidden: N". An invited applicant stays whatever the filters say.
-- [ ] Rows show the best key in this dungeon next to the rating, green when timed; Sort by "This dungeon" orders by it.
+- [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top, this dungeon below, green when timed, clear of the invite buttons; nothing on cancelled rows. Sort by "This dungeon" orders by the lower one.
+- [ ] Best key anywhere at least 12: applicants whose best run is below +12 move down.
+- [ ] An applicant cancels, times out or is declined: the row leaves the list at once. Remove closed applications off: the row stays with its X, as Blizzard shows it.
 - [ ] Reset clears everything except the mode. Invite and decline from a filtered list work, BugSack stays empty.
 - [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them.
 - [ ] Switch off: the panel disappears and the list is Blizzard's again at once.

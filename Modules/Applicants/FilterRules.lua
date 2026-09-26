@@ -16,6 +16,7 @@ function Rules.Defaults()
         minRating = nil,
         minItemLevel = nil,
         minDungeonLevel = nil,
+        minOverallLevel = nil,
         timedOnly = false,
         bloodlustFit = false,
         battleResFit = false,
@@ -30,6 +31,15 @@ function Rules.Effective(s, isMythicPlus)
     copy.minDungeonLevel = nil
     copy.timedOnly = false
     return copy
+end
+
+local FINISHED = {
+    cancelled = true, failed = true, timedout = true, invitedeclined = true,
+    declined = true, declined_full = true, declined_delisted = true,
+}
+
+function Rules.IsFinished(status, pendingStatus)
+    return pendingStatus == nil and FINISHED[status] == true
 end
 
 function Rules.Next(state)
@@ -50,7 +60,7 @@ function Rules.IsActive(s)
         if not s.roles[role] then return true end
     end
     return s.hideFilledRoles or s.timedOnly or s.bloodlustFit or s.battleResFit
-        or s.minRating ~= nil or s.minItemLevel ~= nil or s.minDungeonLevel ~= nil
+        or s.minRating ~= nil or s.minItemLevel ~= nil or s.minDungeonLevel ~= nil or s.minOverallLevel ~= nil
 end
 
 local function MemberPasses(member, s)
@@ -58,6 +68,7 @@ local function MemberPasses(member, s)
     if s.minRating and (member.rating or 0) < s.minRating then return false end
     if s.minItemLevel and (member.itemLevel or 0) < s.minItemLevel then return false end
     if s.minDungeonLevel and (member.dungeonLevel or 0) < s.minDungeonLevel then return false end
+    if s.minOverallLevel and (member.overallLevel or 0) < s.minOverallLevel then return false end
     if s.timedOnly and not member.dungeonTimed then return false end
     for _, role in ipairs(Rules.ROLES) do
         if member.roles[role] and s.roles[role] then return true end

@@ -10,7 +10,8 @@ Success: with the panel set once, the applicants worth inviting are at the top o
 
 ## Where it lives
 
-- A panel docked beside `PVEFrame`, shown only while `LFGListFrame.ApplicationViewer` is visible: left when there is room on screen, otherwise right (the default UI puts PVEFrame at the left edge). It can be dragged anywhere (kept in `LittleThingsDB.applicantPanelPos`, clamped to the screen) and right-click docks it again, which is how it gets clear of Raider.IO's frame on the right.
+- A panel docked beside `PVEFrame`, shown only while `LFGListFrame.ApplicationViewer` is visible. Side (right by default, or left) and an X/Y pixel offset are settings on the Mythic+ page (`LittleThingsDB.applicantPanel`), which is how the user moves it clear of Raider.IO's frame. Solid background.
+- Closed applications (cancelled, failed, timed out, declined, invite declined) are removed from the list at once through `C_LFGList.RemoveApplicant`, the call behind the row's X; a setting, on by default.
 - During chat messaging lockdown (inside dungeons and raids) the LFG reads are Secret, so the addon leaves the applicant list to Blizzard until the lockdown ends.
 - The "This dungeon" limits apply only to Mythic+ listings.
 - The bottom class bar is removed; its class icons move into the panel.
@@ -20,7 +21,7 @@ Success: with the panel set once, the applicants worth inviting are at the top o
 
 1. **Classes.** 13 class icons, each with the count of applicants of that class under it (every member of a group application, hidden or moved ones included, empty for zero). Left-click cycles neutral, needed (green frame), excluded (red frame, desaturated); right-click clears.
 2. **Roles.** Three toggles (tank, healer, damage), all on by default; an applicant whose offered roles are all toggled off fails. Checkbox "Hide roles already filled", off by default: counts our group's assigned roles against 1 tank, 1 healer, 3 damage.
-3. **Minimums.** Number boxes: overall Mythic+ rating, item level. Empty means no limit.
+3. **Minimums.** Number boxes: overall Mythic+ rating, item level, best key anywhere (`GetApplicantBestDungeonScore`). Empty means no limit.
 4. **This dungeon** (Mythic+ listings only, greyed otherwise). Number box: minimum best key level in the listed dungeon. Checkbox "Timed only".
 5. **Group utility.** Checkboxes "Bloodlust fit" and "Battle res fit".
 6. **Mode.** Dropdown: "Move down" (default) or "Hide".

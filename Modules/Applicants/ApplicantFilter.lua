@@ -72,6 +72,34 @@ local function UsesGroup()
     return s.hideFilledRoles or s.bloodlustFit or s.battleResFit
 end
 
+function ApplicantFilter.Options()
+    return ns.db.applicantFilterOptions
+end
+
+local sweepQueued = false
+
+local function Sweep()
+    sweepQueued = false
+    if not ns.db.classFilter or not ApplicantFilter.Options().removeFinished or Data.Locked() then return end
+    local removed = false
+    for _, applicantID in ipairs(C_LFGList.GetApplicants() or {}) do
+        if not issecretvalue(applicantID) then
+            local info = C_LFGList.GetApplicantInfo(applicantID)
+            if info and Rules.IsFinished(info.applicationStatus, info.pendingApplicationStatus) then
+                C_LFGList.RemoveApplicant(applicantID)
+                removed = true
+            end
+        end
+    end
+    if removed then Pipeline.Refresh() end
+end
+
+local function QueueSweep()
+    if sweepQueued then return end
+    sweepQueued = true
+    C_Timer.After(0, Sweep)
+end
+
 function ApplicantFilter.Changed()
     Pipeline.Refresh()
     Notify()
@@ -89,9 +117,16 @@ function ApplicantFilter.Enable()
     local events = CreateFrame("Frame")
     events:RegisterEvent("GROUP_ROSTER_UPDATE")
     events:RegisterEvent("PLAYER_ROLES_ASSIGNED")
-    events:SetScript("OnEvent", function()
-        if ns.db.classFilter and UsesGroup() then Pipeline.Refresh() end
+    events:RegisterEvent("LFG_LIST_APPLICANT_UPDATED")
+    events:RegisterEvent("LFG_LIST_APPLICANT_LIST_UPDATED")
+    events:SetScript("OnEvent", function(_, event)
+        if event == "LFG_LIST_APPLICANT_UPDATED" or event == "LFG_LIST_APPLICANT_LIST_UPDATED" then
+            QueueSweep()
+        elseif ns.db.classFilter and UsesGroup() then
+            Pipeline.Refresh()
+        end
     end)
+    QueueSweep()
 end
 
 function ApplicantFilter.OnSwitch(on)

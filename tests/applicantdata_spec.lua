@@ -18,6 +18,7 @@ local function lfg(members, status, best)
       return "Name", m.class, "Class", 90, m.itemLevel, 0, m.tank, m.healer, m.damage, "NONE", nil, m.rating
     end,
     GetApplicantDungeonScoreForListing = function(_, i) return best and best[i] end,
+    GetApplicantBestDungeonScore = function() return nil end,
     GetActiveEntryInfo = function() return { activityIDs = { 42 } } end,
     GetActivityInfoTable = function() return { isMythicPlusActivity = true, maxNumPlayers = 5 } end,
   }
@@ -131,5 +132,16 @@ describe("Data.Group, unassigned roles", function()
     _G.GetSpecializationRole = function(index) return index == 2 and "TANK" or nil end
     local group = load().Group({ fiveMan = true })
     assert.same({ TANK = 0, HEALER = 1, DAMAGER = 2 }, group.open)
+  end)
+end)
+
+describe("Data.Application, best key anywhere", function()
+  it("reads the best run from any dungeon for every listing", function()
+    local fake = lfg({ { class = "MAGE", itemLevel = 290, tank = false, healer = false, damage = true, rating = 2000 } })
+    fake.GetApplicantBestDungeonScore = function() return { bestRunLevel = 13, finishedSuccess = false, mapScore = 330 } end
+    install({ units = {}, lfg = fake })
+    local m = load().Application(7, { activityID = 42, isMythicPlus = false }).members[1]
+    assert.equals(13, m.overallLevel)
+    assert.is_false(m.overallTimed)
   end)
 end)

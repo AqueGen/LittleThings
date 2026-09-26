@@ -30,12 +30,19 @@ function Data.Listing()
     }
 end
 
-function Data.DungeonBest(applicantID, memberIndex, activityID)
-    local best = C_LFGList.GetApplicantDungeonScoreForListing(applicantID, memberIndex, activityID)
+local function ReadBest(best)
     if not best then return nil end
     if AnySecret(best.bestRunLevel, best.finishedSuccess, best.mapScore) then return false end
     if (best.bestRunLevel or 0) <= 0 then return nil end
     return { level = best.bestRunLevel, timed = best.finishedSuccess == true, score = best.mapScore }
+end
+
+function Data.DungeonBest(applicantID, memberIndex, activityID)
+    return ReadBest(C_LFGList.GetApplicantDungeonScoreForListing(applicantID, memberIndex, activityID))
+end
+
+function Data.OverallBest(applicantID, memberIndex)
+    return ReadBest(C_LFGList.GetApplicantBestDungeonScore(applicantID, memberIndex))
 end
 
 function Data.Application(applicantID, listing)
@@ -55,6 +62,11 @@ function Data.Application(applicantID, listing)
             rating = rating,
             roles = { TANK = tank == true, HEALER = healer == true, DAMAGER = damage == true },
         }
+        local overall = Data.OverallBest(applicantID, i)
+        if overall == false then return nil end
+        if overall then
+            member.overallLevel, member.overallTimed = overall.level, overall.timed
+        end
         if listing.isMythicPlus then
             local best = Data.DungeonBest(applicantID, i, listing.activityID)
             if best == false then return nil end

@@ -17,6 +17,13 @@ local BORDER = {
     [Rules.EXCLUDE] = { 0.95, 0.15, 0.15 },
 }
 
+local SIDES = {
+    right = { label = "Right of the group finder", point = "TOPLEFT", relativePoint = "TOPRIGHT", x = 2 },
+    left = { label = "Left of the group finder", point = "TOPRIGHT", relativePoint = "TOPLEFT", x = -2 },
+}
+local SIDE_ORDER = { "right", "left" }
+local POSITION_DEFAULTS = { side = "right", x = 0, y = 0 }
+
 local panel
 local classButtons, roleButtons, boxes, checks = {}, {}, {}, {}
 
@@ -161,8 +168,8 @@ local function BuildMode(y)
             S().mode = mode
             Filter.Changed()
         end
-        root:CreateRadio("Failing applicants move down", IsSelected, Select, "down")
-        root:CreateRadio("Failing applicants are hidden", IsSelected, Select, "hide")
+        root:CreateRadio("Move down", IsSelected, Select, "down")
+        root:CreateRadio("Hide", IsSelected, Select, "hide")
     end)
     return y - 30
 end
@@ -212,32 +219,16 @@ local function Sync()
     end
 end
 
+local function Position()
+    return ns.db.applicantPanel
+end
+
 local function Place()
+    if not panel then return end
+    local position = Position()
+    local side = SIDES[position.side] or SIDES.right
     panel:ClearAllPoints()
-    local saved = ns.db.applicantPanelPos
-    if saved then
-        panel:SetPoint(saved.point, UIParent, saved.relativePoint, saved.x, saved.y)
-        return
-    end
-    local left = PVEFrame:GetLeft()
-    if left and left >= WIDTH + 4 then
-        panel:SetPoint("TOPRIGHT", PVEFrame, "TOPLEFT", -2, 0)
-    else
-        panel:SetPoint("TOPLEFT", PVEFrame, "TOPRIGHT", 2, 0)
-    end
-end
-
-local function SavePosition(self)
-    self:StopMovingOrSizing()
-    local point, _, relativePoint, x, y = self:GetPoint(1)
-    ns.db.applicantPanelPos = { point = point, relativePoint = relativePoint, x = x, y = y }
-end
-
-local function Redock(self, mouseButton)
-    if mouseButton == "RightButton" then
-        ns.db.applicantPanelPos = nil
-        Place()
-    end
+    panel:SetPoint(side.point, PVEFrame, side.relativePoint, side.x + position.x, position.y)
 end
 
 local function Build()
@@ -245,12 +236,11 @@ local function Build()
     panel = CreateFrame("Frame", nil, viewer, "TooltipBackdropTemplate")
     panel:SetWidth(WIDTH)
     panel:SetClampedToScreen(true)
-    panel:SetMovable(true)
     panel:EnableMouse(true)
-    panel:RegisterForDrag("LeftButton")
-    panel:SetScript("OnDragStart", panel.StartMoving)
-    panel:SetScript("OnDragStop", SavePosition)
-    panel:SetScript("OnMouseUp", Redock)
+    local background = panel:CreateTexture(nil, "BACKGROUND", nil, -8)
+    background:SetPoint("TOPLEFT", 3, -3)
+    background:SetPoint("BOTTOMRIGHT", -3, 3)
+    background:SetColorTexture(0.04, 0.04, 0.06, 0.96)
     panel.Sync = Sync
 
     local y = -PAD
@@ -264,6 +254,7 @@ local function Build()
     y = Heading("Minimums", y)
     y = Box("minRating", "Mythic+ rating", y)
     y = Box("minItemLevel", "Item level", y)
+    y = Box("minOverallLevel", "Best key anywhere", y)
     y = Heading("This dungeon", y)
     y = Box("minDungeonLevel", "Best key at least", y)
     Check("timedOnly", "Timed only", PAD, y)
@@ -294,6 +285,49 @@ local function Build()
     panel:SetShown(ns.db.classFilter == true)
     Place()
     Sync()
+end
+
+local function SideOptions()
+    local container = Settings.CreateControlTextContainer()
+    for _, key in ipairs(SIDE_ORDER) do
+        container:Add(key, SIDES[key].label)
+    end
+    return container:GetData()
+end
+
+function Filter.Pages(page)
+    ns.db.applicantFilterOptions = ns.db.applicantFilterOptions or {}
+    ns.ApplyDefaults(ns.db.applicantFilterOptions, { removeFinished = true })
+    local remove = Settings.RegisterProxySetting(page.category, "LT_applicantFilter_removeFinished", Settings.VarType.Boolean,
+        "Remove closed applications", true,
+        function() return ns.db.applicantFilterOptions.removeFinished end,
+        function(value) ns.db.applicantFilterOptions.removeFinished = value end)
+    ns.AddToPage(page, Settings.CreateCheckbox(page.category, remove,
+        "Applications that were cancelled, timed out, declined or turned the invite down leave the list at once, as if you clicked their X."))
+
+    ns.db.applicantPanel = ns.db.applicantPanel or {}
+    ns.ApplyDefaults(ns.db.applicantPanel, POSITION_DEFAULTS)
+    if not SIDES[Position().side] then Position().side = POSITION_DEFAULTS.side end
+
+    local category = page.category
+    local function Proxy(key, varType, label)
+        return Settings.RegisterProxySetting(category, "LT_applicantPanel_" .. key, varType, label,
+            POSITION_DEFAULTS[key],
+            function() return Position()[key] end,
+            function(value)
+                Position()[key] = value
+                Place()
+            end)
+    end
+
+    ns.AddToPage(page, Settings.CreateDropdown(category, Proxy("side", Settings.VarType.String, "Panel side"),
+        SideOptions, "Which side of the group finder the applicant filter panel sits on."))
+    for _, key in ipairs({ "x", "y" }) do
+        local options = Settings.CreateSliderOptions(-800, 800, 1)
+        options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
+        ns.AddToPage(page, Settings.CreateSlider(category, Proxy(key, Settings.VarType.Number, "Panel " .. key:upper() .. " offset"),
+            options, "Pixels to move the panel from its side of the group finder. X moves it right, Y moves it up."))
+    end
 end
 
 Filter.BuildPanel = function()

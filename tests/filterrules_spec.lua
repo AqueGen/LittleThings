@@ -253,3 +253,31 @@ describe("Rules.CountClasses, members still loading", function()
     assert.equals(1, counts.MAGE)
   end)
 end)
+
+describe("Rules.IsFinished", function()
+  it("is true for applications that ended without joining", function()
+    for _, status in ipairs({ "cancelled", "failed", "timedout", "declined", "declined_full", "declined_delisted", "invitedeclined" }) do
+      assert.is_true(Rules.IsFinished(status, nil), status)
+    end
+  end)
+
+  it("is false for live applications and while a change is pending", function()
+    assert.is_false(Rules.IsFinished("applied", nil))
+    assert.is_false(Rules.IsFinished("invited", nil))
+    assert.is_false(Rules.IsFinished("inviteaccepted", nil))
+    assert.is_false(Rules.IsFinished("cancelled", "applied"))
+  end)
+end)
+
+describe("Rules.Passes, best key anywhere", function()
+  it("drops a member whose best key anywhere is below the minimum", function()
+    local s = settings({ minOverallLevel = 12 })
+    assert.is_false(Rules.Passes(app(member("MAGE", { overallLevel = 11 })), OPEN_GROUP, s))
+    assert.is_true(Rules.Passes(app(member("MAGE", { overallLevel = 12 })), OPEN_GROUP, s))
+    assert.is_false(Rules.Passes(app(member("MAGE")), OPEN_GROUP, s))
+  end)
+
+  it("counts as an active filter", function()
+    assert.is_true(Rules.IsActive(settings({ minOverallLevel = 0 })))
+  end)
+end)
