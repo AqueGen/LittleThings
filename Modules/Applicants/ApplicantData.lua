@@ -1,6 +1,7 @@
 local _, ns = ...
 
 local Rules = ns and ns.FilterRules or require("FilterRules")
+local Progress = ns and ns.RaidProgress or require("RaidProgress")
 
 local Data = {}
 
@@ -28,6 +29,8 @@ function Data.Listing()
         isMythicPlus = activity.isMythicPlusActivity == true,
         fiveMan = activity.maxNumPlayers == 5,
         isRaid = (activity.maxNumPlayers or 0) > 5 and not activity.isPvpActivity and not activity.isRatedPvpActivity,
+        mapID = activity.mapID,
+        raidDifficulty = Progress.Difficulty(activity),
     }
 end
 

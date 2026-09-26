@@ -3,6 +3,7 @@ local addonName, ns = ...
 local Order = ns.ApplicantOrder
 local Data = ns.ApplicantData
 local Pipeline = ns.ApplicantPipeline
+local Progress = ns.RaidProgress
 
 local ApplicantSort = {}
 
@@ -57,25 +58,63 @@ local function KeyText(best, colors)
     return color:WrapTextInColorCode("+" .. best.level)
 end
 
+local DIFFICULTY_COLORS = { [1] = CreateColor(0.12, 1, 0), [2] = CreateColor(0, 0.44, 0.87), [3] = CreateColor(0.64, 0.21, 0.93) }
+local RAID_COLUMN_X = 200
+
 local function KeyLines(member)
     if not member.ltKeys then
-        local overall = member:CreateFontString(nil, "ARTWORK", "GameFontNormalTiny")
-        overall:SetPoint("BOTTOMLEFT", member.Rating, "RIGHT", 3, 0)
-        local dungeon = member:CreateFontString(nil, "ARTWORK", "GameFontNormalTiny")
-        dungeon:SetPoint("TOPLEFT", member.Rating, "RIGHT", 3, 0)
-        member.ltKeys = { overall = overall, dungeon = dungeon }
+        member.ltKeys = {
+            overall = member:CreateFontString(nil, "ARTWORK", "GameFontNormalTiny"),
+            dungeon = member:CreateFontString(nil, "ARTWORK", "GameFontNormalTiny"),
+        }
     end
     return member.ltKeys
+end
+
+local function PlaceLines(member, lines, raid)
+    lines.overall:ClearAllPoints()
+    lines.dungeon:ClearAllPoints()
+    if raid then
+        lines.overall:SetPoint("BOTTOMLEFT", member, "LEFT", RAID_COLUMN_X, 0)
+        lines.dungeon:SetPoint("TOPLEFT", member, "LEFT", RAID_COLUMN_X, 0)
+    else
+        lines.overall:SetPoint("BOTTOMLEFT", member.Rating, "RIGHT", 3, 0)
+        lines.dungeon:SetPoint("TOPLEFT", member.Rating, "RIGHT", 3, 0)
+    end
+end
+
+local function RaidEntries(applicantID, memberIndex)
+    local rio = _G.RaiderIO
+    if type(rio) ~= "table" or type(rio.GetProfile) ~= "function" then return nil end
+    local name = C_LFGList.GetApplicantMemberInfo(applicantID, memberIndex)
+    if type(name) ~= "string" or issecretvalue(name) then return nil end
+    if not name:find("-", 1, true) then
+        name = name .. "-" .. GetNormalizedRealmName()
+    end
+    local ok, profile = pcall(rio.GetProfile, name)
+    local raid = ok and type(profile) == "table" and profile.raidProfile
+    return raid and raid.progress
+end
+
+local function ProgressText(entry)
+    local text = Progress.Text(entry)
+    local color = entry and DIFFICULTY_COLORS[entry.difficulty]
+    return (color and text ~= "") and color:WrapTextInColorCode(text) or text
 end
 
 local function ShowKey(member, applicantID, memberIndex)
     local lines = KeyLines(member)
     local overallText, dungeonText = "", ""
-    local listing = ns.db.applicantSort and member.Rating:IsShown() and not issecretvalue(applicantID) and Data.Listing()
-    if listing and listing.isMythicPlus then
+    local listing = ns.db.applicantSort and not issecretvalue(applicantID) and Data.Listing()
+    if listing and listing.isMythicPlus and member.Rating:IsShown() then
         overallText = KeyText(Data.OverallBest(applicantID, memberIndex) or nil, OVERALL_COLORS)
         dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil, DUNGEON_COLORS)
+    elseif listing and listing.isRaid and member.ItemLevel:IsShown() then
+        local entries = RaidEntries(applicantID, memberIndex)
+        overallText = ProgressText(Progress.Best(entries))
+        dungeonText = ProgressText(Progress.For(entries, listing.mapID, listing.raidDifficulty))
     end
+    PlaceLines(member, lines, listing and listing.isRaid)
     lines.overall:SetText(overallText)
     lines.dungeon:SetText(dungeonText)
 end
@@ -84,7 +123,7 @@ local function ShowColumnLabel()
     local header = LFGApplicationViewerRatingColumnHeader
     if not header then return end
     if not header.ltKeyLabel then
-        header.ltKeyLabel = header:CreateFontString(nil, "OVERLAY", "GameFontNormalTiny")
+        header.ltKeyLabel = header:GetParent():CreateFontString(nil, "OVERLAY", "GameFontNormalTiny")
         header.ltKeyLabel:SetPoint("LEFT", header, "RIGHT", 3, 0)
         header.ltKeyLabel:SetJustifyH("LEFT")
         header.ltKeyLabel:SetText(OVERALL_COLORS.timed:WrapTextInColorCode("Best") .. "|n" .. DUNGEON_COLORS.timed:WrapTextInColorCode("Here"))
