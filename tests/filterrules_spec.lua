@@ -182,3 +182,50 @@ describe("Rules.Passes, battle res fit", function()
     assert.is_true(Rules.Passes(app(member("ROGUE")), tankOpen, s))
   end)
 end)
+describe("Rules.Apply", function()
+  local byId = {
+    [1] = app(member("MAGE")),
+    [2] = app(member("PALADIN")),
+    [3] = app(member("PRIEST")),
+    [4] = app(member("PALADIN")),
+  }
+  local s = settings({ classes = { PALADIN = EXCLUDE } })
+
+  it("moves failing applications below passing ones, keeping both orders", function()
+    local ids = { 4, 1, 2, 3 }
+    local failed, count = Rules.Apply(ids, byId, OPEN_GROUP, s)
+    assert.same({ 1, 3, 4, 2 }, ids)
+    assert.equals(2, count)
+    assert.is_true(failed[4])
+    assert.is_true(failed[2])
+    assert.is_nil(failed[1])
+  end)
+
+  it("removes failing applications in hide mode", function()
+    local ids = { 4, 1, 2, 3 }
+    local hide = settings({ classes = { PALADIN = EXCLUDE }, mode = "hide" })
+    local _, count = Rules.Apply(ids, byId, OPEN_GROUP, hide)
+    assert.same({ 1, 3 }, ids)
+    assert.equals(2, count)
+  end)
+end)
+
+describe("Rules.Migrate", function()
+  it("starts from the defaults and adopts the old class picks", function()
+    local migrated = Rules.Migrate(nil, { MAGE = NEED })
+    assert.equals(NEED, migrated.classes.MAGE)
+    assert.equals("down", migrated.mode)
+    assert.is_true(migrated.roles.TANK)
+  end)
+
+  it("keeps saved settings and fills what a newer version added", function()
+    local saved = { classes = { ROGUE = EXCLUDE }, roles = { TANK = false, HEALER = true, DAMAGER = true }, minRating = 2000 }
+    local migrated = Rules.Migrate(saved, { MAGE = NEED })
+    assert.equals(EXCLUDE, migrated.classes.ROGUE)
+    assert.is_nil(migrated.classes.MAGE)
+    assert.is_false(migrated.roles.TANK)
+    assert.equals(2000, migrated.minRating)
+    assert.equals("down", migrated.mode)
+    assert.is_false(migrated.timedOnly)
+  end)
+end)

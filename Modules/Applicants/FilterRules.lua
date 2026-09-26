@@ -134,5 +134,45 @@ function Rules.CountClasses(applications)
     return counts
 end
 
+function Rules.Apply(ids, byId, group, s)
+    local passing, failing, failed = {}, {}, {}
+    for _, id in ipairs(ids) do
+        if Rules.Passes(byId[id], group, s) then
+            passing[#passing + 1] = id
+        else
+            failing[#failing + 1] = id
+            failed[id] = true
+        end
+    end
+
+    for index = #ids, 1, -1 do
+        ids[index] = nil
+    end
+    for _, id in ipairs(passing) do
+        ids[#ids + 1] = id
+    end
+    if s.mode ~= "hide" then
+        for _, id in ipairs(failing) do
+            ids[#ids + 1] = id
+        end
+    end
+    return failed, #failing
+end
+
+function Rules.Migrate(current, oldClassPicks)
+    local defaults = Rules.Defaults()
+    if current == nil then
+        current = defaults
+        for class, state in pairs(oldClassPicks or {}) do
+            current.classes[class] = state
+        end
+        return current
+    end
+    for key, value in pairs(defaults) do
+        if current[key] == nil then current[key] = value end
+    end
+    return current
+end
+
 if ns then ns.FilterRules = Rules end
 return Rules
