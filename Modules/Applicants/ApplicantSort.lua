@@ -48,9 +48,12 @@ local function Sort(applicants)
     end
 end
 
-local function KeyText(best)
+local OVERALL_COLORS = { timed = CreateColor(0.35, 0.75, 1), untimed = CreateColor(0.5, 0.55, 0.65) }
+local DUNGEON_COLORS = { timed = GREEN_FONT_COLOR, untimed = GRAY_FONT_COLOR }
+
+local function KeyText(best, colors)
     if not best then return "" end
-    local color = best.timed and GREEN_FONT_COLOR or GRAY_FONT_COLOR
+    local color = best.timed and colors.timed or colors.untimed
     return color:WrapTextInColorCode("+" .. best.level)
 end
 
@@ -70,8 +73,8 @@ local function ShowKey(member, applicantID, memberIndex)
     local overallText, dungeonText = "", ""
     local listing = ns.db.applicantSort and member.Rating:IsShown() and not issecretvalue(applicantID) and Data.Listing()
     if listing and listing.isMythicPlus then
-        overallText = KeyText(Data.OverallBest(applicantID, memberIndex) or nil)
-        dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil)
+        overallText = KeyText(Data.OverallBest(applicantID, memberIndex) or nil, OVERALL_COLORS)
+        dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil, DUNGEON_COLORS)
     end
     lines.overall:SetText(overallText)
     lines.dungeon:SetText(dungeonText)
@@ -84,7 +87,7 @@ local function ShowColumnLabel()
         header.ltKeyLabel = header:CreateFontString(nil, "OVERLAY", "GameFontNormalTiny")
         header.ltKeyLabel:SetPoint("LEFT", header, "RIGHT", 3, 0)
         header.ltKeyLabel:SetJustifyH("LEFT")
-        header.ltKeyLabel:SetText("Best|nHere")
+        header.ltKeyLabel:SetText(OVERALL_COLORS.timed:WrapTextInColorCode("Best") .. "|n" .. DUNGEON_COLORS.timed:WrapTextInColorCode("Here"))
     end
     header.ltKeyLabel:SetShown(ns.db.applicantSort == true)
 end

@@ -104,7 +104,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Roles: tank toggled off moves tank-only applicants down; a tank/damage flex stays. Hide roles already filled with a tank in the group moves tank-only applicants down; when the tank leaves, they come back.
 - [ ] Bloodlust fit with no Bloodlust class in the group and one damage slot left: a mage stays, a rogue moves down.
 - [ ] Mode Hide: failing applicants disappear, "Hidden: N". An invited applicant stays whatever the filters say.
-- [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top, this dungeon below, green when timed, clear of the invite buttons; nothing on cancelled rows. Sort by "This dungeon" orders by the lower one.
+- [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top in blue, this dungeon below in green, each dimmed when not timed, label colours matching, clear of the invite buttons; nothing on cancelled rows. Sort by "This dungeon" orders by the lower one.
 - [ ] Best key anywhere at least 12: applicants whose best run is below +12 move down.
 - [ ] An applicant cancels, times out or is declined: the row leaves the list at once. Remove closed applications off: the row stays with its X, as Blizzard shows it.
 - [ ] Reset clears everything except the mode. Invite and decline from a filtered list work, BugSack stays empty.
