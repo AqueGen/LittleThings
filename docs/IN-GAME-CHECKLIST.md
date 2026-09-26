@@ -93,14 +93,16 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Invite and decline still work from the sorted list, in and out of an instance, and BugSack stays empty.
 - [ ] Switch off: the next list update goes back to Blizzard's order.
 
-## 9. Class filter for applicants
+## 9. Applicant filter
 
-- [ ] Switch on Class filter, list a group, open its applicant list: a row of 13 dimmed class icons hangs under the finder, below the Dungeons & Raids / PvP / Mythic+ tabs, not over them. It is gone on the group search list and when the finder closes.
-- [ ] Left-click Mage: green frame, only mage applicants stay, "Hidden: N" appears. Left-click again: red frame, desaturated, mages are gone and the rest are back. Third click or right-click: dim, full list.
-- [ ] Need Shaman, Mage, Hunter and Evoker: every applicant left is one of them. A two-player application with one of them in it stays.
-- [ ] Hide every applicant: the list shows Blizzard's "no applicants" text. New applicants of a hidden class do not appear; of a needed class they do, sorted by the Mythic+ applicants order when that is on.
-- [ ] Under each icon: the number of applicants of that class, counting every member of a group application and the hidden ones too; empty for a class nobody applied as. Counts follow new and withdrawn applications.
-- [ ] Reset is greyed out with nothing picked. With picks, Reset clears every icon and the full list is back.
-- [ ] Invite and decline from a filtered list work, BugSack stays empty.
-- [ ] Reload: the picks are still there. On another character: none.
-- [ ] Switch off: the row disappears and the full list is back at once.
+- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits left of the finder, clear of Raider.IO's frame on the right; it is gone on the search list and when the finder closes.
+- [ ] Class icons show counts, including applicants moved down or hidden; need, exclude and clear work as the tooltip says.
+- [ ] Minimum rating 2500: applicants below move to the bottom, dimmed; "Moved down: N" matches. Empty the box: back to normal. Type 0: nothing moves.
+- [ ] Best key at least 10 and Timed only: an applicant who never ran the dungeon moves down. In a raid listing both are greyed out.
+- [ ] Roles: tank toggled off moves tank-only applicants down; a tank/damage flex stays. Hide roles already filled with a tank in the group moves tank-only applicants down; when the tank leaves, they come back.
+- [ ] Bloodlust fit with no Bloodlust class in the group and one damage slot left: a mage stays, a rogue moves down.
+- [ ] Mode Hide: failing applicants disappear, "Hidden: N". An invited applicant stays whatever the filters say.
+- [ ] Rows show the best key in this dungeon next to the rating, green when timed; Sort by "This dungeon" orders by it.
+- [ ] Reset clears everything except the mode. Invite and decline from a filtered list work, BugSack stays empty.
+- [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them.
+- [ ] Switch off: the panel disappears and the list is Blizzard's again at once.

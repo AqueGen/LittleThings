@@ -46,13 +46,16 @@ If any value the rules need comes back Secret (`GetApplicantInfo` is Secret duri
 
 ## Code layout
 
-`Modules/ApplicantFilter/`:
+`Modules/Applicants/`:
 
-- `FilterRules.lua` - pure Lua, no game API: takes applications as plain tables (`{ members = { { class, roles, rating, itemLevel, dungeonLevel, dungeonTimed } } }`), the group state (`{ open = { TANK, HEALER, DAMAGER }, hasBloodlust, hasBattleRes }`) and the filter settings; returns pass/fail per application, the class counts, and the partitioned order.
+- `FilterRules.lua` - pure Lua, no game API: takes applications as plain tables (`{ pinned, members = { { class, roles, rating, itemLevel, dungeonLevel, dungeonTimed, dungeonScore } } }`), the group state (`{ open = { TANK, HEALER, DAMAGER } | nil, hasBloodlust, hasBattleRes }`) and the filter settings; returns pass/fail per application, the class counts, the partitioned order, and migrates the old class picks.
 - `ApplicantData.lua` - reads the game API into those plain tables; returns nil on any Secret value.
-- `ApplicantFilter.lua` - hooks `LFGListUtil_SortApplicants` (partition) and `LFGListApplicationViewer_UpdateApplicantMember` (dungeon key text, dimming), refreshes on `GROUP_ROSTER_UPDATE` and `PLAYER_ROLES_ASSIGNED`, owns the panel.
+- `Pipeline.lua` - the one hook on `LFGListUtil_SortApplicants`, running sort then filter in a fixed order, and the list refresh.
+- `ApplicantOrder.lua`, `ApplicantSort.lua` - the Mythic+ applicants sort, its three keys and the dungeon key on each row.
+- `ApplicantFilter.lua` - the filter module: settings adoption, the pipeline step, row dimming, roster events.
+- `FilterPanel.lua` - the panel frame.
 
-`Modules/ClassFilter/` is deleted; its rules move into `FilterRules.lua`.
+`Modules/ClassFilter/` is deleted; its rules moved into `FilterRules.lua`.
 
 ## Testing
 
