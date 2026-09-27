@@ -15,7 +15,7 @@ end
 DefaultPlaystyle.Options = Options
 
 local function Pick(creation)
-    if not ns.db.defaultPlaystyle then return end
+    if not ns.IsOn("defaultPlaystyle") then return end
     local style = Enum.LFGEntryGeneralPlaystyle[Options().style]
     if not style or not creation.PlayStyleDropdown:IsShown() then return end
     if creation.generalPlaystyle ~= Enum.LFGEntryGeneralPlaystyle.None then return end
@@ -24,7 +24,7 @@ local function Pick(creation)
 end
 
 local function PreferMythicPlus(creation, _, _, groupID, activityID)
-    if not ns.db.defaultPlaystyle or not Options().preferMythicPlus then return end
+    if not ns.IsOn("defaultPlaystyle") or not Options().preferMythicPlus then return end
     if not groupID or activityID or not creation.selectedActivity then return end
     local current = C_LFGList.GetActivityInfoTable(creation.selectedActivity)
     if not current or current.isMythicPlusActivity then return end
@@ -38,7 +38,7 @@ local function PreferMythicPlus(creation, _, _, groupID, activityID)
 end
 
 local function PlainTitle(creation)
-    if not ns.db.defaultPlaystyle or not Options().plainTitle then return end
+    if not ns.IsOn("defaultPlaystyle") or not Options().plainTitle then return end
     local activity, group, general = creation.selectedActivity, creation.selectedGroup, creation.generalPlaystyle
     if not activity or not group or not general or general == Enum.LFGEntryGeneralPlaystyle.None then return end
     if not C_LFGList.DoesEntryTitleMatchPrebuiltTitle(activity, group, creation.selectedPlaystyle, general) then return end
@@ -51,7 +51,7 @@ end
 local BLOCKABLE = { "SetEntryTitle", "CreateListing", "UpdateListing" }
 
 local function OnBlocked(_, _, blockedAddon, blockedFunction)
-    if not ns.db.defaultPlaystyle or blockedAddon ~= addonName or type(blockedFunction) ~= "string" then return end
+    if not ns.IsOn("defaultPlaystyle") or blockedAddon ~= addonName or type(blockedFunction) ~= "string" then return end
     for _, name in ipairs(BLOCKABLE) do
         if blockedFunction:find(name, 1, true) then
             ns.SetSwitch("defaultPlaystyle", false)

@@ -69,7 +69,7 @@ local function RaidEntries(applicantID, memberIndex)
 end
 
 local function Sort(applicants)
-    if not ns.db.applicantSort then return end
+    if not ns.IsOn("applicantSort") then return end
     local listing = Data.Listing()
     local choices = ApplicantSort.Choices(listing)
     if not choices then return end
@@ -163,7 +163,7 @@ local function ShowColumnLabel(listing)
         header.ltRaidLegend:SetJustifyH("LEFT")
         header.ltRaidLegend:SetText(RAID_LEGEND)
     end
-    local on = ns.db.applicantSort == true
+    local on = ns.IsOn("applicantSort") == true
     local raid = listing ~= nil and listing.isRaid
     header.ltKeyLabel:SetShown(on and listing ~= nil and not raid)
     header.ltRaidLegend:SetShown(on and raid)
@@ -172,7 +172,7 @@ end
 local function ShowKey(member, applicantID, memberIndex)
     local lines = KeyLines(member)
     local overallText, dungeonText = "", ""
-    local listing = ns.db.applicantSort and not issecretvalue(applicantID) and Data.Listing()
+    local listing = ns.IsOn("applicantSort") and not issecretvalue(applicantID) and Data.Listing()
     if listing and listing.isMythicPlus and member.Rating:IsShown() then
         overallText = KeyText(Data.OverallBest(applicantID, memberIndex) or nil, OVERALL_COLORS)
         dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil, DUNGEON_COLORS)

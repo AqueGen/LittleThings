@@ -24,7 +24,7 @@ local function Creation()
 end
 
 local function On()
-    return ns.db.defaultPlaystyle and ns.DefaultPlaystyle.Options().partyKeys
+    return ns.IsOn("defaultPlaystyle") and ns.DefaultPlaystyle.Options().partyKeys
 end
 
 local function UnitFullName(unit)

@@ -33,7 +33,7 @@ local function Adopt()
 end
 
 local function Filter(applicants)
-    if not ns.db.classFilter then return end
+    if not ns.IsOn("classFilter") then return end
     local state = ApplicantFilter.state
     state.failed, state.count, state.paused, state.counts = {}, 0, Data.Locked(), nil
     state.listing = Data.Listing()
@@ -63,7 +63,7 @@ end
 
 local function Dim(member, applicantID)
     local button = member:GetParent()
-    local failed = ns.db.classFilter and not issecretvalue(applicantID) and ApplicantFilter.state.failed[applicantID]
+    local failed = ns.IsOn("classFilter") and not issecretvalue(applicantID) and ApplicantFilter.state.failed[applicantID]
     button:SetAlpha(failed and DIMMED or 1)
 end
 
@@ -80,7 +80,7 @@ local sweepQueued = false
 
 local function Sweep()
     sweepQueued = false
-    if not ns.db.classFilter or not ApplicantFilter.Options().removeFinished or Data.Locked() then return end
+    if not ns.IsOn("classFilter") or not ApplicantFilter.Options().removeFinished or Data.Locked() then return end
     local removed = false
     for _, applicantID in ipairs(C_LFGList.GetApplicants() or {}) do
         if not issecretvalue(applicantID) then
@@ -122,7 +122,7 @@ function ApplicantFilter.Enable()
     events:SetScript("OnEvent", function(_, event)
         if event == "LFG_LIST_APPLICANT_UPDATED" or event == "LFG_LIST_APPLICANT_LIST_UPDATED" then
             QueueSweep()
-        elseif ns.db.classFilter and UsesGroup() then
+        elseif ns.IsOn("classFilter") and UsesGroup() then
             Pipeline.Refresh()
         end
     end)
