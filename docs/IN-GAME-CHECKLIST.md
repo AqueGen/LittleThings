@@ -97,7 +97,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 - [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background and shows Classes, Roles, Minimum item level, Group utility, the mode and Reset; it is gone on the search list and when the finder closes. Drag it by its background: it stays where dropped, the page's X/Y offsets show the new values, and the spot is kept after /reload. Panel side Left and the offsets move it at once.
 - [ ] With Sort applicants on, a Mythic+ listing shows a Sort dropdown above the mode; picking a key reorders the list at once and the settings page shows the same choice. Sort off, or a raid listing: no Sort dropdown.
-- [ ] List a raid: the panel drops Group utility and gets shorter; nothing else changes.
+- [ ] List a raid: the panel drops Group utility, and its Sort dropdown offers Progress, then item level / Item level, then progress. With Progress, an applicant with any Mythic kill in the listed raid is above every Heroic-only one, Heroic above Normal, then by bosses killed. Over the column, a Normal / Heroic / Mythic legend in green / blue / purple replaces Best / Here.
 - [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's until you leave the instance.
 - [ ] Class icons show counts, including applicants moved down or hidden; need, exclude and clear work as the tooltip says.
 - [ ] Minimum item level 300: applicants below move to the bottom, dimmed; "Moved down: N" matches. Empty the box: back to normal. Type 0: nothing moves.

@@ -29,6 +29,17 @@ function Progress.For(entries, mapId, difficulty)
     return nil
 end
 
+function Progress.Score(entries, mapId)
+    local best
+    for _, entry in ipairs(entries or {}) do
+        if HasKills(entry) and entry.raid and entry.raid.mapId == mapId then
+            local score = entry.difficulty * 100 + entry.progressCount
+            if not best or score > best then best = score end
+        end
+    end
+    return best
+end
+
 function Progress.Text(entry, compact)
     if not HasKills(entry) then return "" end
     local text = entry.progressCount .. "/" .. (entry.raid and entry.raid.bossCount or "?")

@@ -180,13 +180,15 @@ local function BuildSort()
     dropdown:SetWidth(WIDTH - 2 * PAD)
     dropdown:SetupMenu(function(_, root)
         local sort = ns.ApplicantSort
-        local function IsSelected(key) return sort.GetBy() == key end
+        local choices = sort.Choices(Data.Listing())
+        if not choices then return end
+        local function IsSelected(key) return sort.GetBy(choices) == key end
         local function Select(key)
-            sort.SetBy(key)
+            sort.SetBy(choices, key)
             Filter.Changed()
         end
-        for _, key in ipairs(sort.KEY_ORDER) do
-            root:CreateRadio(sort.KEYS[key], IsSelected, Select, key)
+        for _, key in ipairs(choices.order) do
+            root:CreateRadio(choices.names[key], IsSelected, Select, key)
         end
     end)
     panel.sortDropdown = dropdown
@@ -211,7 +213,7 @@ end
 local function Visible(row, listing)
     if row.when == "fiveMan" then return listing == nil or listing.fiveMan end
     if row.when == "sort" then
-        return ns.db.applicantSort == true and ns.ApplicantSort ~= nil and (listing == nil or listing.isMythicPlus)
+        return ns.db.applicantSort == true and ns.ApplicantSort ~= nil and ns.ApplicantSort.Choices(listing) ~= nil
     end
     return true
 end
