@@ -3,6 +3,7 @@ local _, ns = ...
 local Progress = {}
 
 local SUFFIX = { [1] = "N", [2] = "H", [3] = "M" }
+local RAID_DIFFICULTY_IDS = { [14] = 1, [15] = 2, [16] = 3 }
 
 local function HasKills(entry)
     return entry ~= nil and (entry.progressCount or 0) > 0
@@ -51,7 +52,7 @@ function Progress.Difficulty(activity)
     if activity.isMythicActivity then return 3 end
     if activity.isHeroicActivity then return 2 end
     if activity.isNormalActivity then return 1 end
-    return nil
+    return RAID_DIFFICULTY_IDS[activity.difficultyID]
 end
 
 if ns then ns.RaidProgress = Progress end

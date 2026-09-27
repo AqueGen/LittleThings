@@ -55,6 +55,13 @@ describe("Progress.Difficulty", function()
     assert.equals(1, Progress.Difficulty({ isNormalActivity = true }))
     assert.is_nil(Progress.Difficulty({}))
   end)
+
+  it("falls back to the raid difficulty id when the activity flags are not set", function()
+    assert.equals(1, Progress.Difficulty({ difficultyID = 14 }))
+    assert.equals(2, Progress.Difficulty({ difficultyID = 15 }))
+    assert.equals(3, Progress.Difficulty({ difficultyID = 16 }))
+    assert.is_nil(Progress.Difficulty({ difficultyID = 17 }))
+  end)
 end)
 
 describe("Progress.Score", function()

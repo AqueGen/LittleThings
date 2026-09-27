@@ -145,24 +145,6 @@ local function ProgressText(entry)
     return (color and text ~= "") and color:WrapTextInColorCode(text) or text
 end
 
-local function ShowKey(member, applicantID, memberIndex)
-    local lines = KeyLines(member)
-    local overallText, dungeonText = "", ""
-    local listing = ns.db.applicantSort and not issecretvalue(applicantID) and Data.Listing()
-    if listing and listing.isMythicPlus and member.Rating:IsShown() then
-        overallText = KeyText(Data.OverallBest(applicantID, memberIndex) or nil, OVERALL_COLORS)
-        dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil, DUNGEON_COLORS)
-    elseif listing and listing.isRaid and member.ItemLevel:IsShown() then
-        local entries = RaidEntries(applicantID, memberIndex)
-        overallText = ProgressText(Progress.Best(entries))
-        dungeonText = ProgressText(Progress.For(entries, listing.mapID, listing.raidDifficulty))
-    end
-    PlaceLines(member, lines, listing and listing.isRaid)
-    ShowColumnLabel(listing or nil)
-    lines.overall:SetText(overallText)
-    lines.dungeon:SetText(dungeonText)
-end
-
 local RAID_LEGEND = DIFFICULTY_COLORS[1]:WrapTextInColorCode("Normal") .. "  "
     .. DIFFICULTY_COLORS[2]:WrapTextInColorCode("Heroic") .. "  "
     .. DIFFICULTY_COLORS[3]:WrapTextInColorCode("Mythic")
@@ -184,6 +166,24 @@ local function ShowColumnLabel(listing)
     local raid = listing ~= nil and listing.isRaid
     header.ltKeyLabel:SetShown(on and not raid)
     header.ltRaidLegend:SetShown(on and raid)
+end
+
+local function ShowKey(member, applicantID, memberIndex)
+    local lines = KeyLines(member)
+    local overallText, dungeonText = "", ""
+    local listing = ns.db.applicantSort and not issecretvalue(applicantID) and Data.Listing()
+    if listing and listing.isMythicPlus and member.Rating:IsShown() then
+        overallText = KeyText(Data.OverallBest(applicantID, memberIndex) or nil, OVERALL_COLORS)
+        dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil, DUNGEON_COLORS)
+    elseif listing and listing.isRaid and member.ItemLevel:IsShown() then
+        local entries = RaidEntries(applicantID, memberIndex)
+        overallText = ProgressText(Progress.Best(entries))
+        dungeonText = ProgressText(Progress.For(entries, listing.mapID, listing.raidDifficulty))
+    end
+    PlaceLines(member, lines, listing and listing.isRaid)
+    ShowColumnLabel(listing or nil)
+    lines.overall:SetText(overallText)
+    lines.dungeon:SetText(dungeonText)
 end
 
 function ApplicantSort.Pages(page)
