@@ -8,13 +8,15 @@ local Progress = ns.RaidProgress
 local ApplicantSort = {}
 
 local KEYS = {
-    rating = "Mythic+ rating, then item level",
-    itemLevel = "Item level, then Mythic+ rating",
-    dungeon = "This dungeon, then Mythic+ rating",
+    rating = "Rating, then item level",
+    itemLevel = "Item level, then rating",
+    dungeon = "This dungeon, then rating",
 }
 local KEY_ORDER = { "rating", "itemLevel", "dungeon" }
 
 ApplicantSort.defaults = { by = "rating" }
+ApplicantSort.KEYS = KEYS
+ApplicantSort.KEY_ORDER = KEY_ORDER
 
 local enabled = false
 
@@ -172,5 +174,15 @@ function ApplicantSort.OnSwitch(on)
     Pipeline.Refresh()
 end
 
+function ApplicantSort.GetBy()
+    return Options().by
+end
+
+function ApplicantSort.SetBy(value)
+    Options().by = value
+    Pipeline.Refresh()
+end
+
 ApplicantSort.key = "applicantSort"
+ns.ApplicantSort = ApplicantSort
 ns.RegisterModule("ApplicantSort", ApplicantSort)

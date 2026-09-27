@@ -34,10 +34,10 @@ local function S()
     return Filter.Settings()
 end
 
-local function Row(height, fiveManOnly)
+local function Row(height, when)
     local row = CreateFrame("Frame", nil, panel)
     row:SetSize(WIDTH, height)
-    row.fiveManOnly = fiveManOnly
+    row.when = when
     rows[#rows + 1] = row
     return row
 end
@@ -166,10 +166,30 @@ local function BuildRoles()
 end
 
 local function BuildUtility()
-    local row = Row(18 + 24 + 30, true)
+    local row = Row(18 + 24 + 30, "fiveMan")
     Heading(row, "Group utility")
     Check(row, "needBloodlust", "Brings Bloodlust", -18)
     Check(row, "needBattleRes", "Brings battle res", -42)
+end
+
+local function BuildSort()
+    local row = Row(18 + 30, "sort")
+    Heading(row, "Sort")
+    local dropdown = CreateFrame("DropdownButton", nil, row, "WowStyle1DropdownTemplate")
+    dropdown:SetPoint("TOPLEFT", PAD, -18)
+    dropdown:SetWidth(WIDTH - 2 * PAD)
+    dropdown:SetupMenu(function(_, root)
+        local sort = ns.ApplicantSort
+        local function IsSelected(key) return sort.GetBy() == key end
+        local function Select(key)
+            sort.SetBy(key)
+            Filter.Changed()
+        end
+        for _, key in ipairs(sort.KEY_ORDER) do
+            root:CreateRadio(sort.KEYS[key], IsSelected, Select, key)
+        end
+    end)
+    panel.sortDropdown = dropdown
 end
 
 local function BuildMode()
@@ -188,12 +208,19 @@ local function BuildMode()
     end)
 end
 
+local function Visible(row, listing)
+    if row.when == "fiveMan" then return listing == nil or listing.fiveMan end
+    if row.when == "sort" then
+        return ns.db.applicantSort == true and ns.ApplicantSort ~= nil and (listing == nil or listing.isMythicPlus)
+    end
+    return true
+end
+
 local function Layout()
     local listing = Data.Listing()
-    local fiveMan = listing == nil or listing.fiveMan
     local y = -PAD - TITLE_HEIGHT
     for _, row in ipairs(rows) do
-        local shown = fiveMan or not row.fiveManOnly
+        local shown = Visible(row, listing)
         row:SetShown(shown)
         if shown then
             row:ClearAllPoints()
@@ -230,6 +257,7 @@ local function Sync()
     for key, check in pairs(checks) do
         check:SetChecked(s[key] == true)
     end
+    if panel.sortDropdown:IsVisible() then panel.sortDropdown:GenerateMenu() end
     Layout()
 
     panel.reset:SetEnabled(Rules.IsActive(s))
@@ -297,6 +325,7 @@ local function Build()
     BuildRoles()
     Box(Row(28), "minItemLevel", "Minimum item level")
     BuildUtility()
+    BuildSort()
     BuildMode()
 
     local footer = Row(22)
