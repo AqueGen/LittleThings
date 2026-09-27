@@ -25,9 +25,9 @@ ns.charDefaults = {
 ns.MODULES = {
     { key = "damageMeter", label = "Damage meter", switch = "Damage meter tweaks", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
     { key = "characterPanel", label = "Character panel", switch = "Spec and loot spec bars", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
-    { key = "applicantSort", label = "Mythic+ applicants", page = "Group finder", section = "Applicants", switch = "Sort applicants", live = true, tooltip = "When your group is listed, applicants are ordered by the key chosen below for Mythic+, and by item level for raids, highest first. Applicants without a value go to the bottom. Other listings keep Blizzard's order." },
-    { key = "classFilter", label = "Applicant filter", page = "Group finder", section = "Applicants", switch = "Applicant filter panel", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum rating and item level, best key in this dungeon, Bloodlust and battle res fit. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
-    { key = "defaultPlaystyle", label = "Group creation", page = "Group finder", section = "Creating a group", switch = "Group creation helpers", live = true, tooltip = "Creating a Mythic+ listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks one after the addon filled it in, this switch turns itself off and says so in chat." },
+    { key = "applicantSort", label = "Mythic+ applicants", page = "Group finder", section = "Applicants", switch = "Sort applicants", live = true, tooltip = "When your group is listed, applicants are ordered by the keys chosen below, one for Mythic+ and one for raids, highest first. Applicants without a value go to the bottom. Other listings keep Blizzard's order." },
+    { key = "classFilter", label = "Applicant filter", page = "Group finder", section = "Applicants", switch = "Applicant filter panel", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum item level, and in 5-player listings Bloodlust or battle res. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
+    { key = "defaultPlaystyle", label = "Group creation", page = "Group finder", section = "Creating a group", switch = "Group creation helpers", live = true, tooltip = "Creating a listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
     { key = "logLink", label = "Mythic+ log link", page = "Group finder", section = "Player menus", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "journalLoot", label = "Journal loot", switch = "Loot spec icons in the Adventure Guide", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
 }
@@ -240,18 +240,21 @@ StaticPopupDialogs["LITTLETHINGS_MODULE_RELOAD"] = {
     preferredIndex = 3,
 }
 
+function ns.SetSwitch(key, value)
+    ns.db[key] = value
+    for _, registered in ipairs(moduleOrder) do
+        if registered.key == key and registered.OnSwitch then
+            registered.OnSwitch(value)
+        end
+    end
+end
+
 local function AddModuleSwitch(page, module)
     local setting = Settings.RegisterProxySetting(page.category, "LT_module_" .. module.key,
         Settings.VarType.Boolean, module.switch, ns.defaults[module.key],
         function() return ns.db[module.key] end,
         function(value)
-            ns.db[module.key] = value
-
-            for _, registered in ipairs(moduleOrder) do
-                if registered.key == module.key and registered.OnSwitch then
-                    registered.OnSwitch(value)
-                end
-            end
+            ns.SetSwitch(module.key, value)
 
             if not module.live then
                 StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", module.label, value and "on" or "off")

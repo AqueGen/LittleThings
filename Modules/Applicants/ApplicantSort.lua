@@ -165,7 +165,7 @@ local function ShowColumnLabel(listing)
     end
     local on = ns.db.applicantSort == true
     local raid = listing ~= nil and listing.isRaid
-    header.ltKeyLabel:SetShown(on and not raid)
+    header.ltKeyLabel:SetShown(on and listing ~= nil and not raid)
     header.ltRaidLegend:SetShown(on and raid)
 end
 

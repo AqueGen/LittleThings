@@ -299,9 +299,10 @@ local function KeepDraggedPosition(self)
     local side = SIDES[position.side] or SIDES.right
     local anchorX = position.side == "left" and PVEFrame:GetLeft() or PVEFrame:GetRight()
     local panelX = position.side == "left" and self:GetRight() or self:GetLeft()
-    if anchorX and panelX then
+    local top, anchorTop = self:GetTop(), PVEFrame:GetTop()
+    if anchorX and panelX and top and anchorTop then
         position.x = Clamp(panelX - anchorX - side.x)
-        position.y = Clamp(self:GetTop() - PVEFrame:GetTop())
+        position.y = Clamp(top - anchorTop)
     end
     Place()
 end

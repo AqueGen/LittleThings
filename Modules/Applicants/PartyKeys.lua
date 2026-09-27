@@ -182,7 +182,7 @@ function PartyKeys.Enable()
     local events = CreateFrame("Frame")
     events:RegisterEvent("GROUP_ROSTER_UPDATE")
     events:SetScript("OnEvent", function()
-        Request()
+        if Creation():IsVisible() then Request() end
         Refresh()
     end)
 end

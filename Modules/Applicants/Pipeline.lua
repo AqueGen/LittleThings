@@ -11,7 +11,7 @@ local steps = {}
 local hooked = false
 
 local function Run(applicants)
-    if type(applicants) ~= "table" or issecretvalue(applicants) or Data.Locked() then return end
+    if type(applicants) ~= "table" or issecretvalue(applicants) then return end
     for _, step in ipairs(steps) do
         step.run(applicants)
     end

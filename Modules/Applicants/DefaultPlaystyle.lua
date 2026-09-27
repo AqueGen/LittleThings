@@ -7,7 +7,6 @@ local STYLES = { "Learning", "FunRelaxed", "FunSerious", "Expert" }
 DefaultPlaystyle.defaults = { style = "FunSerious", preferMythicPlus = true, plainTitle = true, partyKeys = true }
 
 local hooked = false
-local picked = false
 
 local function Options()
     return ns.db.defaultPlaystyleOptions
@@ -22,7 +21,6 @@ local function Pick(creation)
     if creation.generalPlaystyle ~= Enum.LFGEntryGeneralPlaystyle.None then return end
     LFGListEntryCreation_OnPlayStyleSelectedInternal(creation, style)
     creation.PlayStyleDropdown:GenerateMenu()
-    picked = true
 end
 
 local function PreferMythicPlus(creation, _, _, groupID, activityID)
@@ -33,7 +31,6 @@ local function PreferMythicPlus(creation, _, _, groupID, activityID)
     for _, candidate in ipairs(C_LFGList.GetAvailableActivities(creation.selectedCategory, groupID) or {}) do
         local info = C_LFGList.GetActivityInfoTable(candidate)
         if info and info.isMythicPlusActivity then
-            picked = true
             LFGListEntryCreation_Select(creation, creation.selectedFilters, creation.selectedCategory, groupID, candidate)
             return
         end
@@ -45,21 +42,22 @@ local function PlainTitle(creation)
     local activity, group, general = creation.selectedActivity, creation.selectedGroup, creation.generalPlaystyle
     if not activity or not group or not general or general == Enum.LFGEntryGeneralPlaystyle.None then return end
     if not C_LFGList.DoesEntryTitleMatchPrebuiltTitle(activity, group, creation.selectedPlaystyle, general) then return end
-    picked = true
     pcall(C_LFGList.SetEntryTitle, activity, group, creation.selectedPlaystyle, nil)
     if creation.Name and creation.Name:GetText() == "" then
         pcall(C_LFGList.SetEntryTitle, activity, group, creation.selectedPlaystyle, general)
     end
 end
 
+local BLOCKABLE = { "SetEntryTitle", "CreateListing", "UpdateListing" }
+
 local function OnBlocked(_, _, blockedAddon, blockedFunction)
-    if not picked or blockedAddon ~= addonName or type(blockedFunction) ~= "string" then return end
-    if blockedFunction:find("SetEntryTitle", 1, true) then
-        Options().plainTitle = false
-        ns.Print("the game refused to rewrite the group title without the playstyle, so that option is now off. /reload to clear the block.")
-    elseif blockedFunction:find("CreateListing", 1, true) then
-        ns.db.defaultPlaystyle = false
-        ns.Print("the game blocked listing the group after the addon filled it in, so the group creation helpers are now off. Fill it in by hand, and /reload to clear the block.")
+    if not ns.db.defaultPlaystyle or blockedAddon ~= addonName or type(blockedFunction) ~= "string" then return end
+    for _, name in ipairs(BLOCKABLE) do
+        if blockedFunction:find(name, 1, true) then
+            ns.SetSwitch("defaultPlaystyle", false)
+            ns.Print("the game blocked " .. name .. " after the group creation helpers changed the screen, so they are now off. Fill it in by hand, and /reload to clear the block.")
+            return
+        end
     end
 end
 
@@ -81,7 +79,7 @@ function DefaultPlaystyle.Pages(page)
     end
 
     ns.AddToPage(page, Settings.CreateDropdown(page.category, setting, StyleOptions,
-        "The playstyle already picked when you create a Mythic+ listing. You can still change it before listing."))
+        "The playstyle already picked when you create a listing. You can still change it before listing."))
 
     local function Checkbox(key, label, tooltip)
         local check = Settings.RegisterProxySetting(page.category, "LT_defaultPlaystyle_" .. key, Settings.VarType.Boolean,

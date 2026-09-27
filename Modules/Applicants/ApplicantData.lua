@@ -36,6 +36,7 @@ end
 
 local function ReadBest(best)
     if not best then return nil end
+    if issecretvalue(best) then return false end
     if AnySecret(best.bestRunLevel, best.finishedSuccess, best.mapScore) then return false end
     if (best.bestRunLevel or 0) <= 0 then return nil end
     return { level = best.bestRunLevel, timed = best.finishedSuccess == true, score = best.mapScore }
@@ -52,7 +53,7 @@ end
 function Data.Application(applicantID, listing)
     if issecretvalue(applicantID) then return nil end
     local info = C_LFGList.GetApplicantInfo(applicantID)
-    if not info or AnySecret(info.numMembers, info.applicationStatus) then return nil end
+    if not info or issecretvalue(info) or AnySecret(info.numMembers, info.applicationStatus) then return nil end
 
     local status = info.applicationStatus
     local application = { members = {}, pinned = status == "invited" or status == "inviteaccepted" }

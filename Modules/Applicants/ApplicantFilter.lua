@@ -35,7 +35,7 @@ end
 local function Filter(applicants)
     if not ns.db.classFilter then return end
     local state = ApplicantFilter.state
-    state.failed, state.count, state.paused, state.counts = {}, 0, false, nil
+    state.failed, state.count, state.paused, state.counts = {}, 0, Data.Locked(), nil
     state.listing = Data.Listing()
 
     if state.listing then

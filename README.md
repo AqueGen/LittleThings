@@ -46,7 +46,7 @@ One page in three sections (Applicants, Creating a group, Player menus), four sw
 
 **Group creation helpers.** Choosing a dungeon picks its Mythic+ difficulty rather than plain Mythic, so a leader listing someone else's key needs no extra click; the title the game builds leaves the playstyle (Competitive and so on) out; and a list beside the screen shows the keystones your group shares through LibKeystone (DBM, BigWigs, EllesmereUI and others carry it), yours first, one click picks that dungeon at Mythic+ and puts the cursor in the title, with a grey hint of the level to type (such as type +16) that goes away once you type. The title itself stays yours to type: the game does not let addons write it (tested), and for someone else's key its own title is just the playstyle, which is kept rather than leaving the title empty. Each part has its own checkbox.
 
-**Default playstyle.** Creating a Mythic+ listing opens with a playstyle already picked (Competitive unless you choose another on the page). The game lets only its own code create listings, so a playstyle the addon picked may get List Group blocked; if the game reports that, the switch turns itself off and says so in chat, and picking the playstyle by hand always works.
+**Default playstyle.** Creating a listing opens with a playstyle already picked (Competitive unless you choose another on the page). The game lets only its own code create listings, so a playstyle the addon picked may get List Group blocked; if the game reports that, the switch turns itself off and says so in chat, and picking the playstyle by hand always works.
 
 ### Journal loot
 

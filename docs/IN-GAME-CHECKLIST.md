@@ -86,19 +86,19 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## 8. Mythic+ applicants
 
 - [ ] Switch on Mythic+ applicants, list a Mythic+ key: applicants are ordered by the rating column, highest first. No reload needed.
-- [ ] Two applicants with the same rating: the higher item level is above. Sort by "Item level, then Mythic+ rating": the list follows the item level column at the next update.
+- [ ] Two applicants with the same rating: the higher item level is above. Sort by "Item level, then rating": the list follows the item level column at the next update.
 - [ ] A new applicant with a higher rating than the ones listed lands above them, not at the bottom.
 - [ ] A group applying together is placed by the rating of the player who applied.
-- [ ] List a raid or a custom group: the order is Blizzard's (oldest first, new applicants at the bottom).
+- [ ] List a custom or PvP group: the order is Blizzard's (oldest first, new applicants at the bottom).
 - [ ] Invite and decline still work from the sorted list, in and out of an instance, and BugSack stays empty.
 - [ ] Switch off: the next list update goes back to Blizzard's order.
 
 ## 9. Applicant filter
 
 - [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background and shows Classes, Roles, Minimum item level, Group utility, the mode and Reset; it is gone on the search list and when the finder closes. Drag it by its background: it stays where dropped, the page's X/Y offsets show the new values, and the spot is kept after /reload. Panel side Left and the offsets move it at once.
-- [ ] With Sort applicants on, a Mythic+ listing shows a Sort dropdown above the mode; picking a key reorders the list at once and the settings page shows the same choice. Sort off, or a raid listing: no Sort dropdown.
+- [ ] With Sort applicants on, a Mythic+ listing shows a Sort dropdown above the mode; picking a key reorders the list at once and the settings page shows the same choice. Sort off: no Sort dropdown.
 - [ ] List a raid: the panel drops Group utility, and its Sort dropdown offers Progress, then item level / Item level, then progress. With Progress, an applicant with any Mythic kill in the listed raid is above every Heroic-only one, Heroic above Normal, then by bosses killed. Over the column, a Normal / Heroic / Mythic legend in green / blue / purple replaces Best / Here.
-- [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's until you leave the instance.
+- [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's, rows are not dimmed and the panel says Filter paused until you leave the instance.
 - [ ] Class icons show counts, including applicants moved down or hidden; need, exclude and clear work as the tooltip says.
 - [ ] Minimum item level 300: applicants below move to the bottom, dimmed; "Moved down: N" matches. Empty the box: back to normal. Type 0: nothing moves.
 - [ ] Roles: tank toggled off moves tank-only applicants down; a tank/damage flex stays.
@@ -114,7 +114,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## 10. Default playstyle
 
 - [ ] Switch on, Premade Groups > Dungeons > Create: the playstyle dropdown already says Competitive. List Group works, no "Interface action failed because of an addon".
-- [ ] If listing is blocked: chat says the default playstyle was turned off, the switch is off, and after /reload listing with a hand-picked playstyle works.
+- [ ] If the game blocks the title or the listing: chat names the blocked call and says the group creation helpers were turned off, the switch is off, the keystone list is gone, and after /reload listing with a hand-picked playstyle works.
 - [ ] Choose a dungeon you hold no key for: the second dropdown says Mythic Keystone, not Mythic. Pick Mythic by hand: it stays Mythic.
 - [ ] With a playstyle picked and the title untouched, the title has no Competitive/Relaxed at the end; a title you typed stays as typed. No "Interface action failed", no LittleThings message in chat; List Group works.
 - [ ] In a party whose members run DBM or BigWigs, open Create in Dungeons: Group keystones lists everyone's key, yours first; clicking one picks that dungeon at Mythic Keystone and puts the cursor in the title with a grey 'type +N' hint on its right; typing, picking another dungeon or closing the screen clears the hint. For someone else's key the title is not left empty, so List Group stays available. A member leaving drops their key; no keys at all hides the list.
