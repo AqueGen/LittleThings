@@ -1,15 +1,14 @@
 local addonName, ns = ...
 
 ns.defaults = {
-    damageMeter = true,
+    damageMeter = false,
     characterPanel = false,
-    -- Off by default: a player who installed this for the meter did not ask
-    -- for entries in every unit menu.
-    logLink = false,
+    groupFinder = false,
+    applicantSort = true,
+    classFilter = true,
+    defaultPlaystyle = true,
+    logLink = true,
     journalLoot = false,
-    applicantSort = false,
-    classFilter = false,
-    defaultPlaystyle = false,
 
     format = true,
     snap = true,
@@ -23,14 +22,26 @@ ns.charDefaults = {
 }
 
 ns.MODULES = {
-    { key = "damageMeter", label = "Damage meter", switch = "Damage meter tweaks", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
-    { key = "characterPanel", label = "Character panel", switch = "Spec and loot spec bars", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
-    { key = "applicantSort", label = "Mythic+ applicants", page = "Group finder", section = "Applicants", switch = "Sort applicants", live = true, tooltip = "When your group is listed, applicants are ordered by the keys chosen below, one for Mythic+ and one for raids, highest first. Applicants without a value go to the bottom. Other listings keep Blizzard's order." },
-    { key = "classFilter", label = "Applicant filter", page = "Group finder", section = "Applicants", switch = "Applicant filter panel", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum item level, and in 5-player listings Bloodlust or battle res. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
-    { key = "defaultPlaystyle", label = "Group creation", page = "Group finder", section = "Creating a group", switch = "Group creation helpers", live = true, tooltip = "Creating a listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
-    { key = "logLink", label = "Mythic+ log link", page = "Group finder", section = "Player menus", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
-    { key = "journalLoot", label = "Journal loot", switch = "Loot spec icons in the Adventure Guide", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
+    { key = "damageMeter", label = "Damage meter", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
+    { key = "characterPanel", label = "Character panel", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
+    { key = "groupFinder", label = "Group finder", live = true, tooltip = "Tools for the premade group finder: applicant sorting and a filter panel, group creation helpers, a Warcraft Logs link in player menus. Each has its own switch on the Group finder page." },
+    { key = "applicantSort", parent = "groupFinder", label = "Sort applicants", section = "Applicants", live = true, tooltip = "When your group is listed, applicants are ordered by the keys chosen below, one for Mythic+ and one for raids, highest first. Applicants without a value go to the bottom. Other listings keep Blizzard's order." },
+    { key = "classFilter", parent = "groupFinder", label = "Applicant filter panel", section = "Applicants", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum item level, and in 5-player listings Bloodlust or battle res. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
+    { key = "defaultPlaystyle", parent = "groupFinder", label = "Group creation helpers", section = "Creating a group", live = true, tooltip = "Creating a listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
+    { key = "logLink", parent = "groupFinder", label = "Warcraft Logs link in player menus", section = "Player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
+    { key = "journalLoot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
 }
+
+local rows = {}
+for _, row in ipairs(ns.MODULES) do
+    rows[row.key] = row
+end
+
+function ns.IsOn(key)
+    local row = rows[key]
+    local parent = row and row.parent
+    return ns.db[key] == true and (parent == nil or ns.db[parent] == true)
+end
 
 local modules = {}
 local moduleOrder = {}
@@ -190,6 +201,9 @@ end
 local function AdoptOldSavedVariables()
     if LittleThingsDB == nil then
         LittleThingsDB = DamageMeterCompanionDB or DamageMeterTweaksDB
+        if LittleThingsDB and LittleThingsDB.damageMeter == nil then
+            LittleThingsDB.damageMeter = true
+        end
     end
 
     if LittleThingsCharDB == nil then
@@ -207,6 +221,14 @@ local function InitializeSavedVariables()
 
     LittleThingsDB = LittleThingsDB or {}
     LittleThingsCharDB = LittleThingsCharDB or {}
+
+    if LittleThingsDB.groupFinder == nil then
+        for _, row in ipairs(ns.MODULES) do
+            if row.parent == "groupFinder" and LittleThingsDB[row.key] then
+                LittleThingsDB.groupFinder = true
+            end
+        end
+    end
 
     ns.ApplyDefaults(LittleThingsDB, ns.defaults)
     ns.ApplyDefaults(LittleThingsCharDB, ns.charDefaults)
@@ -240,40 +262,144 @@ StaticPopupDialogs["LITTLETHINGS_MODULE_RELOAD"] = {
     preferredIndex = 3,
 }
 
-function ns.SetSwitch(key, value)
-    ns.db[key] = value
+local hosts = {}
+
+local function Registered(key)
+    local found = {}
     for _, registered in ipairs(moduleOrder) do
-        if registered.key == key and registered.OnSwitch then
-            registered.OnSwitch(value)
+        if registered.key == key then
+            found[#found + 1] = registered
+        end
+    end
+    return found
+end
+
+local function HasContent(host)
+    for _, row in ipairs(host.rows) do
+        if row.parent then
+            return true
+        end
+        for _, registered in ipairs(Registered(row.key)) do
+            if registered.Pages then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function HostOf(key)
+    local row = rows[key]
+    local title = row.parent and rows[row.parent].label or row.label
+    for _, host in ipairs(hosts) do
+        if host.title == title then
+            return host
         end
     end
 end
 
-local function AddModuleSwitch(page, module)
-    local setting = Settings.RegisterProxySetting(page.category, "LT_module_" .. module.key,
-        Settings.VarType.Boolean, module.switch, ns.defaults[module.key],
-        function() return ns.db[module.key] end,
+local function AddModuleSwitch(category, row)
+    local setting = Settings.RegisterProxySetting(category, "LT_module_" .. row.key,
+        Settings.VarType.Boolean, row.label, ns.defaults[row.key],
+        function() return ns.db[row.key] end,
         function(value)
-            ns.SetSwitch(module.key, value)
+            ns.SetSwitch(row.key, value)
 
-            if not module.live then
-                StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", module.label, value and "on" or "off")
+            if not row.live then
+                StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", row.label, value and "on" or "off")
             end
         end)
 
-    local tooltip = module.tooltip
-    if not module.live then
+    local tooltip = row.tooltip
+    if not row.live then
         tooltip = tooltip .. "|n|n|cff808080Takes effect after /reload.|r"
     end
-    page.switch = Settings.CreateCheckbox(page.category, setting, tooltip)
+    return Settings.CreateCheckbox(category, setting, tooltip)
 end
 
--- Every option on a module page hangs under the module's switch: indented
--- beneath it, and gone from the page while the switch is off, so the page
--- shows only what is in effect.
+local function ParentOn(row)
+    return function() return ns.db[row.parent] == true end
+end
+
+local function BuildHost(host)
+    host.category, host.layout = ns.RegisterSubcategory(host.title)
+    local section
+    for _, row in ipairs(host.rows) do
+        local page = { key = row.key, category = host.category, layout = host.layout }
+        if row.parent then
+            if row.section and row.section ~= section and host.layout and CreateSettingsListSectionHeaderInitializer then
+                section = row.section
+                local header = CreateSettingsListSectionHeaderInitializer(section)
+                header:AddShownPredicate(ParentOn(row))
+                host.layout:AddInitializer(header)
+            end
+            page.switch = AddModuleSwitch(host.category, row)
+            page.switch:AddShownPredicate(ParentOn(row))
+        end
+
+        ns.pages[row.key] = page
+        for _, registered in ipairs(Registered(row.key)) do
+            if registered.Pages then
+                registered.Pages(page)
+            end
+        end
+    end
+end
+
+local function EnsurePage(key)
+    local host = HostOf(key)
+    if host and not host.category and HasContent(host) then
+        BuildHost(host)
+    end
+end
+
+-- Blizzard has no call to take a page out of the list, so the list of our pages
+-- is rewritten in place: only modules that are on keep one, in root order.
+local function SyncPages(host)
+    local list = ns.category:GetSubcategories()
+    for index = #list, 1, -1 do
+        for _, other in ipairs(hosts) do
+            if list[index] == other.category then
+                table.remove(list, index)
+                break
+            end
+        end
+    end
+    for _, other in ipairs(hosts) do
+        if other.category and ns.db[other.rows[1].key] then
+            table.insert(list, other.category)
+        end
+    end
+    if host and host.category then
+        Settings.RegisterAddOnCategory(host.category)
+    end
+end
+
+function ns.SetSwitch(key, value)
+    ns.db[key] = value
+    if value then
+        EnsurePage(key)
+    end
+    if not rows[key].parent then
+        SyncPages(HostOf(key))
+    end
+    for _, row in ipairs(ns.MODULES) do
+        if row.key == key or row.parent == key then
+            for _, registered in ipairs(Registered(row.key)) do
+                if registered.OnSwitch then
+                    registered.OnSwitch(ns.IsOn(row.key))
+                end
+            end
+        end
+    end
+end
+
+-- Options of a module whose switch is on its page hang indented under it.
 function ns.AddToPage(page, initializer)
-    initializer:SetParentInitializer(page.switch)
-    initializer:AddShownPredicate(function() return ns.db[page.key] == true end)
+    if page.switch then
+        initializer:SetParentInitializer(page.switch)
+    end
+    initializer:AddShownPredicate(function() return ns.IsOn(page.key) end)
     return initializer
 end
 
@@ -292,7 +418,7 @@ function ns.RegisterSubcategory(name)
 end
 
 local function IsEnabled(module)
-    if module.key and not ns.db[module.key] then
+    if module.key and not ns.IsOn(module.key) then
         return false
     end
 
@@ -303,13 +429,9 @@ local function IsEnabled(module)
     return true
 end
 
--- The root page carries nothing but the addon's one-line description; the
--- three module pages under it each open with that module's switch. Pages are
--- built here, before any module is enabled, so a module that is off is still
--- reachable. A module adds its options to its page from Pages, which runs
--- right after the switch whether the module is on or off, so the page always
--- says what the switch does; a page of its own (a canvas) registered there
--- sits right under the switch page in the list.
+-- The root page holds one switch per module, its description in the tooltip.
+-- A module's page is built at login when the module is on, or the moment it is
+-- switched on. Group finder's tools each have their own switch on its page.
 local function RegisterSettings()
     local layout
     ns.category, layout = Settings.RegisterVerticalLayoutCategory("LittleThings")
@@ -317,35 +439,24 @@ local function RegisterSettings()
     -- list offers, and it is guarded because a client without it should lose
     -- the text rather than the panel.
     if layout and CreateSettingsListSectionHeaderInitializer then
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Small touches on the default UI. One page per touch, each with its own switch."))
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Switch a module on to get its page in the list."))
         layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("|cFF0057B7Made|r |cFFFFD700in Ukraine|r"))
     end
     Settings.RegisterAddOnCategory(ns.category)
 
     ns.pages = {}
-    local shared = {}
-    for _, module in ipairs(ns.MODULES) do
-        local title = module.page or module.label
-        local host = shared[title]
-        if not host then
-            host = {}
-            host.category, host.layout = ns.RegisterSubcategory(title)
-            shared[title] = host
+    for _, row in ipairs(ns.MODULES) do
+        if row.parent then
+            table.insert(HostOf(row.key).rows, row)
+        else
+            hosts[#hosts + 1] = { title = row.label, rows = { row } }
+            AddModuleSwitch(ns.category, row)
         end
+    end
 
-        if module.section and module.section ~= host.section and host.layout and CreateSettingsListSectionHeaderInitializer then
-            host.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(module.section))
-            host.section = module.section
-        end
-
-        local page = { key = module.key, category = host.category, layout = host.layout }
-        ns.pages[module.key] = page
-        AddModuleSwitch(page, module)
-
-        for _, registered in ipairs(moduleOrder) do
-            if registered.key == module.key and registered.Pages then
-                registered.Pages(page)
-            end
+    for _, row in ipairs(ns.MODULES) do
+        if not row.parent and ns.db[row.key] then
+            EnsurePage(row.key)
         end
     end
 end

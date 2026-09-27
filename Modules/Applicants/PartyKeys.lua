@@ -24,7 +24,7 @@ local function Creation()
 end
 
 local function On()
-    return ns.db.defaultPlaystyle and ns.DefaultPlaystyle.Options().partyKeys
+    return ns.IsOn("defaultPlaystyle") and ns.DefaultPlaystyle.Options().partyKeys
 end
 
 local function UnitFullName(unit)
@@ -67,7 +67,7 @@ local function ChooseKey(button)
         ns.Print("no Mythic+ listing found for that keystone's dungeon.")
         return
     end
-    LFGListEntryCreation_Select(creation, creation.selectedFilters, GROUP_FINDER_CATEGORY_ID_DUNGEONS, groupID, activityID)
+    ns.DefaultPlaystyle.Select(creation, GROUP_FINDER_CATEGORY_ID_DUNGEONS, groupID, activityID)
     if creation.Name then pcall(creation.Name.SetFocus, creation.Name) end
     ShowHint("type +" .. button.level)
 end

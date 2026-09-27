@@ -7,6 +7,8 @@ local STYLES = { "Learning", "FunRelaxed", "FunSerious", "Expert" }
 DefaultPlaystyle.defaults = { style = "FunSerious", preferMythicPlus = true, plainTitle = true, partyKeys = true }
 
 local hooked = false
+local selecting = false
+local titling = false
 
 local function Options()
     return ns.db.defaultPlaystyleOptions
@@ -15,7 +17,7 @@ end
 DefaultPlaystyle.Options = Options
 
 local function Pick(creation)
-    if not ns.db.defaultPlaystyle then return end
+    if not ns.IsOn("defaultPlaystyle") then return end
     local style = Enum.LFGEntryGeneralPlaystyle[Options().style]
     if not style or not creation.PlayStyleDropdown:IsShown() then return end
     if creation.generalPlaystyle ~= Enum.LFGEntryGeneralPlaystyle.None then return end
@@ -23,35 +25,49 @@ local function Pick(creation)
     creation.PlayStyleDropdown:GenerateMenu()
 end
 
+function DefaultPlaystyle.Select(creation, categoryID, groupID, activityID)
+    selecting = true
+    pcall(LFGListEntryCreation_Select, creation, creation.selectedFilters, categoryID, groupID, activityID)
+    selecting = false
+end
+
 local function PreferMythicPlus(creation, _, _, groupID, activityID)
-    if not ns.db.defaultPlaystyle or not Options().preferMythicPlus then return end
+    if not ns.IsOn("defaultPlaystyle") or not Options().preferMythicPlus then return end
     if not groupID or activityID or not creation.selectedActivity then return end
     local current = C_LFGList.GetActivityInfoTable(creation.selectedActivity)
     if not current or current.isMythicPlusActivity then return end
     for _, candidate in ipairs(C_LFGList.GetAvailableActivities(creation.selectedCategory, groupID) or {}) do
         local info = C_LFGList.GetActivityInfoTable(candidate)
         if info and info.isMythicPlusActivity then
-            LFGListEntryCreation_Select(creation, creation.selectedFilters, creation.selectedCategory, groupID, candidate)
+            DefaultPlaystyle.Select(creation, creation.selectedCategory, groupID, candidate)
             return
         end
     end
 end
 
 local function PlainTitle(creation)
-    if not ns.db.defaultPlaystyle or not Options().plainTitle then return end
+    if selecting or not ns.IsOn("defaultPlaystyle") or not Options().plainTitle then return end
     local activity, group, general = creation.selectedActivity, creation.selectedGroup, creation.generalPlaystyle
     if not activity or not group or not general or general == Enum.LFGEntryGeneralPlaystyle.None then return end
     if not C_LFGList.DoesEntryTitleMatchPrebuiltTitle(activity, group, creation.selectedPlaystyle, general) then return end
+    titling = true
     pcall(C_LFGList.SetEntryTitle, activity, group, creation.selectedPlaystyle, nil)
     if creation.Name and creation.Name:GetText() == "" then
         pcall(C_LFGList.SetEntryTitle, activity, group, creation.selectedPlaystyle, general)
     end
+    titling = false
 end
 
 local BLOCKABLE = { "SetEntryTitle", "CreateListing", "UpdateListing" }
 
 local function OnBlocked(_, _, blockedAddon, blockedFunction)
-    if not ns.db.defaultPlaystyle or blockedAddon ~= addonName or type(blockedFunction) ~= "string" then return end
+    if not ns.IsOn("defaultPlaystyle") or blockedAddon ~= addonName or type(blockedFunction) ~= "string" then return end
+    if titling then
+        titling = false
+        Options().plainTitle = false
+        ns.Print("the game refused to rewrite the group title, so Keep the playstyle out of the title is now off. /reload to clear the block.")
+        return
+    end
     for _, name in ipairs(BLOCKABLE) do
         if blockedFunction:find(name, 1, true) then
             ns.SetSwitch("defaultPlaystyle", false)

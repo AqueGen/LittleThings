@@ -1,6 +1,6 @@
 # LittleThings
 
-Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. Each module has its own settings page that opens with its switch, off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
+Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. The LittleThings page has one switch per module, with what it does in the tooltip, and every switch starts off. Switch one on and its settings page appears under LittleThings; switch it off and the page goes. Off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
 
 Retail only, patch 12.1. No libraries, no dependencies.
 
@@ -36,7 +36,7 @@ Off by default. Two bars of icons next to the character panel: your specializati
 
 ### Group finder
 
-One page in three sections (Applicants, Creating a group, Player menus), four switches, all off by default.
+One switch on the LittleThings page, off by default. Turned on, it brings up the Group finder page, where each of the four tools below has its own switch (all on) and its options, in three sections: Applicants, Creating a group, Player menus.
 
 **Warcraft Logs link.** Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
 
@@ -64,4 +64,4 @@ Off by default. Every loot row in the Adventure Guide gets small icons for the s
 
 `busted tests` runs the pure-logic suite - number composition, snap geometry, the drop preview and the transparency rules. Everything frame-bound is verified in game against `docs/IN-GAME-CHECKLIST.md`.
 
-A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key` (a module with no key is always enabled and reads its switch itself); a switch is a row in `ns.MODULES` in `Core.lua`, which also gives the module its settings page as `ns.pages[key]`, opened with the switch. Rows that name the same `page` share one settings page, their switches in `ns.MODULES` order. The module adds its own options to that page from `Enable`.
+A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key` (a module with no key is always enabled and reads its switch itself); a switch is a row in `ns.MODULES` in `Core.lua`. A row without a `parent` is a switch on the root page and owns a settings page, `ns.pages[key]`, built at login when it is on or the moment it is switched on, and listed only while it is on; the module adds its options to it from `Pages`. A row with a `parent` is a switch on its parent's page, its options indented under it, and it is on only while its parent is: modules read `ns.IsOn(key)`, never `ns.db[key]`.

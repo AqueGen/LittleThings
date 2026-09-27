@@ -213,7 +213,7 @@ end
 local function Visible(row, listing)
     if row.when == "fiveMan" then return listing == nil or listing.fiveMan end
     if row.when == "sort" then
-        return ns.db.applicantSort == true and ns.ApplicantSort ~= nil and ns.ApplicantSort.Choices(listing) ~= nil
+        return ns.IsOn("applicantSort") == true and ns.ApplicantSort ~= nil and ns.ApplicantSort.Choices(listing) ~= nil
     end
     return true
 end
@@ -350,7 +350,7 @@ local function Build()
         Place()
         Sync()
     end)
-    panel:SetShown(ns.db.classFilter == true)
+    panel:SetShown(ns.IsOn("classFilter") == true)
     Place()
     Sync()
 end
