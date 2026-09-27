@@ -12,6 +12,7 @@ local MAX_ROWS = 5
 local keys = {}
 local panel
 local buttons = {}
+local hint
 local enabled = false
 
 local function Library()
@@ -54,6 +55,10 @@ local function DungeonActivities()
     return infos
 end
 
+local function ShowHint(text)
+    if hint then hint:SetText(text or "") end
+end
+
 local function ChooseKey(button)
     local creation = Creation()
     local _, _, _, _, _, mapID = C_ChallengeMode.GetMapUIInfo(button.challengeMapID)
@@ -64,6 +69,7 @@ local function ChooseKey(button)
     end
     LFGListEntryCreation_Select(creation, creation.selectedFilters, GROUP_FINDER_CATEGORY_ID_DUNGEONS, groupID, activityID)
     if creation.Name then pcall(creation.Name.SetFocus, creation.Name) end
+    ShowHint("type +" .. button.level)
 end
 
 local function Row(index)
@@ -93,6 +99,7 @@ local function Refresh()
         local button = Row(index)
         local dungeon = C_ChallengeMode.GetMapUIInfo(row.challengeMapID) or "?"
         button.challengeMapID = row.challengeMapID
+        button.level = row.level
         button.text:SetText(("|cffffd100+%d|r %s  |cff999999%s|r"):format(row.level, dungeon, Ambiguate(row.name, "short")))
         button:Show()
     end
@@ -134,7 +141,20 @@ local function Build()
         Refresh()
     end)
     creation:HookScript("OnHide", Refresh)
-    hooksecurefunc("LFGListEntryCreation_Select", Refresh)
+    hooksecurefunc("LFGListEntryCreation_Select", function()
+        ShowHint()
+        Refresh()
+    end)
+
+    local name = creation.Name
+    if name then
+        hint = name:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        hint:SetPoint("RIGHT", -8, 0)
+        name:HookScript("OnTextChanged", function(_, userInput)
+            if userInput then ShowHint() end
+        end)
+        name:HookScript("OnHide", function() ShowHint() end)
+    end
 end
 
 function PartyKeys.Pages(page)
@@ -148,7 +168,7 @@ function PartyKeys.Pages(page)
             Refresh()
         end)
     ns.AddToPage(page, Settings.CreateCheckbox(page.category, setting,
-        "A list beside the group creation screen with the keystones your group shares (yours first), for players running DBM, BigWigs or another addon with LibKeystone. Click one to pick its dungeon at Mythic+ and put the cursor in the title, ready for you to type the level: the game does not let addons write the title."))
+        "A list beside the group creation screen with the keystones your group shares (yours first), for players running DBM, BigWigs or another addon with LibKeystone. Click one to pick its dungeon at Mythic+ and put the cursor in the title, with a grey hint of the level to type, such as +16: the game does not let addons write the title."))
 end
 
 function PartyKeys.Enable()
