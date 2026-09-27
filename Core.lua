@@ -23,9 +23,9 @@ ns.charDefaults = {
 ns.MODULES = {
     { key = "damageMeter", label = "Damage meter", switch = "Damage meter tweaks", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
     { key = "characterPanel", label = "Character panel", switch = "Spec and loot spec bars", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
-    { key = "applicantSort", label = "Mythic+ applicants", page = "Group finder", section = "Applicants", switch = "Sort applicants", live = true, tooltip = "When your group is listed, applicants are ordered by the keys chosen below, one for Mythic+ and one for raids, highest first. Applicants without a value go to the bottom. Other listings keep Blizzard's order." },
+    { key = "applicantSort", label = "Mythic+ applicants", page = "Group finder", section = "Applicants", switch = "Sort applicants", live = true, tooltip = "When your group is listed, applicants are ordered by the keys chosen on the Group finder page, one for Mythic+ and one for raids, highest first. Applicants without a value go to the bottom. Other listings keep Blizzard's order." },
     { key = "classFilter", label = "Applicant filter", page = "Group finder", section = "Applicants", switch = "Applicant filter panel", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum item level, and in 5-player listings Bloodlust or battle res. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
-    { key = "defaultPlaystyle", label = "Group creation", page = "Group finder", section = "Creating a group", switch = "Group creation helpers", live = true, tooltip = "Creating a listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
+    { key = "defaultPlaystyle", label = "Group creation", page = "Group finder", section = "Creating a group", switch = "Group creation helpers", live = true, tooltip = "Creating a listing opens with the playstyle chosen on the Group finder page already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
     { key = "logLink", label = "Mythic+ log link", page = "Group finder", section = "Player menus", switch = "Warcraft Logs link in player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "journalLoot", label = "Journal loot", switch = "Loot spec icons in the Adventure Guide", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
 }
@@ -241,10 +241,79 @@ StaticPopupDialogs["LITTLETHINGS_MODULE_RELOAD"] = {
     preferredIndex = 3,
 }
 
+local hosts = {}
+
+local function Registered(key)
+    local found = {}
+    for _, registered in ipairs(moduleOrder) do
+        if registered.key == key then
+            found[#found + 1] = registered
+        end
+    end
+    return found
+end
+
+local function HasOptions(key)
+    for _, registered in ipairs(Registered(key)) do
+        if registered.Pages then
+            return true
+        end
+    end
+    return false
+end
+
+local function SectionShown(host, section)
+    return function()
+        for _, module in ipairs(host.modules) do
+            if module.section == section and ns.db[module.key] and HasOptions(module.key) then
+                return true
+            end
+        end
+        return false
+    end
+end
+
+local function BuildHost(host)
+    host.category, host.layout = ns.RegisterSubcategory(host.title)
+    local section
+    for _, module in ipairs(host.modules) do
+        if module.section and module.section ~= section and host.layout and CreateSettingsListSectionHeaderInitializer then
+            section = module.section
+            local header = CreateSettingsListSectionHeaderInitializer(section)
+            header:AddShownPredicate(SectionShown(host, section))
+            host.layout:AddInitializer(header)
+        end
+
+        local page = { key = module.key, category = host.category, layout = host.layout }
+        ns.pages[module.key] = page
+        for _, registered in ipairs(Registered(module.key)) do
+            if registered.Pages then
+                registered.Pages(page)
+            end
+        end
+    end
+end
+
+local function EnsurePage(key)
+    for _, host in ipairs(hosts) do
+        if not host.category then
+            for _, module in ipairs(host.modules) do
+                if module.key == key and HasOptions(key) then
+                    BuildHost(host)
+                    return
+                end
+            end
+        end
+    end
+end
+
 function ns.SetSwitch(key, value)
     ns.db[key] = value
-    for _, registered in ipairs(moduleOrder) do
-        if registered.key == key and registered.OnSwitch then
+    if value then
+        EnsurePage(key)
+    end
+    for _, registered in ipairs(Registered(key)) do
+        if registered.OnSwitch then
             registered.OnSwitch(value)
         end
     end
@@ -266,14 +335,13 @@ local function AddModuleSwitch(page, module)
     if not module.live then
         tooltip = tooltip .. "|n|n|cff808080Takes effect after /reload.|r"
     end
-    page.switch = Settings.CreateCheckbox(page.category, setting, tooltip)
+    Settings.CreateCheckbox(page.category, setting, tooltip)
 end
 
--- Every option on a module page hangs under the module's switch: indented
--- beneath it, and gone from the page while the switch is off, so the page
--- shows only what is in effect.
+-- A module page exists only once its module has been on, and Blizzard cannot
+-- take a page out of the list again, so a switched-off module's options hide
+-- until the reload drops its page.
 function ns.AddToPage(page, initializer)
-    initializer:SetParentInitializer(page.switch)
     initializer:AddShownPredicate(function() return ns.db[page.key] == true end)
     return initializer
 end
@@ -304,49 +372,43 @@ local function IsEnabled(module)
     return true
 end
 
--- The root page carries nothing but the addon's one-line description; the
--- three module pages under it each open with that module's switch. Pages are
--- built here, before any module is enabled, so a module that is off is still
--- reachable. A module adds its options to its page from Pages, which runs
--- right after the switch whether the module is on or off, so the page always
--- says what the switch does; a page of its own (a canvas) registered there
--- sits right under the switch page in the list.
+-- Every switch sits on the root page, grouped by the page its options live on,
+-- with the description in its tooltip. A module's page is built at login when
+-- the module is on, or the moment it is switched on; modules that share a page
+-- build it together, so their options' defaults exist before any of them runs.
 local function RegisterSettings()
     local layout
     ns.category, layout = Settings.RegisterVerticalLayoutCategory("LittleThings")
     -- A section header is the only plain-text initializer Blizzard's settings
     -- list offers, and it is guarded because a client without it should lose
     -- the text rather than the panel.
-    if layout and CreateSettingsListSectionHeaderInitializer then
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Small touches on the default UI. One page per touch, each with its own switch."))
+    local headers = layout and CreateSettingsListSectionHeaderInitializer
+    if headers then
+        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Small touches on the default UI. Switch one on and its settings page appears under LittleThings."))
         layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("|cFF0057B7Made|r |cFFFFD700in Ukraine|r"))
     end
     Settings.RegisterAddOnCategory(ns.category)
 
     ns.pages = {}
-    local shared = {}
+    local byTitle = {}
     for _, module in ipairs(ns.MODULES) do
         local title = module.page or module.label
-        local host = shared[title]
+        local host = byTitle[title]
         if not host then
-            host = {}
-            host.category, host.layout = ns.RegisterSubcategory(title)
-            shared[title] = host
-        end
-
-        if module.section and module.section ~= host.section and host.layout and CreateSettingsListSectionHeaderInitializer then
-            host.layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(module.section))
-            host.section = module.section
-        end
-
-        local page = { key = module.key, category = host.category, layout = host.layout }
-        ns.pages[module.key] = page
-        AddModuleSwitch(page, module)
-
-        for _, registered in ipairs(moduleOrder) do
-            if registered.key == module.key and registered.Pages then
-                registered.Pages(page)
+            host = { title = title, modules = {} }
+            byTitle[title] = host
+            hosts[#hosts + 1] = host
+            if headers then
+                layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(title))
             end
+        end
+        table.insert(host.modules, module)
+        AddModuleSwitch({ key = module.key, category = ns.category }, module)
+    end
+
+    for _, module in ipairs(ns.MODULES) do
+        if ns.db[module.key] then
+            EnsurePage(module.key)
         end
     end
 end

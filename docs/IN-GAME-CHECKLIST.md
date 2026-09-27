@@ -62,6 +62,8 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 6. Settings panel
 
+- [ ] Fresh profile: the LittleThings page lists every switch under Damage meter, Character panel, Group finder and Journal loot, all off, each with its description on hover, and there are no module pages under it. A profile adopted from Damage Meter Companion keeps the damage meter on.
+- [ ] Switch Journal loot on: its page appears under LittleThings at once and holds its options. Switch it off: the page empties, and after /reload it is gone. Switch on Sort applicants: the Group finder page appears with the Applicants section only.
 - [ ] The behaviour page has readable numbers, snapping, snap distance, idle transparency, layer, and at the bottom a Blizzard section with Enable Damage Meter and Auto Reset that mirror Gameplay Enhancements both ways.
 - [ ] The addon list has one Damage meter entry, with Windows nested under it. The Windows page lists three rows. Ticking Shown on a hidden slot shows the window and offers a reload; after the reload the window is there and combat logs nothing. Window 1's size boxes route through Edit Mode; a size Edit Mode refuses prints a message.
 - [ ] Typing an out-of-range width comes back clamped. A locked window's boxes are greyed.
