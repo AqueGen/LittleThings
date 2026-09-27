@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/AqueGen/LittleThings/compare/v0.10.0...v0.11.0) (2026-09-27)
+
+
+### Features
+
+* group finder applicant sort, filter panel and group creation helpers ([#17](https://github.com/AqueGen/LittleThings/issues/17)) ([c96f1a5](https://github.com/AqueGen/LittleThings/commit/c96f1a5da6d6a806490084c6dec84801d78adfcb))
+
 ## [0.10.0](https://github.com/AqueGen/LittleThings/compare/v0.9.1...v0.10.0) (2026-09-25)
 
 
