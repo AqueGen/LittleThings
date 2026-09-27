@@ -145,9 +145,9 @@ local function ProgressText(entry)
     return (color and text ~= "") and color:WrapTextInColorCode(text) or text
 end
 
-local RAID_LEGEND = DIFFICULTY_COLORS[1]:WrapTextInColorCode("Normal") .. "  "
-    .. DIFFICULTY_COLORS[2]:WrapTextInColorCode("Heroic") .. "  "
-    .. DIFFICULTY_COLORS[3]:WrapTextInColorCode("Mythic")
+local RAID_LEGEND = DIFFICULTY_COLORS[3]:WrapTextInColorCode("Mythic") .. "|n"
+    .. DIFFICULTY_COLORS[2]:WrapTextInColorCode("Heroic") .. "|n"
+    .. DIFFICULTY_COLORS[1]:WrapTextInColorCode("Normal")
 
 local function ShowColumnLabel(listing)
     local header = LFGApplicationViewerRatingColumnHeader
@@ -160,6 +160,7 @@ local function ShowColumnLabel(listing)
         header.ltKeyLabel:SetText(OVERALL_COLORS.timed:WrapTextInColorCode("Best") .. "|n" .. DUNGEON_COLORS.timed:WrapTextInColorCode("Here"))
         header.ltRaidLegend = viewer:CreateFontString(nil, "OVERLAY", "GameFontNormalTiny")
         header.ltRaidLegend:SetPoint("LEFT", viewer.ItemLevelColumnHeader, "RIGHT", 6, 0)
+        header.ltRaidLegend:SetJustifyH("LEFT")
         header.ltRaidLegend:SetText(RAID_LEGEND)
     end
     local on = ns.db.applicantSort == true
