@@ -276,12 +276,15 @@ local function Position()
     return ns.db.applicantPanel
 end
 
-local function Place()
-    if not panel then return end
+function Filter.PlaceBeside(frame)
     local position = Position()
     local side = SIDES[position.side] or SIDES.right
-    panel:ClearAllPoints()
-    panel:SetPoint(side.point, PVEFrame, side.relativePoint, side.x + position.x, position.y)
+    frame:ClearAllPoints()
+    frame:SetPoint(side.point, PVEFrame, side.relativePoint, side.x + position.x, position.y)
+end
+
+local function Place()
+    if panel then Filter.PlaceBeside(panel) end
 end
 
 local OFFSET_LIMIT = 800

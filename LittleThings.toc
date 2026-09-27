@@ -35,3 +35,5 @@ Modules/Applicants/ApplicantSort.lua
 Modules/Applicants/ApplicantFilter.lua
 Modules/Applicants/FilterPanel.lua
 Modules/Applicants/DefaultPlaystyle.lua
+Modules/Applicants/KeystoneRules.lua
+Modules/Applicants/PartyKeys.lua
