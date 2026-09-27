@@ -10,16 +10,22 @@ local function entry(raid, difficulty, kills)
 end
 
 describe("Progress.Best", function()
-  it("picks the highest difficulty, then the most kills", function()
-    local best = Progress.Best({ entry(ABYSS, 1, 9), entry(ABYSS, 2, 6), entry(GROTTO, 2, 1) })
+  it("picks the highest difficulty in the listed raid, then the most kills", function()
+    local best = Progress.Best({ entry(ABYSS, 1, 9), entry(ABYSS, 2, 6), entry(GROTTO, 2, 1) }, 2900)
     assert.equals(6, best.progressCount)
     assert.equals(2, best.difficulty)
   end)
 
-  it("returns nothing for no progress", function()
-    assert.is_nil(Progress.Best({}))
-    assert.is_nil(Progress.Best(nil))
-    assert.is_nil(Progress.Best({ entry(ABYSS, 2, 0) }))
+  it("ignores other raids, older ones included, even with a higher difficulty", function()
+    local best = Progress.Best({ entry(GROTTO, 3, 1), entry(ABYSS, 2, 6) }, 2900)
+    assert.equals(ABYSS, best.raid)
+  end)
+
+  it("returns nothing for no progress in the listed raid", function()
+    assert.is_nil(Progress.Best({}, 2900))
+    assert.is_nil(Progress.Best(nil, 2900))
+    assert.is_nil(Progress.Best({ entry(ABYSS, 2, 0) }, 2900))
+    assert.is_nil(Progress.Best({ entry(GROTTO, 3, 1) }, 2900))
   end)
 end)
 

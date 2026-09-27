@@ -178,7 +178,7 @@ local function ShowKey(member, applicantID, memberIndex)
         dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil, DUNGEON_COLORS)
     elseif listing and listing.isRaid and member.ItemLevel:IsShown() then
         local entries = RaidEntries(applicantID, memberIndex)
-        overallText = ProgressText(Progress.Best(entries))
+        overallText = ProgressText(Progress.Best(entries, listing.mapID))
         dungeonText = ProgressText(Progress.For(entries, listing.mapID, listing.raidDifficulty))
     end
     PlaceLines(member, lines, listing and listing.isRaid)

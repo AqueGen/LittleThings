@@ -9,10 +9,10 @@ local function HasKills(entry)
     return entry ~= nil and (entry.progressCount or 0) > 0
 end
 
-function Progress.Best(entries)
+function Progress.Best(entries, mapId)
     local best
     for _, entry in ipairs(entries or {}) do
-        if HasKills(entry) and (not best
+        if HasKills(entry) and entry.raid and entry.raid.mapId == mapId and (not best
             or entry.difficulty > best.difficulty
             or (entry.difficulty == best.difficulty and entry.progressCount > best.progressCount)) then
             best = entry
