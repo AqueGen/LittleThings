@@ -1,10 +1,8 @@
 local addonName, ns = ...
 
 ns.defaults = {
-    damageMeter = true,
+    damageMeter = false,
     characterPanel = false,
-    -- Off by default: a player who installed this for the meter did not ask
-    -- for entries in every unit menu.
     logLink = false,
     journalLoot = false,
     applicantSort = false,
@@ -190,6 +188,9 @@ end
 local function AdoptOldSavedVariables()
     if LittleThingsDB == nil then
         LittleThingsDB = DamageMeterCompanionDB or DamageMeterTweaksDB
+        if LittleThingsDB and LittleThingsDB.damageMeter == nil then
+            LittleThingsDB.damageMeter = true
+        end
     end
 
     if LittleThingsCharDB == nil then

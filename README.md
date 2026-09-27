@@ -1,6 +1,6 @@
 # LittleThings
 
-Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. Each module has its own settings page that opens with its switch, off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
+Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. Each module has its own settings page that opens with its switch, every switch starts off, off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
 
 Retail only, patch 12.1. No libraries, no dependencies.
 
