@@ -61,7 +61,7 @@ local function KeyText(best, colors)
 end
 
 local DIFFICULTY_COLORS = { [1] = CreateColor(0.12, 1, 0), [2] = CreateColor(0, 0.44, 0.87), [3] = CreateColor(0.64, 0.21, 0.93) }
-local RAID_COLUMN_X = 200
+local RAID_COLUMN_RIGHT = 201
 
 local function KeyLines(member)
     if not member.ltKeys then
@@ -77,8 +77,8 @@ local function PlaceLines(member, lines, raid)
     lines.overall:ClearAllPoints()
     lines.dungeon:ClearAllPoints()
     if raid then
-        lines.overall:SetPoint("BOTTOMLEFT", member, "LEFT", RAID_COLUMN_X, 0)
-        lines.dungeon:SetPoint("TOPLEFT", member, "LEFT", RAID_COLUMN_X, 0)
+        lines.overall:SetPoint("BOTTOMRIGHT", member, "LEFT", RAID_COLUMN_RIGHT, 0)
+        lines.dungeon:SetPoint("TOPRIGHT", member, "LEFT", RAID_COLUMN_RIGHT, 0)
     else
         lines.overall:SetPoint("BOTTOMLEFT", member.Rating, "RIGHT", 3, 0)
         lines.dungeon:SetPoint("TOPLEFT", member.Rating, "RIGHT", 3, 0)
@@ -99,7 +99,7 @@ local function RaidEntries(applicantID, memberIndex)
 end
 
 local function ProgressText(entry)
-    local text = Progress.Text(entry)
+    local text = Progress.Text(entry, true)
     local color = entry and DIFFICULTY_COLORS[entry.difficulty]
     return (color and text ~= "") and color:WrapTextInColorCode(text) or text
 end

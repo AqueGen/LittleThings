@@ -29,9 +29,11 @@ function Progress.For(entries, mapId, difficulty)
     return nil
 end
 
-function Progress.Text(entry)
+function Progress.Text(entry, compact)
     if not HasKills(entry) then return "" end
-    return entry.progressCount .. "/" .. (entry.raid and entry.raid.bossCount or "?") .. " " .. (SUFFIX[entry.difficulty] or "")
+    local text = entry.progressCount .. "/" .. (entry.raid and entry.raid.bossCount or "?")
+    if compact then return text end
+    return text .. " " .. (SUFFIX[entry.difficulty] or "")
 end
 
 function Progress.Difficulty(activity)

@@ -42,6 +42,10 @@ describe("Progress.Text", function()
     assert.equals("1/1 M", Progress.Text(entry(GROTTO, 3, 1)))
     assert.equals("", Progress.Text(nil))
   end)
+
+  it("leaves the difficulty letter out when asked, for tight rows", function()
+    assert.equals("6/9", Progress.Text(entry(ABYSS, 2, 6), true))
+  end)
 end)
 
 describe("Progress.Difficulty", function()
