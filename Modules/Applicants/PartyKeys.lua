@@ -54,6 +54,23 @@ local function DungeonActivities()
     return infos
 end
 
+local warnedTitle = false
+
+local function TrySetTitle(creation, title)
+    local name = creation.Name
+    if not name then return end
+    pcall(name.SetText, name, title)
+    if name:GetText() ~= title then
+        pcall(name.SetFocus, name)
+        pcall(name.HighlightText, name)
+        pcall(name.Insert, name, title)
+    end
+    if name:GetText() ~= title and not warnedTitle then
+        warnedTitle = true
+        ns.Print(("the game does not let addons write the group title; type %s yourself."):format(title))
+    end
+end
+
 local function ChooseKey(button)
     local creation = Creation()
     local _, _, _, _, _, mapID = C_ChallengeMode.GetMapUIInfo(button.challengeMapID)
@@ -63,6 +80,7 @@ local function ChooseKey(button)
         return
     end
     LFGListEntryCreation_Select(creation, creation.selectedFilters, GROUP_FINDER_CATEGORY_ID_DUNGEONS, groupID, activityID)
+    TrySetTitle(creation, "+" .. button.level)
 end
 
 local function Row(index)
@@ -92,6 +110,7 @@ local function Refresh()
         local button = Row(index)
         local dungeon = C_ChallengeMode.GetMapUIInfo(row.challengeMapID) or "?"
         button.challengeMapID = row.challengeMapID
+        button.level = row.level
         button.text:SetText(("|cffffd100+%d|r %s  |cff999999%s|r"):format(row.level, dungeon, Ambiguate(row.name, "short")))
         button:Show()
     end
