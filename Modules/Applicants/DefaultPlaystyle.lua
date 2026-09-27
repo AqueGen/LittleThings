@@ -47,6 +47,9 @@ local function PlainTitle(creation)
     if not C_LFGList.DoesEntryTitleMatchPrebuiltTitle(activity, group, creation.selectedPlaystyle, general) then return end
     picked = true
     pcall(C_LFGList.SetEntryTitle, activity, group, creation.selectedPlaystyle, nil)
+    if creation.Name and creation.Name:GetText() == "" then
+        pcall(C_LFGList.SetEntryTitle, activity, group, creation.selectedPlaystyle, general)
+    end
 end
 
 local function OnBlocked(_, _, blockedAddon, blockedFunction)
@@ -91,7 +94,7 @@ function DefaultPlaystyle.Pages(page)
     Checkbox("preferMythicPlus", "Pick Mythic+ when you choose a dungeon",
         "Choosing a dungeon picks its Mythic Keystone difficulty instead of plain Mythic, so listing someone else's key needs no extra click. Picking Mythic yourself afterwards is left alone.")
     Checkbox("plainTitle", "Keep the playstyle out of the title",
-        "The title the game builds for you no longer ends in the playstyle, such as Competitive. A title you typed yourself is never touched.")
+        "The title the game builds for you no longer ends in the playstyle, such as Competitive, unless the playstyle is all it has: an empty title cannot be listed. A title you typed yourself is never touched.")
 end
 
 function DefaultPlaystyle.Enable()

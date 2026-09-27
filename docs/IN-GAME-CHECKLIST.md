@@ -117,5 +117,5 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] If listing is blocked: chat says the default playstyle was turned off, the switch is off, and after /reload listing with a hand-picked playstyle works.
 - [ ] Choose a dungeon you hold no key for: the second dropdown says Mythic Keystone, not Mythic. Pick Mythic by hand: it stays Mythic.
 - [ ] With a playstyle picked and the title untouched, the title has no Competitive/Relaxed at the end; a title you typed stays as typed. No "Interface action failed", no LittleThings message in chat; List Group works.
-- [ ] In a party whose members run DBM or BigWigs, open Create in Dungeons: Group keystones lists everyone's key, yours first; clicking one picks that dungeon at Mythic Keystone. A member leaving drops their key; no keys at all hides the list.
+- [ ] In a party whose members run DBM or BigWigs, open Create in Dungeons: Group keystones lists everyone's key, yours first; clicking one picks that dungeon at Mythic Keystone and puts the cursor in the title. For someone else's key the title is not left empty, so List Group stays available. A member leaving drops their key; no keys at all hides the list.
 - [ ] Pick Relaxed on the page: the next new listing opens with Relaxed. Editing an active listing keeps its own playstyle.
