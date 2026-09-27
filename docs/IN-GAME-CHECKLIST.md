@@ -82,3 +82,40 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] "Name line, right edge" puts the icons right of the item name, clear of a transmog addon's corner mark. Switching between the two is live, and so is the size slider.
 - [ ] A profile saved with a position that no longer exists opens on the slot line.
 - [ ] Switch off: icons disappear at once. BugSack stays empty throughout, and the journal's own class filter is unchanged after every step.
+
+## 8. Mythic+ applicants
+
+- [ ] Switch on Mythic+ applicants, list a Mythic+ key: applicants are ordered by the rating column, highest first. No reload needed.
+- [ ] Two applicants with the same rating: the higher item level is above. Sort by "Item level, then rating": the list follows the item level column at the next update.
+- [ ] A new applicant with a higher rating than the ones listed lands above them, not at the bottom.
+- [ ] A group applying together is placed by the rating of the player who applied.
+- [ ] List a custom or PvP group: the order is Blizzard's (oldest first, new applicants at the bottom).
+- [ ] Invite and decline still work from the sorted list, in and out of an instance, and BugSack stays empty.
+- [ ] Switch off: the next list update goes back to Blizzard's order.
+
+## 9. Applicant filter
+
+- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background and shows Classes, Roles, Minimum item level, Group utility, the mode and Reset; it is gone on the search list and when the finder closes. Drag it by its background: it stays where dropped, the page's X/Y offsets show the new values, and the spot is kept after /reload. Panel side Left and the offsets move it at once.
+- [ ] With Sort applicants on, a Mythic+ listing shows a Sort dropdown above the mode; picking a key reorders the list at once and the settings page shows the same choice. Sort off: no Sort dropdown.
+- [ ] List a raid: the panel drops Group utility, and its Sort dropdown offers Progress, then item level / Item level, then progress. With Progress, an applicant with any Mythic kill in the listed raid is above every Heroic-only one, Heroic above Normal, then by bosses killed. Over the column, a Normal / Heroic / Mythic legend in green / blue / purple replaces Best / Here.
+- [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's, rows are not dimmed and the panel says Filter paused until you leave the instance.
+- [ ] Class icons show counts, including applicants moved down or hidden; need, exclude and clear work as the tooltip says.
+- [ ] Minimum item level 300: applicants below move to the bottom, dimmed; "Moved down: N" matches. Empty the box: back to normal. Type 0: nothing moves.
+- [ ] Roles: tank toggled off moves tank-only applicants down; a tank/damage flex stays.
+- [ ] Brings Bloodlust with no Bloodlust class in the group: shamans, mages, hunters and evokers stay on top, everyone else moves down (Hide: disappears). Once a Bloodlust class joins, the list is back. Both boxes: applications bringing either Bloodlust or battle res stay on top, the rest move down; once one of them is in the group, only the other one is asked for.
+- [ ] Mode Hide: failing applicants disappear, "Hidden: N". An invited applicant stays whatever the filters say.
+- [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top in blue, this dungeon below in green, each dimmed when not timed, label colours matching, clear of the invite buttons; nothing on cancelled rows. Sort by "This dungeon" orders by the lower one.
+- [ ] List a raid with Raider.IO installed: each row shows two small progress lines (kills/bosses, no letter) just left of the Invite button and clear of it, this raid only (older raids never show): its best difficulty on top, the listed difficulty below, coloured N green / H blue / M purple; empty for players Raider.IO does not know. Without Raider.IO: no error, no text.
+- [ ] An applicant cancels, times out or is declined: the row leaves the list at once. Remove closed applications off: the row stays with its X, as Blizzard shows it.
+- [ ] Reset clears everything except the mode. Invite and decline from a filtered list work, BugSack stays empty.
+- [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them. Values saved for the removed options (minimum rating, keys) have no effect.
+- [ ] Switch off: the panel disappears and the list is Blizzard's again at once.
+
+## 10. Default playstyle
+
+- [ ] Switch on, Premade Groups > Dungeons > Create: the playstyle dropdown already says Competitive. List Group works, no "Interface action failed because of an addon".
+- [ ] If the game blocks the title or the listing: chat names the blocked call and says the group creation helpers were turned off, the switch is off, the keystone list is gone, and after /reload listing with a hand-picked playstyle works.
+- [ ] Choose a dungeon you hold no key for: the second dropdown says Mythic Keystone, not Mythic. Pick Mythic by hand: it stays Mythic.
+- [ ] With a playstyle picked and the title untouched, the title has no Competitive/Relaxed at the end; a title you typed stays as typed. No "Interface action failed", no LittleThings message in chat; List Group works.
+- [ ] In a party whose members run DBM or BigWigs, open Create in Dungeons: Group keystones lists everyone's key, yours first; clicking one picks that dungeon at Mythic Keystone and puts the cursor in the title with a grey 'type +N' hint on its right; typing, picking another dungeon or closing the screen clears the hint. For someone else's key the title is not left empty, so List Group stays available. A member leaving drops their key; no keys at all hides the list.
+- [ ] Pick Relaxed on the page: the next new listing opens with Relaxed. Editing an active listing keeps its own playstyle.
