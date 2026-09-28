@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/AqueGen/LittleThings/compare/v0.11.0...v0.12.0) (2026-09-27)
+
+
+### Features
+
+* root settings page with one switch per module, module pages only while on ([#19](https://github.com/AqueGen/LittleThings/issues/19)) ([d69df49](https://github.com/AqueGen/LittleThings/commit/d69df49da484f090231bbd09415e8f717667a61e))
+
 ## [0.11.0](https://github.com/AqueGen/LittleThings/compare/v0.10.0...v0.11.0) (2026-09-27)
 
 
