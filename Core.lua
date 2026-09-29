@@ -9,7 +9,8 @@ ns.defaults = {
     defaultPlaystyle = true,
     logLink = true,
     journalLoot = false,
-    graphics = false,
+    performance = false,
+    smoothGarbageCollection = true,
 
     format = true,
     snap = true,
@@ -31,7 +32,7 @@ ns.MODULES = {
     { key = "defaultPlaystyle", parent = "groupFinder", label = "Group creation helpers", section = "Creating a group", live = true, tooltip = "Creating a listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
     { key = "logLink", parent = "groupFinder", label = "Warcraft Logs link in player menus", section = "Player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "journalLoot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
-    { key = "graphics", label = "Graphics", live = true, tooltip = "One button that sets the game's graphics options for frame rate, showing every change before it is made, and one that puts your own settings back." },
+    { key = "performance", label = "Performance", live = true, tooltip = "A button that sets the game's graphics options for frame rate, showing every change before it is made, and one that puts your own settings back. Smoother garbage collection, and a button that collects it now." },
 }
 
 local rows = {}

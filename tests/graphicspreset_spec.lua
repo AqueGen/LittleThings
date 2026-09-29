@@ -1,4 +1,4 @@
-package.path = "./Modules/Graphics/?.lua;" .. package.path
+package.path = "./Modules/Performance/?.lua;" .. package.path
 
 local Preset = require("GraphicsPreset")
 

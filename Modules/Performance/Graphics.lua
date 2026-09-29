@@ -120,11 +120,12 @@ local function AddButton(page, name, text, onClick, tooltip)
 end
 
 function Graphics.Pages(page)
+    ns.AddHeader(page, "Graphics")
     AddButton(page, "Optimize graphics", "Optimize my FPS", Optimize,
         "Lowers the settings that cost the most frames and matter least in combat: shadows, ambient occlusion, depth and compute effects, view distance, environment detail and ground clutter. Textures stay high and particles stay at Ultra so spell effects remain readable. A window lists every change before it is made.")
     AddButton(page, "Restore graphics", "Restore my settings", Restore,
         "Puts back the values these settings had before the first Optimize, after showing what will change.")
 end
 
-Graphics.key = "graphics"
+Graphics.key = "performance"
 ns.RegisterModule("Graphics", Graphics)

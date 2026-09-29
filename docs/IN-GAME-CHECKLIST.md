@@ -123,10 +123,13 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] In a party whose members run DBM or BigWigs, open Create in Dungeons: Group keystones lists everyone's key, yours first; clicking one picks that dungeon at Mythic Keystone and puts the cursor in the title with a grey 'type +N' hint on its right; typing, picking another dungeon or closing the screen clears the hint. For someone else's key the title is not left empty, so List Group stays available. A member leaving drops their key; no keys at all hides the list.
 - [ ] Pick Relaxed on the page: the next new listing opens with Relaxed. Editing an active listing keeps its own playstyle.
 
-## 11. Graphics
+## 11. Performance
 
-- [ ] Switch on Graphics: a Graphics page appears with Optimize my FPS and Restore my settings. Every label in the confirmation window reads like the game's own graphics menu (Fair, Disabled, a 1-10 number for view distance), none is a bare number or blank.
+- [ ] Switch on Performance: a Performance page appears with a Graphics section (Optimize my FPS, Restore my settings) and a Memory section (Smoother garbage collection ticked, Collect garbage). Every label in the confirmation window reads like the game's own graphics menu (Fair, Disabled, a 1-10 number for view distance), none is a bare number or blank.
 - [ ] Raise shadows and view distance in the game's graphics menu, press Optimize: the window lists only what differs, as before > after. Cancel changes nothing. Apply: the game's graphics menu shows the new values, no error.
 - [ ] Press Optimize again: chat says the settings are already optimized, no window.
 - [ ] Press Restore: the window lists the values from before the first Optimize. Apply puts them back. Restore again: chat says nothing to restore.
 - [ ] Open the page in combat and press either button: chat says it cannot be done in combat, nothing changes.
+- [ ] With SmartGarbageCollector disabled: `/run local p = collectgarbage("setpause", 100) collectgarbage("setpause", p) print(p)` prints 110 while Smoother garbage collection is on. Untick it and run the line again: it prints the game's own value. Tick it again, switch Performance off, run it: the game's own value.
+- [ ] Collect garbage out of combat: chat prints Lua memory before > after, the freed amount and five addons with sizes. In combat: chat refuses, no stall.
+- [ ] A few hours of play with SmartGarbageCollector removed: StutterAlert shows no more "Memory cleanup" hitches than with it.

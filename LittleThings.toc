@@ -26,8 +26,9 @@ Modules/LogLink/LogLink.lua
 Modules/CharacterPanel.lua
 Modules/JournalLoot/JournalLootIcons.lua
 Modules/JournalLoot/JournalLoot.lua
-Modules/Graphics/GraphicsPreset.lua
-Modules/Graphics/Graphics.lua
+Modules/Performance/GraphicsPreset.lua
+Modules/Performance/Graphics.lua
+Modules/Performance/Memory.lua
 Modules/Applicants/FilterRules.lua
 Modules/Applicants/RaidProgress.lua
 Modules/Applicants/ApplicantData.lua
