@@ -52,6 +52,10 @@ One switch on the LittleThings page, off by default. Turned on, it brings up the
 
 Off by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels.
 
+### Graphics
+
+Off by default. The page has two buttons. **Optimize my FPS** lowers the options that cost the most frames and matter least in a fight: shadows to Fair, ambient occlusion, depth and compute effects and outlines off, liquid detail, spell density, view distance, environment detail and ground clutter to their lowest, one set of settings for raids too. Textures stay High, particles stay Ultra and projected textures stay on, so spell effects and ground markers remain readable. Before anything changes, a window lists every setting it will touch, as it is now and as it will be, and nothing happens until you press Apply. **Restore my settings** puts back what you had before the first Optimize, with the same window first. The game keeps graphics settings itself, so they stay after the module or the addon is switched off. Neither button works in combat.
+
 ## Commands
 
 - `/lt` (or `/littlethings`, `/dmc`) - settings
