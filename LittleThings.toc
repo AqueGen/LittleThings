@@ -29,6 +29,7 @@ Modules/JournalLoot/JournalLoot.lua
 Modules/Performance/GraphicsPreset.lua
 Modules/Performance/Graphics.lua
 Modules/Performance/Memory.lua
+Modules/Performance/Profiler.lua
 Modules/Applicants/FilterRules.lua
 Modules/Applicants/RaidProgress.lua
 Modules/Applicants/ApplicantData.lua

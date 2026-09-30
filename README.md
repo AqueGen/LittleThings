@@ -54,11 +54,13 @@ Off by default. Every loot row in the Adventure Guide gets small icons for the s
 
 ### Performance
 
-Off by default. The page has a Graphics section and a Memory section.
+Off by default. The page has Graphics, Memory and Addons sections.
 
 **Graphics.** **Optimize my FPS** lowers the options that cost the most frames and matter least in a fight: shadows to Fair, ambient occlusion, depth and compute effects and outlines off, liquid detail, spell density, view distance, environment detail and ground clutter to their lowest, one set of settings for raids too. Textures stay High, particles stay Ultra and projected textures stay on, so spell effects and ground markers remain readable. Before anything changes, a window lists every setting it will touch, as it is now and as it will be, and nothing happens until you press Apply. **Restore my settings** puts back what you had before the first Optimize, with the same window first. The game keeps graphics settings itself, so they stay after the module or the addon is switched off. Neither button works in combat.
 
 **Memory.** **Smoother garbage collection**, on by default, starts a collection after the Lua heap grows by 10% rather than by the game's default, so memory is freed in many small steps instead of one pass that shows as a hitch. Off, or the module off, puts the game's own values back at once. **Clean up in the open world**, on by default, frees thrown-away memory every 40 seconds in small steps spread over up to two seconds, only outside instances, never in combat or on a loading screen. **Collect garbage** frees everything now and prints the Lua memory before and after and the five addons holding the most. It is a diagnostic, not a speed-up: it stalls the game for a moment and gains no frames, and it refuses to run in combat.
+
+**Addons.** **Show addon CPU** prints the game's own profiler figures since login: the five addons costing the most time per frame on average, the five with the slowest single frame, and every addon that took over 50 ms in one frame, with how many times - the hitches, by name.
 
 ## Commands
 
