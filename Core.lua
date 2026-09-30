@@ -573,8 +573,10 @@ local function HandleSlashCommand(input)
 
     if command == "" then
         ns.OpenSettings()
+    elseif command == "cpu" then
+        ns.Profiler.Toggle()
     elseif not meter then
-        ns.Print("the damage meter module is off, nothing else takes commands")
+        ns.Print("commands: cpu. The damage meter module is off, its commands are not available")
     elseif command == "probe" then
         ns.Probe()
     elseif command == "diag" then
@@ -583,7 +585,7 @@ local function HandleSlashCommand(input)
         ns.db[command] = not ns.db[command]
         ns.Print(command .. ": " .. tostring(ns.db[command]))
     else
-        ns.Print("commands: diag, probe, format, snap")
+        ns.Print("commands: cpu, diag, probe, format, snap")
     end
 end
 

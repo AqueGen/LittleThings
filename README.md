@@ -60,12 +60,13 @@ Off by default. The page has Graphics, Memory and Addons sections.
 
 **Memory.** **Smoother garbage collection**, on by default, starts a collection after the Lua heap grows by 10% rather than by the game's default, so memory is freed in many small steps instead of one pass that shows as a hitch. Off, or the module off, puts the game's own values back at once. **Clean up in the open world**, on by default, frees thrown-away memory every 40 seconds in small steps spread over up to two seconds, only outside instances, never in combat or on a loading screen. **Collect garbage** frees everything now and prints the Lua memory before and after and the five addons holding the most. It is a diagnostic, not a speed-up: it stalls the game for a moment and gains no frames, and it refuses to run in combat.
 
-**Addons.** **Show addon CPU** prints the game's own profiler figures since login: the five addons costing the most time per frame on average, the five with the slowest single frame, and every addon that took over 50 ms in one frame, with how many times - the hitches, by name.
+**Addons.** **Show addon CPU**, or `/lt cpu` (also in combat), opens a table of every loaded addon with the game's own profiler figures: time per frame over the last second and since login, the slowest single frame, the average on the last boss, how many frames took over 50 ms (the hitches, by name; those rows are red) and memory. Click a column to sort by it. Times update every second while the table is open; memory updates when it opens and on Refresh memory, because measuring it is itself expensive.
 
 ## Commands
 
 - `/lt` (or `/littlethings`, `/dmc`) - settings
 - `/lt format`, `/lt snap` - toggle one damage meter feature
+- `/lt cpu` - the addon performance table, also in combat
 - `/lt diag` - what the addon sees, per meter window; useful when reporting a bug
 - `/lt probe` - what the API says about Secret values right now
 - `/wcl` - Warcraft Logs link for a name, or the target
