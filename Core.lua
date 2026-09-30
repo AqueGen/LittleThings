@@ -26,16 +26,16 @@ ns.charDefaults = {
 }
 
 ns.MODULES = {
-    { key = "damageMeter", label = "Damage meter", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
-    { key = "characterPanel", label = "Character panel", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
-    { key = "groupFinder", label = "Group finder", live = true, tooltip = "Tools for the premade group finder: applicant sorting and a filter panel, group creation helpers, a Warcraft Logs link in player menus. Each has its own switch on the Group finder page." },
+    { key = "groupFinder", group = "Group content", label = "Group finder", live = true, tooltip = "Tools for the premade group finder: applicant sorting and a filter panel, group creation helpers, a Warcraft Logs link in player menus. Each has its own switch on the Group finder page." },
     { key = "applicantSort", parent = "groupFinder", label = "Sort applicants", section = "Applicants", live = true, tooltip = "When your group is listed, applicants are ordered by the keys chosen below, one for Mythic+ and one for raids, highest first. Applicants without a value go to the bottom. Other listings keep Blizzard's order." },
     { key = "classFilter", parent = "groupFinder", label = "Applicant filter panel", section = "Applicants", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum item level, and in 5-player listings Bloodlust or battle res. Applicants who fail move to the bottom, dimmed, or are hidden. Everything on the panel is saved per character." },
     { key = "defaultPlaystyle", parent = "groupFinder", label = "Group creation helpers", section = "Creating a group", live = true, tooltip = "Creating a listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
     { key = "logLink", parent = "groupFinder", label = "Warcraft Logs link in player menus", section = "Player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
-    { key = "journalLoot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
-    { key = "performance", label = "Performance", live = true, tooltip = "A button that sets the game's graphics options for frame rate, showing every change before it is made, and one that puts your own settings back. Smoother garbage collection, and a button that collects it now." },
-    { key = "groupLeader", label = "Group leader icons", live = true, tooltip = "A crown on the group leader and an assistant icon on raid assistants, on Blizzard's party and raid frames." },
+    { key = "groupLeader", group = "Group content", label = "Group leader icons", live = true, tooltip = "A crown on the group leader and an assistant icon on raid assistants, on Blizzard's party and raid frames." },
+    { key = "damageMeter", group = "Combat", label = "Damage meter", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
+    { key = "characterPanel", group = "Character and loot", label = "Character panel", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
+    { key = "journalLoot", group = "Character and loot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
+    { key = "performance", group = "System", label = "Performance", live = true, tooltip = "A button that sets the game's graphics options for frame rate, showing every change before it is made, and one that puts your own settings back. Smoother garbage collection, and a button that collects it now." },
 }
 
 local rows = {}
@@ -451,10 +451,15 @@ local function RegisterSettings()
     Settings.RegisterAddOnCategory(ns.category)
 
     ns.pages = {}
+    local group
     for _, row in ipairs(ns.MODULES) do
         if row.parent then
             table.insert(HostOf(row.key).rows, row)
         else
+            if row.group ~= group and layout and CreateSettingsListSectionHeaderInitializer then
+                group = row.group
+                layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(group))
+            end
             hosts[#hosts + 1] = { title = row.label, rows = { row } }
             AddModuleSwitch(ns.category, row)
         end
