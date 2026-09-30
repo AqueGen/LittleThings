@@ -52,10 +52,21 @@ One switch on the LittleThings page, off by default. Turned on, it brings up the
 
 Off by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels.
 
+### Performance
+
+Off by default. The page has Graphics, Memory and Addons sections.
+
+**Graphics.** **Optimize my FPS** lowers the options that cost the most frames and matter least in a fight: shadows to Fair, ambient occlusion, depth and compute effects and outlines off, liquid detail, spell density, view distance, environment detail and ground clutter to their lowest, one set of settings for raids too. Textures stay High, particles stay Ultra and projected textures stay on, so spell effects and ground markers remain readable. Before anything changes, a window lists every setting it will touch, as it is now and as it will be, and nothing happens until you press Apply. **Restore my settings** puts back what you had before the first Optimize, with the same window first. The game keeps graphics settings itself, so they stay after the module or the addon is switched off. Neither button works in combat.
+
+**Memory.** **Smoother garbage collection**, on by default, starts a collection after the Lua heap grows by 10% rather than by the game's default, so memory is freed in many small steps instead of one pass that shows as a hitch. Off, or the module off, puts the game's own values back at once. **Clean up in the open world**, on by default, frees thrown-away memory every 40 seconds in small steps spread over up to two seconds, only outside instances, never in combat or on a loading screen. **Collect garbage** frees everything now and prints the Lua memory before and after and the five addons holding the most. It is a diagnostic, not a speed-up: it stalls the game for a moment and gains no frames, and it refuses to run in combat.
+
+**Addons.** **Show addon CPU**, or `/lt cpu` (also in combat), opens a table of every loaded addon with the game's own profiler figures: time per frame over the last second and since login, the slowest single frame, the average on the last boss, how many frames took over 50 ms (the hitches, by name; those rows are red) and memory. Click a column to sort by it. Times update every second while the table is open; memory updates when it opens and on Refresh memory, because measuring it is itself expensive.
+
 ## Commands
 
 - `/lt` (or `/littlethings`, `/dmc`) - settings
 - `/lt format`, `/lt snap` - toggle one damage meter feature
+- `/lt cpu` - the addon performance table, also in combat
 - `/lt diag` - what the addon sees, per meter window; useful when reporting a bug
 - `/lt probe` - what the API says about Secret values right now
 - `/wcl` - Warcraft Logs link for a name, or the target

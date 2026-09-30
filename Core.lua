@@ -9,6 +9,9 @@ ns.defaults = {
     defaultPlaystyle = true,
     logLink = true,
     journalLoot = false,
+    performance = false,
+    smoothGarbageCollection = true,
+    openWorldCleanup = true,
 
     format = true,
     snap = true,
@@ -30,6 +33,7 @@ ns.MODULES = {
     { key = "defaultPlaystyle", parent = "groupFinder", label = "Group creation helpers", section = "Creating a group", live = true, tooltip = "Creating a listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, the title the game builds leaves the playstyle out, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
     { key = "logLink", parent = "groupFinder", label = "Warcraft Logs link in player menus", section = "Player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "journalLoot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
+    { key = "performance", label = "Performance", live = true, tooltip = "A button that sets the game's graphics options for frame rate, showing every change before it is made, and one that puts your own settings back. Smoother garbage collection, and a button that collects it now." },
 }
 
 local rows = {}
@@ -569,8 +573,10 @@ local function HandleSlashCommand(input)
 
     if command == "" then
         ns.OpenSettings()
+    elseif command == "cpu" then
+        ns.Profiler.Toggle()
     elseif not meter then
-        ns.Print("the damage meter module is off, nothing else takes commands")
+        ns.Print("commands: cpu. The damage meter module is off, its commands are not available")
     elseif command == "probe" then
         ns.Probe()
     elseif command == "diag" then
@@ -579,7 +585,7 @@ local function HandleSlashCommand(input)
         ns.db[command] = not ns.db[command]
         ns.Print(command .. ": " .. tostring(ns.db[command]))
     else
-        ns.Print("commands: diag, probe, format, snap")
+        ns.Print("commands: cpu, diag, probe, format, snap")
     end
 end
 
