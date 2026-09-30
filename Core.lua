@@ -12,6 +12,7 @@ ns.defaults = {
     performance = false,
     smoothGarbageCollection = true,
     openWorldCleanup = true,
+    groupLeader = false,
 
     format = true,
     snap = true,
@@ -34,6 +35,7 @@ ns.MODULES = {
     { key = "logLink", parent = "groupFinder", label = "Warcraft Logs link in player menus", section = "Player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "journalLoot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
     { key = "performance", label = "Performance", live = true, tooltip = "A button that sets the game's graphics options for frame rate, showing every change before it is made, and one that puts your own settings back. Smoother garbage collection, and a button that collects it now." },
+    { key = "groupLeader", label = "Group leader icons", live = true, tooltip = "A crown on the group leader and an assistant icon on raid assistants, on Blizzard's party and raid frames." },
 }
 
 local rows = {}
