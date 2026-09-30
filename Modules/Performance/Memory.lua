@@ -4,8 +4,10 @@ local Memory = {}
 
 local TOP_ADDONS = 5
 local PAUSE, STEP_MULTIPLIER = 110, 200
+local CLEANUP_INTERVAL, CLEANUP_STEP, CLEANUP_SECONDS = 40, 128, 2
 
 local original
+local ticker, cleaningUntil, loading, loadingEvents
 
 local function ApplyCollection()
     local wanted = ns.IsOn("performance") and ns.db.smoothGarbageCollection
@@ -19,6 +21,52 @@ local function ApplyCollection()
         collectgarbage("setstepmul", original.stepMultiplier)
         original = nil
     end
+end
+
+local function CanClean()
+    return not loading and not InCombatLockdown() and not IsInInstance()
+end
+
+local function CleanStep()
+    if not cleaningUntil then
+        return
+    end
+    if not CanClean() or GetTime() > cleaningUntil or collectgarbage("step", CLEANUP_STEP) then
+        cleaningUntil = nil
+        return
+    end
+    RunNextFrame(CleanStep)
+end
+
+local function StartCleanup()
+    if cleaningUntil or not CanClean() then
+        return
+    end
+    cleaningUntil = GetTime() + CLEANUP_SECONDS
+    CleanStep()
+end
+
+local function ApplyCleanup()
+    local wanted = ns.IsOn("performance") and ns.db.openWorldCleanup
+    if wanted and not ticker then
+        if not loadingEvents then
+            loadingEvents = CreateFrame("Frame")
+            loadingEvents:RegisterEvent("LOADING_SCREEN_ENABLED")
+            loadingEvents:RegisterEvent("LOADING_SCREEN_DISABLED")
+            loadingEvents:SetScript("OnEvent", function(_, event)
+                loading = event == "LOADING_SCREEN_ENABLED"
+            end)
+        end
+        ticker = C_Timer.NewTicker(CLEANUP_INTERVAL, StartCleanup)
+    elseif not wanted and ticker then
+        ticker:Cancel()
+        ticker, cleaningUntil = nil, nil
+    end
+end
+
+local function Apply()
+    ApplyCollection()
+    ApplyCleanup()
 end
 
 local function Megabytes(kilobytes)
@@ -67,19 +115,24 @@ function Memory.Pages(page)
     ns.AddToPage(page, Settings.CreateCheckbox(category, smooth,
         "The game frees addon memory in one large pass after it has doubled, which shows as a hitch. This starts a pass after 10% growth instead, so the work is spread over many small steps. Off returns the game's own values."))
 
+    local cleanup = Settings.RegisterProxySetting(category, "LT_openWorldCleanup", Settings.VarType.Boolean,
+        "Clean up in the open world", true,
+        function() return ns.db.openWorldCleanup end,
+        function(value)
+            ns.db.openWorldCleanup = value
+            ApplyCleanup()
+        end)
+    ns.AddToPage(page, Settings.CreateCheckbox(category, cleanup,
+        ("Every %d seconds, frees thrown-away memory in small steps over up to %d seconds, so less is left for the game to collect later. Only outside instances, never in combat or on a loading screen."):format(CLEANUP_INTERVAL, CLEANUP_SECONDS)))
+
     local button = CreateSettingsButtonInitializer("Collect garbage", "Collect garbage", CollectGarbage,
         "Frees the memory addons have thrown away and prints how much that was, and the five addons holding the most after it. The game stalls for a moment while it runs and gains no frames: most of what an addon shows before a collection is garbage the game frees on its own.", true)
     page.layout:AddInitializer(button)
     ns.AddToPage(page, button)
 end
 
-function Memory.Enable()
-    ApplyCollection()
-end
-
-function Memory.OnSwitch()
-    ApplyCollection()
-end
+Memory.Enable = Apply
+Memory.OnSwitch = Apply
 
 Memory.key = "performance"
 ns.RegisterModule("Memory", Memory)

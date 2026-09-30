@@ -11,6 +11,7 @@ ns.defaults = {
     journalLoot = false,
     performance = false,
     smoothGarbageCollection = true,
+    openWorldCleanup = true,
 
     format = true,
     snap = true,
