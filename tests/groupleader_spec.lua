@@ -11,9 +11,13 @@ local function new_texture()
   return t
 end
 
-local function new_frame(name, unit)
+local function new_frame(name, unit, forbidden)
   local f = { unit = unit }
-  function f:GetName() return name end
+  function f:IsForbidden() return forbidden == true end
+  function f:GetName()
+    if forbidden then error("Attempt to access forbidden object from code tainted by an AddOn") end
+    return name
+  end
   function f:CreateTexture() return new_texture() end
   return f
 end
@@ -97,6 +101,12 @@ describe("GroupLeader", function()
     addon.hook(arena)
     assert.is_nil(plate.ltLeaderIcon)
     assert.is_nil(arena.ltLeaderIcon)
+  end)
+
+  it("skips forbidden nameplates without touching them", function()
+    local plate = new_frame("NamePlate1UnitFrame", "nameplate1", true)
+    assert.has_no.errors(function() addon.hook(plate) end)
+    assert.is_nil(plate.ltLeaderIcon)
   end)
 
   it("hides every icon when switched off", function()

@@ -10,6 +10,9 @@ local frames = setmetatable({}, { __mode = "k" })
 local hooked = false
 
 local function IsGroupFrame(frame)
+    if frame:IsForbidden() then
+        return false
+    end
     local name = frame:GetName()
     return name ~= nil and (name:find("^CompactPartyFrameMember") or name:find("^CompactRaid")) ~= nil
 end
