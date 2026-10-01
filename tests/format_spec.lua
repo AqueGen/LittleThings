@@ -108,3 +108,51 @@ describe("Format.Compose", function()
         assert.is_nil(Format.Compose(nil, 5))
     end)
 end)
+
+describe("Format.Sweep", function()
+    local fontString, writes, entry
+
+    before_each(function()
+        writes = 0
+        fontString = {}
+        function fontString:GetText() return self.text end
+        function fontString:SetText(text) self.text = text; writes = writes + 1 end
+
+        entry = Entry({ displayType = 1, value = 100, valuePerSecond = 5 })
+        entry.GetValue = function() return fontString end
+
+        local window = {
+            IsShown = function() return true end,
+            GetScrollBox = function() return { ForEachFrame = function(_, func) func(entry) end } end,
+            GetLocalPlayerEntry = function() return nil end,
+            GetSourceWindow = function() return { IsShown = function() return false end } end,
+        }
+        ns.Windows.ForEach = function(func) func(window, 1) end
+    end)
+
+    after_each(function()
+        ns.Windows.ForEach = function() end
+    end)
+
+    it("leaves a bar alone while it still shows our string", function()
+        Format.Sweep()
+        Format.Sweep()
+        assert.are.equal("#100 (#5)", fontString.text)
+        assert.are.equal(1, writes)
+    end)
+
+    it("repaints once Blizzard has written its own string", function()
+        Format.Sweep()
+        fontString.text = "100 (5)"
+        Format.Sweep()
+        assert.are.equal("#100 (#5)", fontString.text)
+        assert.are.equal(2, writes)
+    end)
+
+    it("repaints every pass while the text is Secret", function()
+        fontString.GetText = function() return Secret("x") end
+        Format.Sweep()
+        Format.Sweep()
+        assert.are.equal(2, writes)
+    end)
+end)

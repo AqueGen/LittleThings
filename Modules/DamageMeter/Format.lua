@@ -101,8 +101,21 @@ function Format.Compose(main, parenthetical, percentage)
     return (DAMAGE_METER_ENTRY_FORMAT_MINIMAL or "%s"):format(mainText)
 end
 
+-- The string we last painted on each bar. Blizzard rewrites a bar only when
+-- its values change or the frame is reused, so a bar still showing our string
+-- needs nothing this frame. In combat both strings are Secret and cannot be
+-- compared, so those bars are painted every frame as before.
+local painted = {}
+
 local function Repaint(entry)
     if ns.HasDeathRecap(entry) then
+        return
+    end
+
+    local fontString = entry:GetValue()
+    local current = fontString:GetText()
+
+    if current ~= nil and not issecretvalue(current) and current == painted[entry] then
         return
     end
 
@@ -122,30 +135,49 @@ local function Repaint(entry)
     local text = Format.Compose(main, parenthetical, percentage)
 
     if text then
-        entry:GetValue():SetText(text)
+        fontString:SetText(text)
+        painted[entry] = (not issecretvalue(text)) and text or nil
+    end
+end
+
+-- One bad row must not stop the rest, and a patch that renames a field would
+-- otherwise turn a cosmetic feature into an error every frame.
+local function RepaintSafely(entry)
+    pcall(Repaint, entry)
+end
+
+local function RestoreSafely(entry)
+    pcall(entry.UpdateValue, entry)
+end
+
+-- Held in an upvalue rather than captured, so the per-frame walk below builds
+-- no closures.
+local visit
+
+local function VisitWindow(window)
+    if not window:IsShown() then
+        return
+    end
+
+    window:GetScrollBox():ForEachFrame(visit)
+
+    local localPlayerEntry = window:GetLocalPlayerEntry()
+    if localPlayerEntry and localPlayerEntry:IsShown() then
+        visit(localPlayerEntry)
+    end
+
+    local sourceWindow = window:GetSourceWindow()
+    if sourceWindow:IsShown() then
+        sourceWindow:ForEachEntryFrame(visit)
     end
 end
 
 -- Every entry frame on screen: each window's bars, its off-screen local player
 -- row, and its spell breakdown.
 local function ForEachEntry(func)
-    ns.Windows.ForEach(function(window)
-        if not window:IsShown() then
-            return
-        end
-
-        window:GetScrollBox():ForEachFrame(func)
-
-        local localPlayerEntry = window:GetLocalPlayerEntry()
-        if localPlayerEntry and localPlayerEntry:IsShown() then
-            func(localPlayerEntry)
-        end
-
-        local sourceWindow = window:GetSourceWindow()
-        if sourceWindow:IsShown() then
-            sourceWindow:ForEachEntryFrame(func)
-        end
-    end)
+    visit = func
+    ns.Windows.ForEach(VisitWindow)
+    visit = nil
 end
 
 function Format.Sweep()
@@ -153,12 +185,7 @@ function Format.Sweep()
         return
     end
 
-    ForEachEntry(function(entry)
-        -- One bad row must not stop the rest, and a patch that renames a field
-        -- would otherwise turn a cosmetic feature into an error five times a
-        -- second.
-        pcall(Repaint, entry)
-    end)
+    ForEachEntry(RepaintSafely)
 end
 
 -- Turning the feature off has to hand the bars back. Their UpdateValue rebuilds
@@ -171,9 +198,7 @@ function Format.Restore()
         return
     end
 
-    ForEachEntry(function(entry)
-        pcall(entry.UpdateValue, entry)
-    end)
+    ForEachEntry(RestoreSafely)
 end
 
 -- Deliberately not a hook, and deliberately not reading the numbers.
