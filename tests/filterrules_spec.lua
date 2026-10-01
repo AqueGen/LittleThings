@@ -53,10 +53,6 @@ describe("Rules.IsActive", function()
     assert.is_true(Rules.IsActive(settings({ minItemLevel = 0 })))
     assert.is_true(Rules.IsActive(settings({ needBloodlust = true })))
   end)
-
-  it("ignores the mode", function()
-    assert.is_false(Rules.IsActive(settings({ mode = "hide" })))
-  end)
 end)
 
 describe("Rules.Passes, classes", function()
@@ -116,7 +112,7 @@ describe("Rules.Passes, roles", function()
 
 end)
 
-describe("Rules.Apply", function()
+describe("Rules.Failing", function()
   local byId = {
     [1] = app(member("MAGE")),
     [2] = app(member("PALADIN")),
@@ -125,22 +121,14 @@ describe("Rules.Apply", function()
   }
   local s = settings({ classes = { PALADIN = EXCLUDE } })
 
-  it("moves failing applications below passing ones, keeping both orders", function()
+  it("marks failing applications and leaves the list untouched", function()
     local ids = { 4, 1, 2, 3 }
-    local failed, count = Rules.Apply(ids, byId, OPEN_GROUP, s)
-    assert.same({ 1, 3, 4, 2 }, ids)
+    local failed, count = Rules.Failing(ids, byId, OPEN_GROUP, s)
+    assert.same({ 4, 1, 2, 3 }, ids)
     assert.equals(2, count)
     assert.is_true(failed[4])
     assert.is_true(failed[2])
     assert.is_nil(failed[1])
-  end)
-
-  it("removes failing applications in hide mode", function()
-    local ids = { 4, 1, 2, 3 }
-    local hide = settings({ classes = { PALADIN = EXCLUDE }, mode = "hide" })
-    local _, count = Rules.Apply(ids, byId, OPEN_GROUP, hide)
-    assert.same({ 1, 3 }, ids)
-    assert.equals(2, count)
   end)
 end)
 
@@ -148,7 +136,6 @@ describe("Rules.Migrate", function()
   it("starts from the defaults and adopts the old class picks", function()
     local migrated = Rules.Migrate(nil, { MAGE = NEED })
     assert.equals(NEED, migrated.classes.MAGE)
-    assert.equals("down", migrated.mode)
     assert.is_true(migrated.roles.TANK)
   end)
 
@@ -159,8 +146,11 @@ describe("Rules.Migrate", function()
     assert.is_nil(migrated.classes.MAGE)
     assert.is_false(migrated.roles.TANK)
     assert.equals(280, migrated.minItemLevel)
-    assert.equals("down", migrated.mode)
     assert.is_false(migrated.needBloodlust)
+  end)
+
+  it("drops the removed move down / hide mode", function()
+    assert.is_nil(Rules.Migrate({ classes = {}, mode = "hide" }).mode)
   end)
 end)
 
@@ -220,11 +210,10 @@ describe("Rules.Passes, bring Bloodlust and battle res", function()
     assert.is_true(Rules.Passes(app(member("ROGUE")), raid, settings({ needBloodlust = true, needBattleRes = true })))
   end)
 
-  it("lifts the ones who bring it in move down mode", function()
+  it("marks the ones who bring none of it", function()
     local byId = { [1] = app(member("ROGUE")), [2] = app(member("MAGE")), [3] = app(member("PRIEST")), [4] = app(member("SHAMAN")) }
-    local ids = { 1, 2, 3, 4 }
-    local _, count = Rules.Apply(ids, byId, noUtility, settings({ needBloodlust = true }))
-    assert.same({ 2, 4, 1, 3 }, ids)
+    local failed, count = Rules.Failing({ 1, 2, 3, 4 }, byId, noUtility, settings({ needBloodlust = true }))
+    assert.same({ [1] = true, [3] = true }, failed)
     assert.equals(2, count)
   end)
 end)
