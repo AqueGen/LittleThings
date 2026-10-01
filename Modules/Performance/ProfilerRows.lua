@@ -16,13 +16,5 @@ function Rows.Comparator(sortKey)
     return Compare
 end
 
-function Rows.Sort(rows, sortKey)
-    for _, row in ipairs(rows) do
-        row.sortName = row.sortName or row.name:lower()
-    end
-    table.sort(rows, Rows.Comparator(sortKey))
-    return rows
-end
-
 if ns then ns.ProfilerRows = Rows end
 return Rows
