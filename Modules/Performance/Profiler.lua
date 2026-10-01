@@ -19,11 +19,13 @@ local COLUMNS = {
 local TABLE_WIDTH = 0
 for _, column in ipairs(COLUMNS) do
     TABLE_WIDTH = TABLE_WIDTH + column.width
+    column.enum = column.metric and Enum.AddOnProfilerMetric[column.metric]
 end
 
-local window
+local window, provider
 local sortKey = "average"
 local memory = {}
+local rows, rowsByName = {}, {}
 
 local function LoadedAddOns(func)
     for index = 1, C_AddOns.GetNumAddOns() do
@@ -40,22 +42,37 @@ local function MeasureMemory()
     end)
 end
 
+-- Updates the same row tables every second instead of building new ones, and
+-- reports whether an addon loaded since the last pass.
 local function Collect()
-    local rows = {}
-    LoadedAddOns(function(_, name)
-        local row = { name = name, memory = memory[name] or 0 }
-        for _, column in ipairs(COLUMNS) do
-            if column.metric then
-                row[column.key] = C_AddOnProfiler.GetAddOnMetric(name, Enum.AddOnProfilerMetric[column.metric])
+    local added = false
+    for index = 1, C_AddOns.GetNumAddOns() do
+        if C_AddOns.IsAddOnLoaded(index) then
+            local name = C_AddOns.GetAddOnInfo(index)
+            local row = rowsByName[name]
+            if not row then
+                row = { name = name, sortName = name:lower() }
+                rowsByName[name] = row
+                rows[#rows + 1] = row
+                added = true
+            end
+            row.memory = memory[name] or 0
+            for _, column in ipairs(COLUMNS) do
+                if column.enum then
+                    row[column.key] = C_AddOnProfiler.GetAddOnMetric(name, column.enum)
+                end
             end
         end
-        rows[#rows + 1] = row
-    end)
-    return Rows.Sort(rows, sortKey)
+    end
+    return added
 end
 
 local function Refresh()
-    window.ScrollBox:SetDataProvider(CreateDataProvider(Collect()), ScrollBoxConstants.RetainScrollPosition)
+    if Collect() or not provider then
+        provider = CreateDataProvider(rows)
+        window.ScrollBox:SetDataProvider(provider, ScrollBoxConstants.RetainScrollPosition)
+    end
+    provider:Sort(Rows.Comparator(sortKey))
     for _, header in ipairs(window.headers) do
         header.Text:SetTextColor((header.key == sortKey and HIGHLIGHT_FONT_COLOR or NORMAL_FONT_COLOR):GetRGB())
     end
