@@ -172,49 +172,8 @@ local function BuildUtility()
     Check(row, "needBattleRes", "Brings battle res", -42)
 end
 
-local function BuildSort()
-    local row = Row(18 + 30, "sort")
-    Heading(row, "Sort")
-    local dropdown = CreateFrame("DropdownButton", nil, row, "WowStyle1DropdownTemplate")
-    dropdown:SetPoint("TOPLEFT", PAD, -18)
-    dropdown:SetWidth(WIDTH - 2 * PAD)
-    dropdown:SetupMenu(function(_, root)
-        local sort = ns.ApplicantSort
-        local choices = sort.Choices(Data.Listing())
-        if not choices then return end
-        local function IsSelected(key) return sort.GetBy(choices) == key end
-        local function Select(key)
-            sort.SetBy(choices, key)
-            Filter.Changed()
-        end
-        for _, key in ipairs(choices.order) do
-            root:CreateRadio(choices.names[key], IsSelected, Select, key)
-        end
-    end)
-    panel.sortDropdown = dropdown
-end
-
-local function BuildMode()
-    local row = Row(30)
-    local dropdown = CreateFrame("DropdownButton", nil, row, "WowStyle1DropdownTemplate")
-    dropdown:SetPoint("TOPLEFT", PAD, 0)
-    dropdown:SetWidth(WIDTH - 2 * PAD)
-    dropdown:SetupMenu(function(_, root)
-        local function IsSelected(mode) return S().mode == mode end
-        local function Select(mode)
-            S().mode = mode
-            Filter.Changed()
-        end
-        root:CreateRadio("Move down", IsSelected, Select, "down")
-        root:CreateRadio("Hide", IsSelected, Select, "hide")
-    end)
-end
-
 local function Visible(row, listing)
     if row.when == "fiveMan" then return listing == nil or listing.fiveMan end
-    if row.when == "sort" then
-        return ns.IsOn("applicantSort") == true and ns.ApplicantSort ~= nil and ns.ApplicantSort.Choices(listing) ~= nil
-    end
     return true
 end
 
@@ -234,11 +193,9 @@ local function Layout()
 end
 
 local function ResetAll()
-    local mode = S().mode
     local fresh = Rules.Defaults()
     for key in pairs(S()) do S()[key] = nil end
     for key, value in pairs(fresh) do S()[key] = value end
-    S().mode = mode
     panel:Sync()
     Filter.Changed()
 end
@@ -259,14 +216,13 @@ local function Sync()
     for key, check in pairs(checks) do
         check:SetChecked(s[key] == true)
     end
-    if panel.sortDropdown:IsVisible() then panel.sortDropdown:GenerateMenu() end
     Layout()
 
     panel.reset:SetEnabled(Rules.IsActive(s))
     if state.paused then
         panel.status:SetText("Filter paused")
     elseif state.count > 0 then
-        panel.status:SetText((s.mode == "hide" and "Hidden: " or "Moved down: ") .. state.count)
+        panel.status:SetText("Dimmed: " .. state.count)
     else
         panel.status:SetText("")
     end
@@ -331,8 +287,6 @@ local function Build()
     BuildRoles()
     Box(Row(28), "minItemLevel", "Minimum item level")
     BuildUtility()
-    BuildSort()
-    BuildMode()
 
     local footer = Row(22)
     panel.reset = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
