@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.13.0](https://github.com/AqueGen/LittleThings/compare/v0.12.0...v0.13.0) (2026-10-02)
+
+
+### Features
+
+* dim applicants who need a role your group already has ([#26](https://github.com/AqueGen/LittleThings/issues/26)) ([aca243a](https://github.com/AqueGen/LittleThings/commit/aca243a796a414dbc2b39d59f786e3990cb9c889))
+* leader crown and assistant icon on Blizzard party and raid frames ([#21](https://github.com/AqueGen/LittleThings/issues/21)) ([6d33ae7](https://github.com/AqueGen/LittleThings/commit/6d33ae75970b6a0e7e628830883f5cbf6e83681a))
+* Performance module with graphics optimizer, smoother garbage collection and addon CPU table ([#22](https://github.com/AqueGen/LittleThings/issues/22)) ([bce6ece](https://github.com/AqueGen/LittleThings/commit/bce6ece913807b61c99f8bad977974cb08dc44d5))
+
+
+### Bug Fixes
+
+* stop writing into the group finder applicant list ([#25](https://github.com/AqueGen/LittleThings/issues/25)) ([d4b38d5](https://github.com/AqueGen/LittleThings/commit/d4b38d567885050a7a5ba83067d89844402f7abc))
+
+
+### Performance Improvements
+
+* stop per-frame allocations in the damage meter repaint and the addon CPU table ([#24](https://github.com/AqueGen/LittleThings/issues/24)) ([2c21d79](https://github.com/AqueGen/LittleThings/commit/2c21d799aa22dacd115ee354e0ce31eb8062a1f1))
+
 ## [0.12.0](https://github.com/AqueGen/LittleThings/compare/v0.11.0...v0.12.0) (2026-09-27)
 
 
