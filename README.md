@@ -1,6 +1,6 @@
 # LittleThings
 
-Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. The LittleThings page has one switch per module, with what it does in the tooltip, and every switch starts off. Switch one on and its settings page appears under LittleThings; switch it off and the page goes. Off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
+Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. The LittleThings page has one switch per module, with what it does in the tooltip. Group finder and Journal loot start on, the rest start off. Switch one on and its settings page appears under LittleThings; switch it off and the page goes. Off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
 
 Retail only, patch 12.1. No libraries, no dependencies.
 
@@ -36,7 +36,7 @@ Off by default. Two bars of icons next to the character panel: your specializati
 
 ### Group finder
 
-One switch on the LittleThings page, off by default. Turned on, it brings up the Group finder page, where each of the four tools below has its own switch (all on) and its options, in three sections: Applicants, Creating a group, Player menus.
+One switch on the LittleThings page, on by default. While on, it brings up the Group finder page, where each of the four tools below has its own switch (all on) and its options, in three sections: Applicants, Creating a group, Player menus.
 
 **Warcraft Logs link.** Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
 
@@ -50,7 +50,7 @@ One switch on the LittleThings page, off by default. Turned on, it brings up the
 
 ### Journal loot
 
-Off by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels.
+On by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels.
 
 ### Performance
 
