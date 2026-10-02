@@ -13,9 +13,6 @@ local function RaidEntries(applicantID, memberIndex)
     if type(rio) ~= "table" or type(rio.GetProfile) ~= "function" then return nil end
     local name = C_LFGList.GetApplicantMemberInfo(applicantID, memberIndex)
     if type(name) ~= "string" or issecretvalue(name) then return nil end
-    if not name:find("-", 1, true) then
-        name = name .. "-" .. GetNormalizedRealmName()
-    end
     local ok, profile = pcall(rio.GetProfile, name)
     local raid = ok and type(profile) == "table" and profile.raidProfile
     return raid and raid.progress

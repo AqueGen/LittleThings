@@ -131,3 +131,13 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Show addon CPU opens the Addon performance window: every loaded addon in a row, columns lined up under their headers, Average highlighted and sorted highest first. Now changes every second, Memory does not until Refresh memory. Clicking Addon sorts by name, clicking Hitches puts red rows on top. Drag moves it, Esc and the X close it, the button again toggles it.
 - [ ] In combat, `/lt cpu` opens and closes the window, no error, no "Interface action failed". `/lt` with no argument still opens the settings.
 - [ ] A few hours of play with SmartGarbageCollector removed, then Show addon CPU: no addon has more frames over 50 ms than before the switch, and the game does not feel less even.
+
+## 12. Group leader icons
+
+- [ ] Switch on Group leader icons in a party using Blizzard's party frames: the leader's frame gets a crown on its top left edge at once, no reload. Nobody else gets an icon.
+- [ ] Promote someone else: the crown moves to them. Leave and rejoin: it is on the right member again.
+- [ ] In a raid, make someone an assistant: they get the assistant icon; the leader keeps the crown. Demote them: the icon goes.
+- [ ] Switch raid frames between "Keep groups together" and separate frames: icons stay on the right people. Nameplates and arena frames never get one, and walking past enemies with nameplates on, in the open world and in a dungeon, leaves BugSack empty (nameplate frames are forbidden objects the module must not touch).
+- [ ] Enter combat in a raid instance: icons stay put, BugSack stays empty, no "Interface action failed".
+- [ ] The crown does not cover the role icon or the name enough to hurt reading them.
+- [ ] Switch off: every icon disappears at once.
