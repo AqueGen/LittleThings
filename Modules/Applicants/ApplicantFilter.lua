@@ -52,7 +52,9 @@ local function Filter(applicants)
 
         if not state.paused then
             state.counts = Rules.CountClasses(list)
-            state.failed, state.count = Rules.Failing(applicants, byId, Data.Group(state.listing), ApplicantFilter.Settings())
+            local settings, group = ApplicantFilter.Settings(), Data.Group(state.listing)
+            Rules.FollowGroup(settings, group)
+            state.failed, state.count = Rules.Failing(applicants, byId, group, settings)
         end
     end
     Notify()
@@ -114,6 +116,7 @@ function ApplicantFilter.Enable()
     local events = CreateFrame("Frame")
     events:RegisterEvent("GROUP_ROSTER_UPDATE")
     events:RegisterEvent("PLAYER_ROLES_ASSIGNED")
+    events:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     events:RegisterEvent("LFG_LIST_APPLICANT_UPDATED")
     events:RegisterEvent("LFG_LIST_APPLICANT_LIST_UPDATED")
     events:SetScript("OnEvent", function(_, event)

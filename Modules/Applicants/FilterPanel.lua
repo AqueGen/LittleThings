@@ -145,7 +145,8 @@ end
 
 local function RoleClick(button)
     S().roles[button.role] = not S().roles[button.role]
-    button:SetAlpha(S().roles[button.role] and 1 or 0.3)
+    S().onlyMissingRoles = false
+    panel:Sync()
     Filter.Changed()
 end
 

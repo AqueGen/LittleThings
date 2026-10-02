@@ -42,9 +42,6 @@ end
 
 function Rules.IsDefault(s)
     if next(s.classes) ~= nil then return false end
-    for _, role in ipairs(Rules.ROLES) do
-        if not s.roles[role] then return false end
-    end
     return s.onlyMissingRoles == true and not s.needBloodlust and not s.needBattleRes and s.minItemLevel == nil
 end
 
@@ -106,6 +103,13 @@ function Rules.Passes(application, group, s)
     return (wantsLust and Brings(application, Rules.BLOODLUST))
         or (wantsRes and Brings(application, Rules.BATTLE_RES))
         or false
+end
+
+function Rules.FollowGroup(s, group)
+    if not s.onlyMissingRoles then return end
+    for _, role in ipairs(Rules.ROLES) do
+        s.roles[role] = group.open == nil or group.open[role] > 0
+    end
 end
 
 function Rules.CountClasses(applications)
