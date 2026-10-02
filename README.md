@@ -52,6 +52,10 @@ One switch on the LittleThings page, off by default. Turned on, it brings up the
 
 Off by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels.
 
+### Group leader icons
+
+Off by default. Blizzard's party and raid frames show nobody's rank, so this puts a crown on the group leader and an assistant icon on raid assistants, on the top left edge of their frame. It follows leader and assistant changes as they happen. Frames from other addons are left alone.
+
 ### Performance
 
 Off by default. The page has Graphics, Memory and Addons sections.
