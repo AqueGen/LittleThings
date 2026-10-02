@@ -3,6 +3,7 @@ local addonName, ns = ...
 local Rules = ns.FilterRules
 local Data = ns.ApplicantData
 local Filter = ns.ApplicantFilter
+local Sort = ns.ApplicantSort
 
 local WIDTH = 214
 local PAD = 10
@@ -111,17 +112,31 @@ local function BuildClasses()
     end
 end
 
-local function Check(row, key, label, y)
+local function Check(row, label, y, get, set)
     local check = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
     check:SetSize(24, 24)
     check:SetPoint("TOPLEFT", PAD, y)
     check.text:SetText(label)
     check.text:SetFontObject("GameFontHighlightSmall")
     check:SetScript("OnClick", function(self)
-        S()[key] = self:GetChecked() and true or false
+        set(self:GetChecked() and true or false)
+        panel:Sync()
+    end)
+    check.get = get
+    checks[#checks + 1] = check
+end
+
+local function FilterCheck(row, key, label, y)
+    Check(row, label, y, function() return S()[key] == true end, function(value)
+        S()[key] = value
         Filter.Changed()
     end)
-    checks[key] = check
+end
+
+local function SwitchCheck(row, key, label, y)
+    Check(row, label, y, function() return ns.IsOn(key) == true end, function(value)
+        ns.SetSwitch(key, value)
+    end)
 end
 
 local function Box(row, key, label)
@@ -145,7 +160,8 @@ end
 
 local function RoleClick(button)
     S().roles[button.role] = not S().roles[button.role]
-    button:SetAlpha(S().roles[button.role] and 1 or 0.3)
+    S().onlyMissingRoles = false
+    panel:Sync()
     Filter.Changed()
 end
 
@@ -168,12 +184,51 @@ end
 local function BuildUtility()
     local row = Row(18 + 24 + 30, "fiveMan")
     Heading(row, "Group utility")
-    Check(row, "needBloodlust", "Brings Bloodlust", -18)
-    Check(row, "needBattleRes", "Brings battle res", -42)
+    FilterCheck(row, "needBloodlust", "Brings Bloodlust", -18)
+    FilterCheck(row, "needBattleRes", "Brings battle res", -42)
+end
+
+local function SortMenu(_, root)
+    local choices = Sort.Choices(Data.Listing())
+    if not choices then return end
+    root:CreateRadio("Blizzard order",
+        function() return not ns.IsOn("applicantOrder") end,
+        function() ns.SetSwitch("applicantOrder", false) end)
+    for _, key in ipairs(choices.order) do
+        root:CreateRadio(choices.short[key],
+            function(value) return ns.IsOn("applicantOrder") and Sort.GetBy(choices) == value end,
+            function(value)
+                Sort.SetBy(choices, value)
+                if not ns.IsOn("applicantOrder") then ns.SetSwitch("applicantOrder", true) end
+            end,
+            key)
+    end
+end
+
+local function BuildList()
+    local sortRow = Row(18 + 28, "sortable")
+    Heading(sortRow, "List")
+    local label = sortRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    label:SetPoint("TOPLEFT", PAD, -24)
+    label:SetText("Sort by")
+    panel.sortBy = CreateFrame("DropdownButton", nil, sortRow, "WowStyle1DropdownTemplate")
+    panel.sortBy:SetWidth(120)
+    panel.sortBy:SetPoint("TOPRIGHT", -PAD - 2, -18)
+    panel.sortBy:SetupMenu(SortMenu)
+
+    local row = Row(24 + 24 + 6)
+    SwitchCheck(row, "applicantSort", "Show keys and progress", 0)
+    Check(row, "Remove closed applications", -24,
+        function() return Filter.Options().removeFinished == true end,
+        function(value)
+            Filter.Options().removeFinished = value
+            Filter.Changed()
+        end)
 end
 
 local function Visible(row, listing)
     if row.when == "fiveMan" then return listing == nil or listing.fiveMan end
+    if row.when == "sortable" then return Sort.Choices(listing) ~= nil end
     return true
 end
 
@@ -213,12 +268,13 @@ local function Sync()
     for key, box in pairs(boxes) do
         if not box:HasFocus() then box:SetText(s[key] and tostring(s[key]) or "") end
     end
-    for key, check in pairs(checks) do
-        check:SetChecked(s[key] == true)
+    for _, check in ipairs(checks) do
+        check:SetChecked(check.get())
     end
     Layout()
+    if panel.sortBy:IsVisible() then panel.sortBy:GenerateMenu() end
 
-    panel.reset:SetEnabled(Rules.IsActive(s))
+    panel.reset:SetEnabled(not Rules.IsDefault(s))
     if state.paused then
         panel.status:SetText("Filter paused")
     elseif state.count > 0 then
@@ -285,8 +341,10 @@ local function Build()
 
     BuildClasses()
     BuildRoles()
+    FilterCheck(Row(28, "fiveMan"), "onlyMissingRoles", "Only missing roles", 0)
     Box(Row(28), "minItemLevel", "Minimum item level")
     BuildUtility()
+    BuildList()
 
     local footer = Row(22)
     panel.reset = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
@@ -318,12 +376,10 @@ local function SideOptions()
 end
 
 function Filter.Pages(page)
-    ns.db.applicantFilterOptions = ns.db.applicantFilterOptions or {}
-    ns.ApplyDefaults(ns.db.applicantFilterOptions, { removeFinished = true })
     local remove = Settings.RegisterProxySetting(page.category, "LT_applicantFilter_removeFinished", Settings.VarType.Boolean,
         "Remove closed applications", true,
-        function() return ns.db.applicantFilterOptions.removeFinished end,
-        function(value) ns.db.applicantFilterOptions.removeFinished = value end)
+        function() return Filter.Options().removeFinished end,
+        function(value) Filter.Options().removeFinished = value end)
     ns.AddToPage(page, Settings.CreateCheckbox(page.category, remove,
         "Applications that were cancelled, timed out, declined or turned the invite down leave the list at once, as if you clicked their X."))
 

@@ -12,6 +12,7 @@ function Rules.Defaults()
     return {
         classes = {},
         roles = { TANK = true, HEALER = true, DAMAGER = true },
+        onlyMissingRoles = true,
         minItemLevel = nil,
         needBloodlust = false,
         needBattleRes = false,
@@ -39,12 +40,9 @@ function Rules.ParseNumber(text)
     return nil
 end
 
-function Rules.IsActive(s)
-    if next(s.classes) ~= nil then return true end
-    for _, role in ipairs(Rules.ROLES) do
-        if not s.roles[role] then return true end
-    end
-    return s.needBloodlust or s.needBattleRes or s.minItemLevel ~= nil
+function Rules.IsDefault(s)
+    if next(s.classes) ~= nil then return false end
+    return s.onlyMissingRoles == true and not s.needBloodlust and not s.needBattleRes and s.minItemLevel == nil
 end
 
 local function MemberPasses(member, s)
@@ -68,6 +66,21 @@ local function HasNeededClass(application, s)
     return false
 end
 
+local function Fits(members, open, allowed, index)
+    index = index or 1
+    local member = members[index]
+    if not member then return true end
+    for _, role in ipairs(Rules.ROLES) do
+        if member.roles[role] and allowed[role] and open[role] > 0 then
+            open[role] = open[role] - 1
+            local fits = Fits(members, open, allowed, index + 1)
+            open[role] = open[role] + 1
+            if fits then return true end
+        end
+    end
+    return false
+end
+
 local function Brings(application, classes)
     for _, member in ipairs(application.members) do
         if classes[member.class] then return true end
@@ -83,12 +96,20 @@ function Rules.Passes(application, group, s)
     if not HasNeededClass(application, s) then return false end
 
     if not group.open then return true end
+    if s.onlyMissingRoles and not Fits(application.members, group.open, s.roles) then return false end
     local wantsLust = s.needBloodlust and not group.hasBloodlust
     local wantsRes = s.needBattleRes and not group.hasBattleRes
     if not wantsLust and not wantsRes then return true end
     return (wantsLust and Brings(application, Rules.BLOODLUST))
         or (wantsRes and Brings(application, Rules.BATTLE_RES))
         or false
+end
+
+function Rules.FollowGroup(s, group)
+    if not s.onlyMissingRoles then return end
+    for _, role in ipairs(Rules.ROLES) do
+        s.roles[role] = group.open == nil or group.open[role] > 0
+    end
 end
 
 function Rules.CountClasses(applications)

@@ -88,7 +88,10 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 8. Applicant keys
 
-- [ ] Switch on Keys and raid progress on applicants, list a Mythic+ key: the list keeps Blizzard's order (oldest first, new applicants at the bottom) and the key numbers appear without a reload.
+- [ ] Switch on Keys and raid progress on applicants, list a Mythic+ key: the key numbers appear without a reload.
+- [ ] Sort applicants on, Mythic+ sort by Rating: bright applicants come first, highest rating on top, dimmed ones below them. Switch to Item level: the order follows at once. In a raid listing, Progress and Item level do the same.
+- [ ] Only missing roles on, a healer slot open: healers rise to the top. Someone joins as healer: healers drop down and the next missing role rises, without touching anything.
+- [ ] Listed with the list sorted, pull a mob (combat), then a boss (encounter), with applicants arriving and someone joining or leaving: the list falls back to Blizzard's order, BugSack has no "secret" errors from LFGList.lua 1699 or 1760, invite and decline work; after combat the list is sorted again.
 - [ ] Listed, with applicants waiting, someone joins or leaves the group, in and out of an instance: BugSack has no errors from LFGList.lua (no "secret" at 1760 or 1699), invite and decline work.
 - [ ] Switch off: the key numbers and the column label go away at the next list update.
 
@@ -99,12 +102,14 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's, rows are not dimmed and the panel says Filter paused until you leave the instance.
 - [ ] Class icons show counts, including dimmed applicants; need, exclude and clear work as the tooltip says.
 - [ ] Minimum item level 300: applicants below are dimmed and stay in place; "Dimmed: N" matches. Empty the box: back to normal. Type 0: nothing is dimmed.
-- [ ] Roles: tank toggled off dims tank-only applicants; a tank/damage flex stays bright.
+- [ ] Roles: tank toggled off dims tank-only applicants; a tank/damage flex stays bright, and Only missing roles unticks itself.
+- [ ] Only missing roles on, group of tank, healer and two damage: only the damage toggle is lit, damage applicants are bright, the rest dimmed. Someone leaves or swaps spec: the toggles follow at once.
 - [ ] Brings Bloodlust with no Bloodlust class in the group: shamans, mages, hunters and evokers stay bright, everyone else is dimmed. Once a Bloodlust class joins, nothing is dimmed. Both boxes: applications bringing either Bloodlust or battle res stay bright, the rest are dimmed; once one of them is in the group, only the other one is asked for.
 - [ ] An invited applicant is never dimmed, whatever the filters say.
 - [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top in blue, this dungeon below in green, each dimmed when not timed, label colours matching, clear of the invite buttons; nothing on cancelled rows.
 - [ ] List a raid with Raider.IO installed: each row shows two small progress lines (kills/bosses, no letter) just left of the Invite button and clear of it, this raid only (older raids never show): its best difficulty on top, the listed difficulty below, coloured N green / H blue / M purple; empty for players Raider.IO does not know. Without Raider.IO: no error, no text.
 - [ ] An applicant cancels, times out or is declined: the row leaves the list at once. Remove closed applications off: the row stays with its X, as Blizzard shows it.
+- [ ] List section: Sort by shows the current order (Rating / Item level / This dungeon for Mythic+, Progress / Item level for a raid); picking one resorts at once, Blizzard order stops sorting and the settings page's Sort applicants switch is unticked. Show keys and progress and Remove closed applications match the settings page and act without a reload. The section has no Sort by in PvP or other listings.
 - [ ] Reset clears everything. Invite and decline from a filtered list work, BugSack stays empty.
 - [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them. Values saved for the removed options (minimum rating, keys) have no effect.
 - [ ] Switch off: the panel disappears and the list is Blizzard's again at once.

@@ -52,10 +52,9 @@ local function Filter(applicants)
 
         if not state.paused then
             state.counts = Rules.CountClasses(list)
-            local settings = ApplicantFilter.Settings()
-            if Rules.IsActive(settings) then
-                state.failed, state.count = Rules.Failing(applicants, byId, Data.Group(state.listing), settings)
-            end
+            local settings, group = ApplicantFilter.Settings(), Data.Group(state.listing)
+            Rules.FollowGroup(settings, group)
+            state.failed, state.count = Rules.Failing(applicants, byId, group, settings)
         end
     end
     Notify()
@@ -69,10 +68,12 @@ end
 
 local function UsesGroup()
     local s = ApplicantFilter.Settings()
-    return s.needBloodlust or s.needBattleRes
+    return s.onlyMissingRoles or s.needBloodlust or s.needBattleRes
 end
 
 function ApplicantFilter.Options()
+    ns.db.applicantFilterOptions = ns.db.applicantFilterOptions or {}
+    ns.ApplyDefaults(ns.db.applicantFilterOptions, { removeFinished = true })
     return ns.db.applicantFilterOptions
 end
 
@@ -111,12 +112,13 @@ function ApplicantFilter.Enable()
     if ApplicantFilter.panel then ApplicantFilter.panel:SetShown(true) end
     if enabled then return end
     enabled = true
-    Pipeline.Add(Filter)
+    Pipeline.Add(Pipeline.FILTER, Filter)
     hooksecurefunc("LFGListApplicationViewer_UpdateApplicantMember", Dim)
 
     local events = CreateFrame("Frame")
     events:RegisterEvent("GROUP_ROSTER_UPDATE")
     events:RegisterEvent("PLAYER_ROLES_ASSIGNED")
+    events:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     events:RegisterEvent("LFG_LIST_APPLICANT_UPDATED")
     events:RegisterEvent("LFG_LIST_APPLICANT_LIST_UPDATED")
     events:SetScript("OnEvent", function(_, event)

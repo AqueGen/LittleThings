@@ -3,12 +3,13 @@ local addonName, ns = ...
 ns.defaults = {
     damageMeter = false,
     characterPanel = false,
-    groupFinder = false,
+    groupFinder = true,
     applicantSort = true,
+    applicantOrder = true,
     classFilter = true,
     defaultPlaystyle = true,
     logLink = true,
-    journalLoot = false,
+    journalLoot = true,
     performance = false,
     smoothGarbageCollection = true,
     openWorldCleanup = true,
@@ -26,9 +27,10 @@ ns.charDefaults = {
 }
 
 ns.MODULES = {
-    { key = "groupFinder", group = "Group content", label = "Group finder", live = true, tooltip = "Tools for the premade group finder: applicant keys and a filter panel, group creation helpers, a Warcraft Logs link in player menus. Each has its own switch on the Group finder page." },
-    { key = "applicantSort", parent = "groupFinder", label = "Keys and raid progress on applicants", section = "Applicants", live = true, tooltip = "When your group is listed, each Mythic+ applicant shows their best key anywhere and in the listed dungeon beside the rating, and with Raider.IO each raid applicant shows their progress in the listed raid. The list keeps Blizzard's order: the game does not let addons reorder it." },
-    { key = "classFilter", parent = "groupFinder", label = "Applicant filter panel", section = "Applicants", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum item level, and in 5-player listings Bloodlust or battle res. Applicants who fail are dimmed and keep their place, since the game does not let addons reorder or hide them. Everything on the panel is saved per character." },
+    { key = "groupFinder", group = "Group content", label = "Group finder", live = true, tooltip = "Tools for the premade group finder: applicant keys, sorting and a filter panel, group creation helpers, a Warcraft Logs link in player menus. Each has its own switch on the Group finder page." },
+    { key = "applicantSort", parent = "groupFinder", label = "Keys and raid progress on applicants", section = "Applicants", live = true, tooltip = "When your group is listed, each Mythic+ applicant shows their best key anywhere and in the listed dungeon beside the rating, and with Raider.IO each raid applicant shows their progress in the listed raid." },
+    { key = "applicantOrder", parent = "groupFinder", label = "Sort applicants", section = "Applicants", live = true, tooltip = "When your group is listed, applicants who pass the filter panel come first. Within that, Mythic+ applicants are ordered by rating or item level and raid applicants by progress or item level, as chosen below. While the game restricts addons (combat, boss encounters, an active key, chat lockdown) the list goes back to Blizzard's order and is sorted again once the restriction ends." },
+    { key = "classFilter", parent = "groupFinder", label = "Applicant filter panel", section = "Applicants", live = true, tooltip = "A filter panel beside the group finder while you look through applicants to your group: classes with counts, roles, minimum item level, and in 5-player listings only the roles your group still needs and Bloodlust or battle res. Applicants who fail are dimmed, and with Sort applicants on they go below the rest. Everything on the panel is saved per character." },
     { key = "defaultPlaystyle", parent = "groupFinder", label = "Group creation helpers", section = "Creating a group", live = true, tooltip = "Creating a listing opens with the playstyle below already picked, choosing a dungeon picks its Mythic+ difficulty, and a list beside the screen shows your group's keystones to pick from. The game only lets its own code create a listing; if it ever blocks the screen after the addon changed it, this switch turns itself off and says so in chat." },
     { key = "logLink", parent = "groupFinder", label = "Warcraft Logs link in player menus", section = "Player menus", live = true, tooltip = "Right-click a player anywhere and copy their Warcraft Logs page, opened on the Mythic+ season. Off leaves every menu exactly as Blizzard built it. The /wcl command works either way." },
     { key = "groupLeader", group = "Group content", label = "Group leader icons", live = true, tooltip = "A crown on the group leader and an assistant icon on raid assistants, on Blizzard's party and raid frames." },

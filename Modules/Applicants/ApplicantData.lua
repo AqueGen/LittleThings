@@ -16,6 +16,26 @@ function Data.Locked()
     return C_ChatInfo ~= nil and C_ChatInfo.InChatMessagingLockdown() == true
 end
 
+function Data.Restricted()
+    if Data.Locked() then return true end
+    local restricted = C_RestrictedActions
+    if not (restricted and restricted.IsAddOnRestrictionActive and Enum.AddOnRestrictionType) then return false end
+    for _, restriction in pairs(Enum.AddOnRestrictionType) do
+        if restricted.IsAddOnRestrictionActive(restriction) then return true end
+    end
+    return false
+end
+
+function Data.RaidEntries(applicantID, memberIndex)
+    local rio = _G.RaiderIO
+    if type(rio) ~= "table" or type(rio.GetProfile) ~= "function" then return nil end
+    local name = C_LFGList.GetApplicantMemberInfo(applicantID, memberIndex)
+    if type(name) ~= "string" or issecretvalue(name) then return nil end
+    local ok, profile = pcall(rio.GetProfile, name)
+    local raid = ok and type(profile) == "table" and profile.raidProfile
+    return raid and raid.progress
+end
+
 function Data.Listing()
     if Data.Locked() then return nil end
     local entry = C_LFGList.GetActiveEntryInfo()

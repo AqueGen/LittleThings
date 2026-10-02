@@ -71,3 +71,7 @@ Group search filtering (PGF covers it), expression filters, sounds, spec icons, 
 ## Simplified 2026-09-26
 
 The panel was cut back to keep the addon light: minimum Mythic+ rating (the listing's own requirement does this), best key anywhere, the This dungeon block with Timed only, and Hide roles already filled (the role toggles do it in one click) are gone. What stays: classes with counts, role toggles, minimum item level, Brings Bloodlust / Brings battle res (5-player listings only, hidden otherwise), mode, Reset. Keys and raid progress are shown on each row, not filtered.
+
+## Only missing roles, 2026-10-02
+
+Hide roles already filled came back as "Only missing roles", on by default in 5-player listings: clicking role toggles each time the roster changed was the step people skipped. An application passes only when every member can take a different open slot (1 tank, 1 healer, 3 damage minus the group) in a role that is also toggled on. Reset is enabled whenever the panel differs from its defaults.
