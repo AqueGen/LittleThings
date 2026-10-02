@@ -36,6 +36,8 @@ Modules/Applicants/FilterRules.lua
 Modules/Applicants/RaidProgress.lua
 Modules/Applicants/ApplicantData.lua
 Modules/Applicants/Pipeline.lua
+Modules/Applicants/ApplicantOrder.lua
+Modules/Applicants/ApplicantSort.lua
 Modules/Applicants/ApplicantKeys.lua
 Modules/Applicants/ApplicantFilter.lua
 Modules/Applicants/FilterPanel.lua

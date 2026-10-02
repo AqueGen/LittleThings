@@ -8,16 +8,6 @@ local ApplicantKeys = {}
 
 local enabled = false
 
-local function RaidEntries(applicantID, memberIndex)
-    local rio = _G.RaiderIO
-    if type(rio) ~= "table" or type(rio.GetProfile) ~= "function" then return nil end
-    local name = C_LFGList.GetApplicantMemberInfo(applicantID, memberIndex)
-    if type(name) ~= "string" or issecretvalue(name) then return nil end
-    local ok, profile = pcall(rio.GetProfile, name)
-    local raid = ok and type(profile) == "table" and profile.raidProfile
-    return raid and raid.progress
-end
-
 local OVERALL_COLORS = { timed = CreateColor(0.35, 0.75, 1), untimed = CreateColor(0.5, 0.55, 0.65) }
 local DUNGEON_COLORS = { timed = GREEN_FONT_COLOR, untimed = GRAY_FONT_COLOR }
 
@@ -90,7 +80,7 @@ local function ShowKey(member, applicantID, memberIndex)
         overallText = KeyText(Data.OverallBest(applicantID, memberIndex) or nil, OVERALL_COLORS)
         dungeonText = KeyText(Data.DungeonBest(applicantID, memberIndex, listing.activityID) or nil, DUNGEON_COLORS)
     elseif listing and listing.isRaid and member.ItemLevel:IsShown() then
-        local entries = RaidEntries(applicantID, memberIndex)
+        local entries = Data.RaidEntries(applicantID, memberIndex)
         overallText = ProgressText(Progress.Best(entries, listing.mapID))
         dungeonText = ProgressText(Progress.For(entries, listing.mapID, listing.raidDifficulty))
     end

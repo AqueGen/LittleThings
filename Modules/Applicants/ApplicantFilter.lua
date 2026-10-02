@@ -110,7 +110,7 @@ function ApplicantFilter.Enable()
     if ApplicantFilter.panel then ApplicantFilter.panel:SetShown(true) end
     if enabled then return end
     enabled = true
-    Pipeline.Add(Filter)
+    Pipeline.Add(Pipeline.FILTER, Filter)
     hooksecurefunc("LFGListApplicationViewer_UpdateApplicantMember", Dim)
 
     local events = CreateFrame("Frame")
