@@ -72,6 +72,8 @@ local function UsesGroup()
 end
 
 function ApplicantFilter.Options()
+    ns.db.applicantFilterOptions = ns.db.applicantFilterOptions or {}
+    ns.ApplyDefaults(ns.db.applicantFilterOptions, { removeFinished = true })
     return ns.db.applicantFilterOptions
 end
 

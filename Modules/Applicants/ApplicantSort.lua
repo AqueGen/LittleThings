@@ -17,6 +17,7 @@ local CHOICES = {
             itemLevel = "Item level, then rating",
             dungeon = "This dungeon, then rating",
         },
+        short = { rating = "Rating", itemLevel = "Item level", dungeon = "This dungeon" },
         tooltip = "What puts a Mythic+ applicant higher. The second value only decides between applicants who tie on the first. This dungeon is the applicant's rating in the listed dungeon.",
     },
     raid = {
@@ -27,6 +28,7 @@ local CHOICES = {
             progress = "Progress, then item level",
             itemLevel = "Item level, then progress",
         },
+        short = { progress = "Progress", itemLevel = "Item level" },
         tooltip = "What puts a raid applicant higher. Progress is the applicant's kills in the listed raid from Raider.IO: any Mythic kills rank above Heroic, Heroic above Normal, then the number of bosses. Without Raider.IO every applicant ties on progress.",
     },
 }
@@ -36,6 +38,8 @@ ApplicantSort.defaults = { by = "rating", raidBy = "progress" }
 local enabled = false
 
 local function Options()
+    ns.db.applicantSortOptions = ns.db.applicantSortOptions or {}
+    ns.ApplyDefaults(ns.db.applicantSortOptions, ApplicantSort.defaults)
     return ns.db.applicantSortOptions
 end
 
@@ -44,6 +48,17 @@ local function Choices(listing)
     if listing.isMythicPlus then return CHOICES.mythicPlus end
     if listing.isRaid then return CHOICES.raid end
     return nil
+end
+
+ApplicantSort.Choices = Choices
+
+function ApplicantSort.GetBy(choices)
+    return Options()[choices.option]
+end
+
+function ApplicantSort.SetBy(choices, value)
+    Options()[choices.option] = value
+    Pipeline.Refresh()
 end
 
 -- 12.x: reordering the applicants table taints the viewer, and its roster update then dies on
@@ -73,7 +88,7 @@ local function Sort(applicants)
         end
     end
 
-    local by = Options()[choices.option]
+    local by = ApplicantSort.GetBy(choices)
     local keys
     if listing.isRaid then
         keys = by == "itemLevel" and { passes, itemLevel, progress } or { passes, progress, itemLevel }
@@ -95,9 +110,6 @@ local function OnRestrictionChange()
 end
 
 function ApplicantSort.Pages(page)
-    ns.db.applicantSortOptions = ns.db.applicantSortOptions or {}
-    ns.ApplyDefaults(ns.db.applicantSortOptions, ApplicantSort.defaults)
-
     for _, kind in ipairs({ "mythicPlus", "raid" }) do
         local choices = CHOICES[kind]
         local default = ApplicantSort.defaults[choices.option]
@@ -107,11 +119,8 @@ function ApplicantSort.Pages(page)
 
         local setting = Settings.RegisterProxySetting(page.category, "LT_applicantSort_" .. choices.option, Settings.VarType.String,
             choices.label, default,
-            function() return Options()[choices.option] end,
-            function(value)
-                Options()[choices.option] = value
-                Pipeline.Refresh()
-            end)
+            function() return ApplicantSort.GetBy(choices) end,
+            function(value) ApplicantSort.SetBy(choices, value) end)
 
         local function Names()
             local container = Settings.CreateControlTextContainer()
