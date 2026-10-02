@@ -52,10 +52,7 @@ local function Filter(applicants)
 
         if not state.paused then
             state.counts = Rules.CountClasses(list)
-            local settings = ApplicantFilter.Settings()
-            if Rules.IsActive(settings) then
-                state.failed, state.count = Rules.Failing(applicants, byId, Data.Group(state.listing), settings)
-            end
+            state.failed, state.count = Rules.Failing(applicants, byId, Data.Group(state.listing), ApplicantFilter.Settings())
         end
     end
     Notify()
@@ -69,7 +66,7 @@ end
 
 local function UsesGroup()
     local s = ApplicantFilter.Settings()
-    return s.needBloodlust or s.needBattleRes
+    return s.onlyMissingRoles or s.needBloodlust or s.needBattleRes
 end
 
 function ApplicantFilter.Options()

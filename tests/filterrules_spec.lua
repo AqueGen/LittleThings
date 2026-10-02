@@ -42,16 +42,17 @@ describe("Rules.ParseNumber", function()
   end)
 end)
 
-describe("Rules.IsActive", function()
-  it("is off for the defaults", function()
-    assert.is_false(Rules.IsActive(settings()))
+describe("Rules.IsDefault", function()
+  it("is true for the defaults", function()
+    assert.is_true(Rules.IsDefault(settings()))
   end)
 
-  it("is on for any class pick, role off, minimum or checkbox", function()
-    assert.is_true(Rules.IsActive(settings({ classes = { MAGE = NEED } })))
-    assert.is_true(Rules.IsActive(settings({ roles = { TANK = false, HEALER = true, DAMAGER = true } })))
-    assert.is_true(Rules.IsActive(settings({ minItemLevel = 0 })))
-    assert.is_true(Rules.IsActive(settings({ needBloodlust = true })))
+  it("is false for any class pick, role off, minimum or checkbox change", function()
+    assert.is_false(Rules.IsDefault(settings({ classes = { MAGE = NEED } })))
+    assert.is_false(Rules.IsDefault(settings({ roles = { TANK = false, HEALER = true, DAMAGER = true } })))
+    assert.is_false(Rules.IsDefault(settings({ minItemLevel = 0 })))
+    assert.is_false(Rules.IsDefault(settings({ needBloodlust = true })))
+    assert.is_false(Rules.IsDefault(settings({ onlyMissingRoles = false })))
   end)
 end)
 
@@ -110,6 +111,26 @@ describe("Rules.Passes, roles", function()
     assert.is_false(Rules.Passes(app(healer), OPEN_GROUP, settings({ roles = { TANK = true, HEALER = false, DAMAGER = true } })))
   end)
 
+  it("drops a member who only offers a role the group has filled", function()
+    assert.is_false(Rules.Passes(app(tankOnly), noTank, settings()))
+    assert.is_true(Rules.Passes(app(tankOrDps), noTank, settings()))
+    assert.is_true(Rules.Passes(app(tankOnly), noTank, settings({ onlyMissingRoles = false })))
+  end)
+
+  it("needs every member of a group application to get an open slot", function()
+    local oneDps = { open = { TANK = 0, HEALER = 1, DAMAGER = 1 }, hasBloodlust = false, hasBattleRes = false }
+    assert.is_false(Rules.Passes(app(member("MAGE"), member("ROGUE")), oneDps, settings()))
+    assert.is_true(Rules.Passes(app(member("MAGE"), healer), oneDps, settings()))
+  end)
+
+  it("places members only in roles that are toggled on", function()
+    assert.is_false(Rules.Passes(app(tankOrDps), noTank, settings({ roles = { TANK = true, HEALER = true, DAMAGER = false } })))
+  end)
+
+  it("ignores open slots in a listing without role slots", function()
+    local raid = { open = nil, hasBloodlust = false, hasBattleRes = false }
+    assert.is_true(Rules.Passes(app(tankOnly, tankOnly), raid, settings()))
+  end)
 end)
 
 describe("Rules.Failing", function()

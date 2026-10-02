@@ -218,7 +218,7 @@ local function Sync()
     end
     Layout()
 
-    panel.reset:SetEnabled(Rules.IsActive(s))
+    panel.reset:SetEnabled(not Rules.IsDefault(s))
     if state.paused then
         panel.status:SetText("Filter paused")
     elseif state.count > 0 then
@@ -285,6 +285,7 @@ local function Build()
 
     BuildClasses()
     BuildRoles()
+    Check(Row(28, "fiveMan"), "onlyMissingRoles", "Only missing roles", 0)
     Box(Row(28), "minItemLevel", "Minimum item level")
     BuildUtility()
 
