@@ -50,8 +50,8 @@ function Windows.Indices()
 end
 
 function Windows.ForEach(func)
-    for _, index in ipairs(Windows.Indices()) do
-        local window = Windows.Get(index)
+    for index = 1, Windows.BLIZZARD_WINDOW_COUNT do
+        local window = DamageMeter:GetSessionWindow(index)
         if window then
             func(window, index)
         end

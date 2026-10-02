@@ -54,7 +54,7 @@ local function Filter(applicants)
             state.counts = Rules.CountClasses(list)
             local settings = ApplicantFilter.Settings()
             if Rules.IsActive(settings) then
-                state.failed, state.count = Rules.Apply(applicants, byId, Data.Group(state.listing), settings)
+                state.failed, state.count = Rules.Failing(applicants, byId, Data.Group(state.listing), settings)
             end
         end
     end
@@ -111,7 +111,7 @@ function ApplicantFilter.Enable()
     if ApplicantFilter.panel then ApplicantFilter.panel:SetShown(true) end
     if enabled then return end
     enabled = true
-    Pipeline.Add(Pipeline.FILTER, Filter)
+    Pipeline.Add(Filter)
     hooksecurefunc("LFGListApplicationViewer_UpdateApplicantMember", Dim)
 
     local events = CreateFrame("Frame")

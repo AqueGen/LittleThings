@@ -101,6 +101,20 @@ function Presence.ApplyStrata()
     end)
 end
 
+local function TrackHover(window)
+    if not window:IsShown() then
+        return
+    end
+
+    local resizeButton = window:GetResizeButton()
+    local isHovered = window:IsMouseOver() or (resizeButton and resizeButton:IsMouseOver()) or false
+
+    if (hovered[window] or false) ~= isHovered then
+        hovered[window] = isHovered or nil
+        Presence.ApplyAlpha(window)
+    end
+end
+
 function Presence.Enable()
     -- Polled from the shared sweep rather than hooked off SetOnUpdateReason.
     -- That hook wrapped a body which installs the window's own OnUpdate
@@ -110,19 +124,7 @@ function Presence.Enable()
     -- IsMouseOver on a handful of windows is nothing, and the alpha only
     -- changes on an edge.
     ns.OnSweep(function()
-        ns.Windows.ForEach(function(window)
-            if not window:IsShown() then
-                return
-            end
-
-            local resizeButton = window:GetResizeButton()
-            local isHovered = window:IsMouseOver() or (resizeButton and resizeButton:IsMouseOver()) or false
-
-            if (hovered[window] or false) ~= isHovered then
-                hovered[window] = isHovered or nil
-                Presence.ApplyAlpha(window)
-            end
-        end)
+        ns.Windows.ForEach(TrackHover)
     end)
 
     -- An Edit Mode transparency change pushes a raw alpha onto every window;

@@ -15,7 +15,6 @@ function Rules.Defaults()
         minItemLevel = nil,
         needBloodlust = false,
         needBattleRes = false,
-        mode = "down",
     }
 end
 
@@ -104,30 +103,15 @@ function Rules.CountClasses(applications)
     return counts
 end
 
-function Rules.Apply(ids, byId, group, s)
-    local passing, failing, failed = {}, {}, {}
+function Rules.Failing(ids, byId, group, s)
+    local failed, count = {}, 0
     for _, id in ipairs(ids) do
-        if Rules.Passes(byId[id], group, s) then
-            passing[#passing + 1] = id
-        else
-            failing[#failing + 1] = id
+        if not Rules.Passes(byId[id], group, s) then
             failed[id] = true
+            count = count + 1
         end
     end
-    if #failing == 0 then return failed, 0 end
-
-    for index = #ids, 1, -1 do
-        ids[index] = nil
-    end
-    for _, id in ipairs(passing) do
-        ids[#ids + 1] = id
-    end
-    if s.mode ~= "hide" then
-        for _, id in ipairs(failing) do
-            ids[#ids + 1] = id
-        end
-    end
-    return failed, #failing
+    return failed, count
 end
 
 function Rules.Migrate(current, oldClassPicks)
@@ -142,6 +126,7 @@ function Rules.Migrate(current, oldClassPicks)
     for key, value in pairs(defaults) do
         if current[key] == nil then current[key] = value end
     end
+    current.mode = nil
     return current
 end
 
