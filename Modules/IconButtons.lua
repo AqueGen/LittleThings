@@ -42,8 +42,10 @@ function IconButtons.SetActive(b, active)
 end
 
 function IconButtons.Row(bar, count)
-    local size, step = IconButtons.SIZE, IconButtons.STEP
+    local size = bar.size or IconButtons.SIZE
+    local step = size + IconButtons.STEP - IconButtons.SIZE
     for i = 0, count - 1 do
+        bar.buttons[i]:SetSize(size, size)
         bar.buttons[i]:ClearAllPoints()
         bar.buttons[i]:SetPoint("LEFT", bar, "LEFT", step * i, 0)
     end
@@ -61,19 +63,25 @@ function IconButtons.OnLootClick(self)
 end
 
 -- New binds bar.onClick at creation, so the bar needs onClick = OnLootClick
--- before the first fill.
-function IconButtons.FillLootSpecs(bar)
+-- before the first fill. Without the default button, a loot spec that follows
+-- the current specialization frames the current specialization's icon.
+function IconButtons.FillLootSpecs(bar, withDefault)
     local numSpecs = C_SpecializationInfo.GetNumSpecializationsForClassID(select(3, UnitClass("player")))
     local current = C_SpecializationInfo.GetSpecialization()
     local lootSpec = GetLootSpecialization()
+    local first = withDefault and 1 or 0
 
     for i = 1, numSpecs do
         local id, name, _, icon = C_SpecializationInfo.GetSpecializationInfo(i)
-        local b = IconButtons.New(bar, i)
+        local b = IconButtons.New(bar, first + i - 1)
         b.specId, b.tip = id, name
         b.icon:SetTexture(icon)
-        IconButtons.SetActive(b, id == lootSpec)
+        IconButtons.SetActive(b, id == lootSpec or (lootSpec == 0 and not withDefault and i == current))
         b:Show()
+    end
+
+    if not withDefault then
+        return numSpecs
     end
 
     local _, currentName, _, currentIcon

@@ -107,7 +107,7 @@ local function Refresh()
     end
 
     Layout(spec, numSpecs)
-    Layout(bars.lootBar, Buttons.FillLootSpecs(bars.lootBar))
+    Layout(bars.lootBar, Buttons.FillLootSpecs(bars.lootBar, true))
 end
 
 local function RefreshIfShown()

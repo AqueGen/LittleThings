@@ -16,7 +16,7 @@ local CORNERS = {
 local CORNER_ORDER = { "bottomright", "topright" }
 local ARMOR_X, ARMOR_Y = 264, -30
 
-JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16, lootSpecButtons = true }
+JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16, lootSpecButtons = true, lootSpecSize = 40 }
 
 local classes
 local cache = {}
@@ -191,6 +191,7 @@ local function RefreshSpecBar()
     local on = ns.db.journalLoot and Options().lootSpecButtons
     specBar:SetShown(on)
     if on and specBar:IsVisible() then
+        specBar.size = Options().lootSpecSize
         Buttons.Row(specBar, Buttons.FillLootSpecs(specBar))
     end
 end
@@ -260,6 +261,11 @@ function JournalLoot.Pages(page)
 
     ns.AddToPage(page, Settings.CreateCheckbox(category, Proxy("lootSpecButtons", Settings.VarType.Boolean, "Loot specialization buttons"),
         "Your loot specialization icons below a boss's loot list, so you can pick it right after looking at what drops."))
+
+    local specSizeOptions = Settings.CreateSliderOptions(20, 48, 1)
+    specSizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
+    ns.AddToPage(page, Settings.CreateSlider(category, Proxy("lootSpecSize", Settings.VarType.Number, "Loot specialization button size"),
+        specSizeOptions, "Size of the loot specialization buttons in pixels."))
 
     local sizeOptions = Settings.CreateSliderOptions(12, 24, 1)
     sizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
