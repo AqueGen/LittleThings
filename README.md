@@ -52,7 +52,7 @@ One switch on the LittleThings page, on by default. While on, it brings up the G
 
 ### Journal loot
 
-On by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels.
+On by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels. Below a boss's loot list sits a row of loot specialization icons (its first icon follows the current spec), so the loot spec can be set right after looking at what drops; a checkbox on the page hides it.
 
 ### Group leader icons
 
