@@ -58,7 +58,7 @@ On by default. Every loot row in the Adventure Guide gets small icons for the sp
 
 ### Group leader icons
 
-Off by default. Blizzard's party and raid frames show nobody's rank, so this puts a crown on the group leader and an assistant icon on raid assistants, on the top left edge of their frame. It follows leader and assistant changes as they happen. Frames from other addons are left alone.
+Off by default. Blizzard's party and raid frames show nobody's rank, so this puts a crown on the group leader and an assistant icon on raid assistants, in the top left corner inside their frame. It follows leader and assistant changes as they happen. Frames from other addons are left alone.
 
 ### Performance
 
