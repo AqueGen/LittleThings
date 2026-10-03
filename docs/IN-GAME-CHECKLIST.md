@@ -150,3 +150,10 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] The crown does not cover the role icon or the name enough to hurt reading them.
 - [ ] Switch off: every icon disappears at once.
 
+## 13. Sign-up roles
+
+- [ ] Premade Groups > Dungeons: tank, healer and damage icons sit at the top of the search panel, clear of the category name and of PGF's checkbox; roles your class cannot play are missing. The lit icons match the Dungeon Finder's role checkboxes.
+- [ ] Click a role: it lights or dims at once, and the Dungeon Finder's checkbox for it follows. Tick a role in the Dungeon Finder: the icon follows. The leader flag is unchanged.
+- [ ] Sign up to a group: Blizzard's dialog opens with the roles the icons show. With PGF's skip-dialog on, the application goes out with those roles (the group's applicant list shows them).
+- [ ] Click a role in combat: either it works, or chat says the role icons were turned off and the switch is off. BugSack has no "Interface action failed" either way.
+- [ ] Switch off: the icons go at once.
