@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/AqueGen/LittleThings/compare/v0.13.0...v0.14.0) (2026-10-03)
+
+
+### Features
+
+* loot spec buttons in the Adventure Guide, sign-up role icons on the premade search ([#27](https://github.com/AqueGen/LittleThings/issues/27)) ([1511ae9](https://github.com/AqueGen/LittleThings/commit/1511ae91b82325dbe894e5c3f9f735c98af3f218))
+
 ## [0.13.0](https://github.com/AqueGen/LittleThings/compare/v0.12.0...v0.13.0) (2026-10-02)
 
 
