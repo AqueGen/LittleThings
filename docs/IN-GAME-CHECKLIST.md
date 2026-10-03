@@ -85,6 +85,9 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] "Name line, right edge" puts the icons right of the item name, clear of a transmog addon's corner mark. Switching between the two is live, and so is the size slider.
 - [ ] A profile saved with a position that no longer exists opens on the slot line.
 - [ ] Switch off: icons disappear at once. BugSack stays empty throughout, and the journal's own class filter is unchanged after every step.
+- [ ] Loot tab of a boss: a row of 40-pixel loot specialization icons, one per spec and no 'current specialization' icon, sits at the bottom right, below the list, not covering the journal's frame or another addon. The current loot spec is framed; with the loot spec following the current spec, the current spec is framed. The size slider resizes the row at once. Click another: it is framed at once and chat shows the game's loot spec message. The Overview and Abilities tabs do not show the row.
+- [ ] Change spec or loot spec on the character panel with the journal open: the row follows. Untick Loot specialization buttons: the row goes at once; switch Journal loot off: it goes too.
+- [ ] Character panel module on: both its bars still switch spec and loot spec as before, with 40-pixel icons on a profile that never set a size. Each bar's Icon size slider resizes only that bar at once, the title stays centred under the icons, and a drag still saves the position.
 
 ## 8. Applicant keys
 
@@ -146,3 +149,11 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Enter combat in a raid instance: icons stay put, BugSack stays empty, no "Interface action failed".
 - [ ] The crown does not cover the role icon or the name enough to hurt reading them.
 - [ ] Switch off: every icon disappears at once.
+
+## 13. Sign-up roles
+
+- [ ] Premade Groups > Dungeons: tank, healer and damage icons sit at the top of the search panel, clear of the category name and of PGF's checkbox; roles your class cannot play are missing. The lit icons match the Dungeon Finder's role checkboxes.
+- [ ] Click a role: it lights or dims at once, and the Dungeon Finder's checkbox for it follows. Tick a role in the Dungeon Finder: the icon follows. The leader flag is unchanged.
+- [ ] Sign up to a group: Blizzard's dialog opens with the roles the icons show. With PGF's skip-dialog on, the application goes out with those roles (the group's applicant list shows them).
+- [ ] Click a role in combat: either it works, or chat says the role icons were turned off and the switch is off. BugSack has no "Interface action failed" either way.
+- [ ] Switch off: the icons go at once.

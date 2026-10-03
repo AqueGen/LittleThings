@@ -1,9 +1,10 @@
 local addonName, ns = ...
 
+local Buttons = ns.IconButtons
+
 local CharacterPanel = {}
 
-local SIZE, STEP, LABEL_GAP = 20, 22, 4
-local BORDER = "Interface\\ContainerFrame\\UI-Icon-QuestBorder"
+local LABEL_GAP = 4
 local CORNERS = {
     topleft = { "BOTTOMLEFT", "TOPLEFT" },
     topright = { "BOTTOMRIGHT", "TOPRIGHT" },
@@ -13,8 +14,8 @@ local CORNERS = {
 
 -- Two bars, each placed on its own: specializations and loot specialization.
 local BARS = {
-    { key = "specBar", label = SPECIALIZATION, defaults = { corner = "bottomleft", x = 8, y = -45, header = "bottom" } },
-    { key = "lootBar", label = SELECT_LOOT_SPECIALIZATION, defaults = { corner = "bottomleft", x = 120, y = -45, header = "bottom" } },
+    { key = "specBar", label = SPECIALIZATION, defaults = { corner = "bottomleft", x = 8, y = -45, header = "bottom", size = Buttons.SIZE } },
+    { key = "lootBar", label = SELECT_LOOT_SPECIALIZATION, defaults = { corner = "bottomleft", x = 190, y = -45, header = "bottom", size = Buttons.SIZE } },
 }
 
 local bars = {}
@@ -44,35 +45,6 @@ local function SaveDraggedPosition(bar)
     Anchor(bar)
 end
 
-local function NewButton(bar, index)
-    local b = bar.buttons[index]
-    if b then return b end
-    b = CreateFrame("Button", nil, bar)
-    b:SetSize(SIZE, SIZE)
-    b.icon = b:CreateTexture(nil, "ARTWORK")
-    b.icon:SetAllPoints()
-    b.overlay = b:CreateTexture(nil, "OVERLAY")
-    b.overlay:SetAllPoints()
-    b:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(self.tip, 1, 1, 1)
-        GameTooltip:Show()
-    end)
-    b:SetScript("OnLeave", GameTooltip_Hide)
-    b:SetScript("OnClick", bar.onClick)
-    bar.buttons[index] = b
-    return b
-end
-
-local function SetActive(b, active)
-    if active then
-        b.overlay:SetTexture(BORDER)
-        b.overlay:SetVertexColor(1, 1, 1, 1)
-    else
-        b.overlay:SetColorTexture(0, 0, 0, 0.65)
-    end
-end
-
 local function OnSpecClick(self)
     if InCombatLockdown() then
         UIErrorsFrame:AddMessage(ERR_NOT_IN_COMBAT, 1, 0.1, 0.1)
@@ -84,18 +56,13 @@ local function OnSpecClick(self)
     end
 end
 
-local function OnLootClick(self)
-    if self.specId ~= GetLootSpecialization() then
-        SetLootSpecialization(self.specId)
-        PlaySound(SOUNDKIT.GS_LOGIN_CHANGE_REALM_OK)
-    end
-end
-
 -- Places the label and the icons for the header position, and sizes the
 -- bar to fit them. count is how many icons the bar shows.
 local function Layout(bar, count)
     local header = bar.db.header
-    local iconsWidth = STEP * count - (STEP - SIZE)
+    local size = bar.db.size
+    local step = size + Buttons.GAP
+    local iconsWidth = step * count - Buttons.GAP
     local labelWidth = bar.label:GetStringWidth()
     local x, y = 0, 0
 
@@ -104,17 +71,17 @@ local function Layout(bar, count)
     if header == "left" then
         bar.label:SetPoint("LEFT", bar, "LEFT", 0, 0)
         x = labelWidth + LABEL_GAP
-        bar:SetSize(x + iconsWidth, SIZE)
+        bar:SetSize(x + iconsWidth, size)
     elseif header == "right" then
         bar.label:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
-        bar:SetSize(iconsWidth + LABEL_GAP + labelWidth, SIZE)
+        bar:SetSize(iconsWidth + LABEL_GAP + labelWidth, size)
     elseif header == "top" then
         bar.label:SetPoint("TOP", bar, "TOP", 0, 0)
         y = -(bar.label:GetStringHeight() + 2)
-        bar:SetSize(math.max(iconsWidth, labelWidth), SIZE - y)
+        bar:SetSize(math.max(iconsWidth, labelWidth), size - y)
     else
         bar.label:SetPoint("BOTTOM", bar, "BOTTOM", 0, 0)
-        bar:SetSize(math.max(iconsWidth, labelWidth), SIZE + bar.label:GetStringHeight() + 2)
+        bar:SetSize(math.max(iconsWidth, labelWidth), size + bar.label:GetStringHeight() + 2)
     end
 
     if header == "top" or header == "bottom" then
@@ -122,41 +89,28 @@ local function Layout(bar, count)
     end
 
     for i = 1, count do
+        bar.buttons[i - 1]:SetSize(size, size)
         bar.buttons[i - 1]:ClearAllPoints()
-        bar.buttons[i - 1]:SetPoint("TOPLEFT", bar, "TOPLEFT", x + STEP * (i - 1), y)
+        bar.buttons[i - 1]:SetPoint("TOPLEFT", bar, "TOPLEFT", x + step * (i - 1), y)
     end
 end
 
 local function Refresh()
     local numSpecs = C_SpecializationInfo.GetNumSpecializationsForClassID(select(3, UnitClass("player")))
     local current = C_SpecializationInfo.GetSpecialization()
-    local lootSpec = GetLootSpecialization()
-    local currentName = current and select(2, C_SpecializationInfo.GetSpecializationInfo(current)) or ""
-    local spec, loot = bars.specBar, bars.lootBar
+    local spec = bars.specBar
 
     for i = 1, numSpecs do
-        local id, name, _, icon = C_SpecializationInfo.GetSpecializationInfo(i)
-        local b = NewButton(spec, i - 1)
+        local _, name, _, icon = C_SpecializationInfo.GetSpecializationInfo(i)
+        local b = Buttons.New(spec, i - 1)
         b.index, b.tip = i, name
         b.icon:SetTexture(icon)
-        SetActive(b, i == current)
+        Buttons.SetActive(b, i == current)
         b:Show()
-
-        local lb = NewButton(loot, i)
-        lb.specId, lb.tip = id, name
-        lb.icon:SetTexture(icon)
-        SetActive(lb, id == lootSpec)
-        lb:Show()
     end
 
-    local auto = NewButton(loot, 0)
-    auto.specId, auto.tip = 0, LOOT_SPECIALIZATION_DEFAULT:format(currentName)
-    auto.icon:SetTexture(current and select(4, C_SpecializationInfo.GetSpecializationInfo(current)))
-    SetActive(auto, lootSpec == 0)
-    auto:Show()
-
     Layout(spec, numSpecs)
-    Layout(loot, numSpecs + 1)
+    Layout(bars.lootBar, Buttons.FillLootSpecs(bars.lootBar, true))
 end
 
 local function RefreshIfShown()
@@ -241,6 +195,12 @@ function CharacterPanel.Pages(page)
             options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
             ns.AddToPage(page, Settings.CreateSlider(category, setting, options, "Pixels from the chosen corner."))
         end
+
+        local sizeOptions = Settings.CreateSliderOptions(16, 48, 1)
+        sizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
+        ns.AddToPage(page, Settings.CreateSlider(category,
+            Proxy(category, bar, "size", Settings.VarType.Number, "Icon size", RefreshIfShown),
+            sizeOptions, "Icon size in pixels."))
     end
 end
 
@@ -249,8 +209,8 @@ local function CreateBar(spec)
     bar.key = spec.key
     bar.db = ns.db[spec.key]
     bar.buttons = {}
-    bar.onClick = spec.key == "specBar" and OnSpecClick or OnLootClick
-    bar:SetSize(SIZE, SIZE)
+    bar.onClick = spec.key == "specBar" and OnSpecClick or Buttons.OnLootClick
+    bar:SetSize(Buttons.SIZE, Buttons.SIZE)
     -- The item slots sit at level 100 inside the same panel; anything below
     -- that is drawn under them once the bar is dragged over the panel.
     bar:SetFrameLevel(200)

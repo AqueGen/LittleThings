@@ -23,6 +23,7 @@ Modules/DamageMeter/Config.lua
 Modules/LogLink/LogLinkRealms.lua
 Modules/LogLink/LogLinkUrl.lua
 Modules/LogLink/LogLink.lua
+Modules/IconButtons.lua
 Modules/CharacterPanel.lua
 Modules/JournalLoot/JournalLootIcons.lua
 Modules/JournalLoot/JournalLoot.lua
@@ -44,3 +45,4 @@ Modules/Applicants/FilterPanel.lua
 Modules/Applicants/DefaultPlaystyle.lua
 Modules/Applicants/KeystoneRules.lua
 Modules/Applicants/PartyKeys.lua
+Modules/SignUpRoles.lua

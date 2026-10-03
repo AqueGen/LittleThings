@@ -32,11 +32,11 @@ No parsing, no storage, no analysis, no skins, no report-to-chat. Blizzard's met
 
 ### Character panel
 
-Off by default. Two bars of icons next to the character panel: your specializations, and the loot specialization (its first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. Each bar is placed on its own: drag it to wherever it stays out of whatever other addons draw on the panel, and the settings page shows the same position as a corner and an X and Y offset, plus where the bar's title sits (above, below or left of the icons).
+Off by default. Two bars of icons next to the character panel: your specializations, and the loot specialization (its first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. Each bar is placed on its own: drag it to wherever it stays out of whatever other addons draw on the panel, and the settings page shows the same position as a corner and an X and Y offset, plus where the bar's title sits (above, below or left of the icons) and the icon size, 40 pixels by default like the Adventure Guide's loot spec row.
 
 ### Group finder
 
-One switch on the LittleThings page, on by default. While on, it brings up the Group finder page, where each of the four tools below has its own switch (all on) and its options, in three sections: Applicants, Creating a group, Player menus.
+One switch on the LittleThings page, on by default. While on, it brings up the Group finder page, where each of the tools below has its own switch (all on) and its options, in four sections: Applicants, Creating a group, Searching for a group, Player menus.
 
 **Warcraft Logs link.** Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
 
@@ -48,11 +48,13 @@ One switch on the LittleThings page, on by default. While on, it brings up the G
 
 **Group creation helpers.** Choosing a dungeon picks its Mythic+ difficulty rather than plain Mythic, so a leader listing someone else's key needs no extra click, and a list beside the screen shows the keystones your group shares through LibKeystone (DBM, BigWigs, EllesmereUI and others carry it), yours first, one click picks that dungeon at Mythic+ and puts the cursor in the title, with a grey hint of the level to type (such as type +16) that goes away once you type. The title itself stays yours to type, and the one the game builds is left as it is: the game does not let addons write it (tested, and blocked again when only stripping the playstyle from it). Each part has its own checkbox.
 
+**Sign-up roles.** Small tank, healer and damage icons at the top of the premade group search show the roles you sign up with, and one click switches a role. These are the Dungeon Finder roles: Blizzard's sign-up dialog starts from them, and addons that sign up in one click or skip the dialog use them as they are, so a role left over from another spec shows here before you apply. Roles your class cannot play are not shown.
+
 **Default playstyle.** Creating a listing opens with a playstyle already picked (Competitive unless you choose another on the page). The game lets only its own code create listings, so a playstyle the addon picked may get List Group blocked; if the game reports that, the switch turns itself off and says so in chat, and picking the playstyle by hand always works.
 
 ### Journal loot
 
-On by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels.
+On by default. Every loot row in the Adventure Guide gets small icons for the specializations the item drops for: your class, or the class picked in the journal's filter. When every spec of the class gets it, one class icon stands in for them. With All classes on it shows every class, folded the same way into a class icon, a role icon (tank, healer, damage) or a single icon when everyone gets the item. By default the icons stand in one column in each row's bottom right corner, on the boss line where the row has one, and the armor type moves left only where they would cover it. They can sit on the name line instead, right of the item name. Size is 12 to 24 pixels. Below a boss's loot list sits a row of loot specialization icons, 40 pixels by default, so the loot spec can be set right after looking at what drops. When the loot spec follows the current spec, the current spec's icon is framed. A checkbox on the page hides the row, and a slider sizes it.
 
 ### Group leader icons
 

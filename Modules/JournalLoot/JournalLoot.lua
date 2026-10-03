@@ -6,11 +6,8 @@ local JournalLoot = {}
 
 local EVERYONE_ICON = 922035
 local CLASS_CIRCLES = "Interface\\TargetingFrame\\UI-Classes-Circles"
-local ROLE_ATLAS = {
-    TANK = "UI-LFG-RoleIcon-Tank-Micro-GroupFinder",
-    HEALER = "UI-LFG-RoleIcon-Healer-Micro-GroupFinder",
-    DAMAGER = "UI-LFG-RoleIcon-DPS-Micro-GroupFinder",
-}
+local Buttons = ns.IconButtons
+local ROLE_ATLAS = Buttons.ROLE_ATLAS
 
 local CORNERS = {
     bottomright = { label = "Bottom right corner", point = "BOTTOMRIGHT", x = 0, y = 6, pushesArmor = true },
@@ -19,11 +16,12 @@ local CORNERS = {
 local CORNER_ORDER = { "bottomright", "topright" }
 local ARMOR_X, ARMOR_Y = 264, -30
 
-JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16 }
+JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16, lootSpecButtons = true, lootSpecSize = Buttons.SIZE }
 
 local classes
 local cache = {}
 local hooked, waiting = false, false
+local specBar
 
 local function Options()
     return ns.db.journalLootOptions
@@ -189,9 +187,33 @@ local function Refresh()
     end
 end
 
+local function RefreshSpecBar()
+    local on = ns.db.journalLoot and Options().lootSpecButtons
+    specBar:SetShown(on)
+    if on and specBar:IsVisible() then
+        specBar.size = Options().lootSpecSize
+        Buttons.Row(specBar, Buttons.FillLootSpecs(specBar))
+    end
+end
+
+local function CreateSpecBar()
+    local loot = EncounterJournal.encounter.info.LootContainer
+    specBar = CreateFrame("Frame", nil, loot)
+    specBar.buttons = {}
+    specBar.onClick = Buttons.OnLootClick
+    specBar:SetPoint("TOPRIGHT", loot, "BOTTOMRIGHT", 0, -4)
+    specBar:SetScript("OnShow", RefreshSpecBar)
+
+    local events = CreateFrame("Frame")
+    events:RegisterEvent("PLAYER_LOOT_SPEC_UPDATED")
+    events:RegisterUnitEvent("PLAYER_SPECIALIZATION_CHANGED", "player")
+    events:SetScript("OnEvent", RefreshSpecBar)
+end
+
 local function Hook()
     if hooked then return end
     hooked = true
+    CreateSpecBar()
     hooksecurefunc("EncounterJournal_LootUpdate", Refresh)
     ScrollBox():RegisterCallback(ScrollBoxListMixin.Event.OnInitializedFrame, function(_, button)
         Paint(button)
@@ -200,6 +222,7 @@ end
 
 local function Repaint()
     cache.key = nil
+    if specBar then RefreshSpecBar() end
     if hooked and EncounterJournal:IsShown() then
         Refresh()
     end
@@ -235,6 +258,14 @@ function JournalLoot.Pages(page)
     end
     ns.AddToPage(page, Settings.CreateDropdown(category, Proxy("corner", Settings.VarType.String, "Position"),
         CornerOptions, "Bottom right corner: one column at the right edge of every row, on the boss line where the row has one. Where the icons would cover the armor type it moves left of them. Name line: right of the item name, clear of a transmog addon's corner mark, but a long name can run under the icons."))
+
+    ns.AddToPage(page, Settings.CreateCheckbox(category, Proxy("lootSpecButtons", Settings.VarType.Boolean, "Loot specialization buttons"),
+        "Your loot specialization icons below a boss's loot list, so you can pick it right after looking at what drops."))
+
+    local specSizeOptions = Settings.CreateSliderOptions(16, 48, 1)
+    specSizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
+    ns.AddToPage(page, Settings.CreateSlider(category, Proxy("lootSpecSize", Settings.VarType.Number, "Loot specialization button size"),
+        specSizeOptions, "Size of the loot specialization buttons in pixels."))
 
     local sizeOptions = Settings.CreateSliderOptions(12, 24, 1)
     sizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
