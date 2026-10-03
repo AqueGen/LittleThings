@@ -32,7 +32,7 @@ No parsing, no storage, no analysis, no skins, no report-to-chat. Blizzard's met
 
 ### Character panel
 
-Off by default. Two bars of icons next to the character panel: your specializations, and the loot specialization (its first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. Each bar is placed on its own: drag it to wherever it stays out of whatever other addons draw on the panel, and the settings page shows the same position as a corner and an X and Y offset, plus where the bar's title sits (above, below or left of the icons).
+Off by default. Two bars of icons next to the character panel: your specializations, and the loot specialization (its first icon follows the current spec). One click switches, the active one is framed, the rest are dimmed. Each bar is placed on its own: drag it to wherever it stays out of whatever other addons draw on the panel, and the settings page shows the same position as a corner and an X and Y offset, plus where the bar's title sits (above, below or left of the icons) and the icon size, 40 pixels by default like the Adventure Guide's loot spec row.
 
 ### Group finder
 

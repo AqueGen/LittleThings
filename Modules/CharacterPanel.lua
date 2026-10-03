@@ -4,7 +4,7 @@ local Buttons = ns.IconButtons
 
 local CharacterPanel = {}
 
-local SIZE, STEP, LABEL_GAP = Buttons.SIZE, Buttons.STEP, 4
+local LABEL_GAP = 4
 local CORNERS = {
     topleft = { "BOTTOMLEFT", "TOPLEFT" },
     topright = { "BOTTOMRIGHT", "TOPRIGHT" },
@@ -14,8 +14,8 @@ local CORNERS = {
 
 -- Two bars, each placed on its own: specializations and loot specialization.
 local BARS = {
-    { key = "specBar", label = SPECIALIZATION, defaults = { corner = "bottomleft", x = 8, y = -45, header = "bottom" } },
-    { key = "lootBar", label = SELECT_LOOT_SPECIALIZATION, defaults = { corner = "bottomleft", x = 120, y = -45, header = "bottom" } },
+    { key = "specBar", label = SPECIALIZATION, defaults = { corner = "bottomleft", x = 8, y = -45, header = "bottom", size = Buttons.SIZE } },
+    { key = "lootBar", label = SELECT_LOOT_SPECIALIZATION, defaults = { corner = "bottomleft", x = 190, y = -45, header = "bottom", size = Buttons.SIZE } },
 }
 
 local bars = {}
@@ -60,7 +60,9 @@ end
 -- bar to fit them. count is how many icons the bar shows.
 local function Layout(bar, count)
     local header = bar.db.header
-    local iconsWidth = STEP * count - (STEP - SIZE)
+    local size = bar.db.size
+    local step = size + Buttons.GAP
+    local iconsWidth = step * count - Buttons.GAP
     local labelWidth = bar.label:GetStringWidth()
     local x, y = 0, 0
 
@@ -69,17 +71,17 @@ local function Layout(bar, count)
     if header == "left" then
         bar.label:SetPoint("LEFT", bar, "LEFT", 0, 0)
         x = labelWidth + LABEL_GAP
-        bar:SetSize(x + iconsWidth, SIZE)
+        bar:SetSize(x + iconsWidth, size)
     elseif header == "right" then
         bar.label:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
-        bar:SetSize(iconsWidth + LABEL_GAP + labelWidth, SIZE)
+        bar:SetSize(iconsWidth + LABEL_GAP + labelWidth, size)
     elseif header == "top" then
         bar.label:SetPoint("TOP", bar, "TOP", 0, 0)
         y = -(bar.label:GetStringHeight() + 2)
-        bar:SetSize(math.max(iconsWidth, labelWidth), SIZE - y)
+        bar:SetSize(math.max(iconsWidth, labelWidth), size - y)
     else
         bar.label:SetPoint("BOTTOM", bar, "BOTTOM", 0, 0)
-        bar:SetSize(math.max(iconsWidth, labelWidth), SIZE + bar.label:GetStringHeight() + 2)
+        bar:SetSize(math.max(iconsWidth, labelWidth), size + bar.label:GetStringHeight() + 2)
     end
 
     if header == "top" or header == "bottom" then
@@ -87,8 +89,9 @@ local function Layout(bar, count)
     end
 
     for i = 1, count do
+        bar.buttons[i - 1]:SetSize(size, size)
         bar.buttons[i - 1]:ClearAllPoints()
-        bar.buttons[i - 1]:SetPoint("TOPLEFT", bar, "TOPLEFT", x + STEP * (i - 1), y)
+        bar.buttons[i - 1]:SetPoint("TOPLEFT", bar, "TOPLEFT", x + step * (i - 1), y)
     end
 end
 
@@ -192,6 +195,12 @@ function CharacterPanel.Pages(page)
             options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
             ns.AddToPage(page, Settings.CreateSlider(category, setting, options, "Pixels from the chosen corner."))
         end
+
+        local sizeOptions = Settings.CreateSliderOptions(16, 48, 1)
+        sizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
+        ns.AddToPage(page, Settings.CreateSlider(category,
+            Proxy(category, bar, "size", Settings.VarType.Number, "Icon size", RefreshIfShown),
+            sizeOptions, "Icon size in pixels."))
     end
 end
 
@@ -201,7 +210,7 @@ local function CreateBar(spec)
     bar.db = ns.db[spec.key]
     bar.buttons = {}
     bar.onClick = spec.key == "specBar" and OnSpecClick or Buttons.OnLootClick
-    bar:SetSize(SIZE, SIZE)
+    bar:SetSize(Buttons.SIZE, Buttons.SIZE)
     -- The item slots sit at level 100 inside the same panel; anything below
     -- that is drawn under them once the bar is dragged over the panel.
     bar:SetFrameLevel(200)

@@ -4,7 +4,7 @@ local IconButtons = {}
 
 local BORDER = "Interface\\ContainerFrame\\UI-Icon-QuestBorder"
 
-IconButtons.SIZE, IconButtons.STEP = 20, 22
+IconButtons.SIZE, IconButtons.GAP = 40, 2
 
 IconButtons.ROLE_ATLAS = {
     TANK = "UI-LFG-RoleIcon-Tank-Micro-GroupFinder",
@@ -43,7 +43,7 @@ end
 
 function IconButtons.Row(bar, count)
     local size = bar.size or IconButtons.SIZE
-    local step = size + IconButtons.STEP - IconButtons.SIZE
+    local step = size + IconButtons.GAP
     for i = 0, count - 1 do
         bar.buttons[i]:SetSize(size, size)
         bar.buttons[i]:ClearAllPoints()

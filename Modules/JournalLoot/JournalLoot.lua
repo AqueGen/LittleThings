@@ -16,7 +16,7 @@ local CORNERS = {
 local CORNER_ORDER = { "bottomright", "topright" }
 local ARMOR_X, ARMOR_Y = 264, -30
 
-JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16, lootSpecButtons = true, lootSpecSize = 40 }
+JournalLoot.defaults = { allClasses = false, corner = "bottomright", size = 16, lootSpecButtons = true, lootSpecSize = Buttons.SIZE }
 
 local classes
 local cache = {}
@@ -262,7 +262,7 @@ function JournalLoot.Pages(page)
     ns.AddToPage(page, Settings.CreateCheckbox(category, Proxy("lootSpecButtons", Settings.VarType.Boolean, "Loot specialization buttons"),
         "Your loot specialization icons below a boss's loot list, so you can pick it right after looking at what drops."))
 
-    local specSizeOptions = Settings.CreateSliderOptions(20, 48, 1)
+    local specSizeOptions = Settings.CreateSliderOptions(16, 48, 1)
     specSizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
     ns.AddToPage(page, Settings.CreateSlider(category, Proxy("lootSpecSize", Settings.VarType.Number, "Loot specialization button size"),
         specSizeOptions, "Size of the loot specialization buttons in pixels."))

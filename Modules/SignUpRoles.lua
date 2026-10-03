@@ -54,6 +54,7 @@ function SignUpRoles.Enable()
         local panel = LFGListFrame.SearchPanel
         bar = CreateFrame("Frame", nil, panel)
         bar.buttons = {}
+        bar.size = 20
         bar.onClick = OnClick
         -- ponytail: fixed spot left of PGF's top-right checkbox, an offset option if it collides with another addon
         bar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -100, -31)

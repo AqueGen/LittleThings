@@ -87,7 +87,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Switch off: icons disappear at once. BugSack stays empty throughout, and the journal's own class filter is unchanged after every step.
 - [ ] Loot tab of a boss: a row of 40-pixel loot specialization icons, one per spec and no 'current specialization' icon, sits at the bottom right, below the list, not covering the journal's frame or another addon. The current loot spec is framed; with the loot spec following the current spec, the current spec is framed. The size slider resizes the row at once. Click another: it is framed at once and chat shows the game's loot spec message. The Overview and Abilities tabs do not show the row.
 - [ ] Change spec or loot spec on the character panel with the journal open: the row follows. Untick Loot specialization buttons: the row goes at once; switch Journal loot off: it goes too.
-- [ ] Character panel module on: both its bars still switch spec and loot spec as before.
+- [ ] Character panel module on: both its bars still switch spec and loot spec as before, with 40-pixel icons on a profile that never set a size. Each bar's Icon size slider resizes only that bar at once, the title stays centred under the icons, and a drag still saves the position.
 
 ## 8. Applicant keys
 
