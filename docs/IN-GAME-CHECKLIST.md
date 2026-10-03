@@ -142,7 +142,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 12. Group leader icons
 
-- [ ] Switch on Group leader icons in a party using Blizzard's party frames: the leader's frame gets a crown on its top left edge at once, no reload. Nobody else gets an icon.
+- [ ] Switch on Group leader icons in a party using Blizzard's party frames: the leader's frame gets a whole crown in its top left corner, inside the frame, at once, no reload. It is not cut off by the frame above, whichever member leads. Nobody else gets an icon.
 - [ ] Promote someone else: the crown moves to them. Leave and rejoin: it is on the right member again.
 - [ ] In a raid, make someone an assistant: they get the assistant icon; the leader keeps the crown. Demote them: the icon goes.
 - [ ] Switch raid frames between "Keep groups together" and separate frames: icons stay on the right people. Nameplates and arena frames never get one, and walking past enemies with nameplates on, in the open world and in a dungeon, leaves BugSack empty (nameplate frames are forbidden objects the module must not touch).
