@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/AqueGen/LittleThings/compare/v0.14.0...v0.14.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* leader crown sits inside the frame instead of under the frame above ([#29](https://github.com/AqueGen/LittleThings/issues/29)) ([3ec7b92](https://github.com/AqueGen/LittleThings/commit/3ec7b925cf4797305a0def746fef3d92ab9edde8))
+
 ## [0.14.0](https://github.com/AqueGen/LittleThings/compare/v0.13.0...v0.14.0) (2026-10-03)
 
 
