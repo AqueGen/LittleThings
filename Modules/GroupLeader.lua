@@ -49,7 +49,7 @@ local function Paint(frame)
     if not icon then
         icon = frame:CreateTexture(nil, "OVERLAY", nil, 7)
         icon:SetSize(SIZE, SIZE)
-        icon:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 2, -4)
+        icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 3, -3)
         frame.ltLeaderIcon = icon
     end
 
