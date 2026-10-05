@@ -13,12 +13,6 @@ local function load(state)
       return m.name, m.class, nil, nil, nil, nil, nil, nil, nil, m.role
     end,
   }
-  _G.GetNumSubgroupMembers = function() return #state.party end
-  _G.UnitName = function(unit) local u = state.units[unit] return u.name, u.realm end
-  _G.UnitClass = function(unit) return nil, state.units[unit].class end
-  _G.UnitGroupRolesAssigned = function(unit) return state.units[unit].role end
-  _G.GetSpecialization = function() return 2 end
-  _G.GetSpecializationRole = function(spec) return spec == 2 and "HEALER" or nil end
   loadfile("Modules/Applicants/Compare.lua")("LittleThings", ns)
   return module
 end
@@ -27,7 +21,7 @@ local function application(status, members)
   return { applicationStatus = status, numMembers = #members, members = members }
 end
 
-describe("Compare data readers", function()
+describe("Compare.applicants", function()
   it("reads only live applications, skips secret names and splits the realm", function()
     local compare = load({
       ids = { 1, 2, 3, 4 },
@@ -39,22 +33,24 @@ describe("Compare data readers", function()
       },
     })
     assert.same({
-      { name = "Cutlers", realm = "Silvermoon", class = "ROGUE", role = "DAMAGER" },
-      { name = "Medvedyk", realm = "TarrenMill", class = "DRUID", role = "HEALER" },
+      { name = "Cutlers", realm = "Silvermoon", class = "ROGUE", role = "DAMAGER", app = 1 },
+      { name = "Medvedyk", realm = "TarrenMill", class = "DRUID", role = "HEALER", app = 2 },
     }, compare.applicants())
   end)
 
-  it("uses the player's spec role when no role is assigned", function()
+  it("gives a duo one number and numbers only applications that add a member", function()
     local compare = load({
-      party = { "party1" },
-      units = {
-        player = { name = "Borshbringer", class = "PALADIN", role = "NONE" },
-        party1 = { name = "Ктулху", realm = "Gordunni", class = "MAGE", role = "DAMAGER" },
+      ids = { 1, 2, 3 },
+      applications = {
+        application("applied", { { name = SECRET, class = "MAGE", role = "DAMAGER" } }),
+        application("applied", { { name = "Cutlers", class = "ROGUE", role = "DAMAGER" }, { name = "Medvedyk", class = "DRUID", role = "HEALER" } }),
+        application("applied", { { name = "Ктулху-Gordunni", class = "MAGE", role = "DAMAGER" } }),
       },
     })
     assert.same({
-      { name = "Borshbringer", realm = "TarrenMill", class = "PALADIN", role = "HEALER" },
-      { name = "Ктулху", realm = "Gordunni", class = "MAGE", role = "DAMAGER" },
-    }, compare.group())
+      { name = "Cutlers", realm = "TarrenMill", class = "ROGUE", role = "DAMAGER", app = 1 },
+      { name = "Medvedyk", realm = "TarrenMill", class = "DRUID", role = "HEALER", app = 1 },
+      { name = "Ктулху", realm = "Gordunni", class = "MAGE", role = "DAMAGER", app = 2 },
+    }, compare.applicants())
   end)
 end)

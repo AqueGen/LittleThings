@@ -19,45 +19,30 @@ local function splitName(full)
 end
 
 local function applicants()
-    local list = {}
+    local list, app = {}, 0
     local ids = C_LFGList.GetApplicants()
     if not readable(ids) or type(ids) ~= "table" then return list end
     for _, applicantID in ipairs(ids) do
         local info = readable(applicantID) and C_LFGList.GetApplicantInfo(applicantID)
         if info and readable(info) and readable(info.numMembers, info.applicationStatus) and LIVE[info.applicationStatus] then
+            local first = #list + 1
             for i = 1, info.numMembers do
                 local full, class, _, _, _, _, _, _, _, role = C_LFGList.GetApplicantMemberInfo(applicantID, i)
                 if readable(full, class, role) and type(full) == "string" then
                     local name, realm = splitName(full)
-                    list[#list + 1] = { name = name, realm = realm, class = class, role = role }
+                    list[#list + 1] = { name = name, realm = realm, class = class, role = role, app = app + 1 }
                 end
             end
-        end
-    end
-    return list
-end
-
-local function group()
-    local list = {}
-    local units = { "player" }
-    for i = 1, GetNumSubgroupMembers() do units[#units + 1] = "party" .. i end
-    for _, unit in ipairs(units) do
-        local name, realm = UnitName(unit)
-        local _, class = UnitClass(unit)
-        local role = UnitGroupRolesAssigned(unit)
-        if readable(name, realm, class, role) and type(name) == "string" then
-            if unit == "player" and role == "NONE" then
-                local spec = GetSpecialization()
-                role = spec and GetSpecializationRole(spec) or role
-            end
-            list[#list + 1] = { name = name, realm = (realm and realm ~= "") and realm or GetNormalizedRealmName(), class = class, role = role }
+            if #list >= first then app = app + 1 end
         end
     end
     return list
 end
 
 local function wanted()
-    return ns.db and ns.IsOn("compareButton") and ns.Link.HubBase(ns.db.logLinkHub) ~= nil
+    if not (ns.db and ns.IsOn("compareButton") and ns.Link.HubBase(ns.db.logLinkHub)) then return false end
+    local listing = ns.ApplicantData.Listing()
+    return listing ~= nil and listing.isMythicPlus
 end
 
 local function refresh()
@@ -70,7 +55,8 @@ local function onClick()
         return
     end
     local key = C_MythicPlus.GetOwnedKeystoneLevel()
-    local url, problem, count = ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group(), applicants())
+    local group = ns.ApplicantData.Group(ns.ApplicantData.Listing() or {}).members
+    local url, problem, count = ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group, applicants())
     ns.CopyLink(url, problem, count and string.format("Compare page for %d applicant%s", count, count == 1 and "" or "s"))
 end
 
@@ -96,6 +82,6 @@ function Compare.OnSwitch()
 end
 
 Compare.applicants = applicants
-Compare.group = group
+ns.RefreshCompareButton = refresh
 Compare.key = "compareButton"
 ns.RegisterModule("Compare", Compare)
