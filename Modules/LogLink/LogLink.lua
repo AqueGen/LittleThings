@@ -152,8 +152,8 @@ end
 
 local function section(rootDescription, name, realm)
     rootDescription:CreateDivider()
-    rootDescription:CreateTitle("Warcraft Logs")
-    rootDescription:CreateButton(Link.ZONE_NAME, function() show(name, realm) end)
+    rootDescription:CreateTitle("LittleThings")
+    rootDescription:CreateButton("WCL " .. Link.ZONE_NAME, function() show(name, realm) end)
     if Link.HubBase(ns.db.logLinkHub) then
         rootDescription:CreateButton("Summary page", function() showHub(name, realm) end)
     end
@@ -280,7 +280,7 @@ local HubSettings = { key = "logLink" }
 function HubSettings.Pages(page)
     local initializer = CreateSettingsButtonInitializer("Summary page", "Set address",
         function() StaticPopup_Show(HUB_POPUP) end,
-        "Adds a Summary page entry under Warcraft Logs in player menus that copies a link to your guild's summary site. Paste the site's address here; empty removes the entry.",
+        "Adds a Summary page entry under LittleThings in player menus that copies a link to your guild's summary site. Paste the site's address here; empty removes the entry.",
         true)
     page.layout:AddInitializer(initializer)
     ns.AddToPage(page, initializer)
