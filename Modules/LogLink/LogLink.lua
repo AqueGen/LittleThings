@@ -25,6 +25,7 @@ StaticPopupDialogs[POPUP] = {
     button1 = CLOSE or "Close",
     hasEditBox = true,
     editBoxWidth = 350,
+    maxLetters = 255,
     timeout = 0,
     whileDead = true,
     hideOnEscape = true,
@@ -39,7 +40,7 @@ StaticPopupDialogs[POPUP] = {
     EditBoxOnEnterPressed = function(box) box:GetParent():Hide() end,
     EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,
     EditBoxOnTextChanged = function(box, data)
-        if box:GetText() ~= data.url then
+        if box:IsVisible() and box:GetText() ~= data.url then
             box:SetText(data.url)
             box:HighlightText()
         end
@@ -245,6 +246,7 @@ StaticPopupDialogs[HUB_POPUP] = {
     button2 = CANCEL or "Cancel",
     hasEditBox = true,
     editBoxWidth = 350,
+    maxLetters = 255,
     timeout = 0,
     whileDead = true,
     hideOnEscape = true,
