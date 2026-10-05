@@ -1,4 +1,4 @@
-local SECRET = setmetatable({}, { __tostring = function() return "secret" end })
+local SECRET = "Secret-Name"
 
 local function load(state)
   local module
