@@ -71,7 +71,7 @@ local function onClick()
     end
     local key = C_MythicPlus.GetOwnedKeystoneLevel()
     local url, problem, count = ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group(), applicants())
-    ns.CopyLink(url, problem, count and string.format("Compare page for %d applicants", count))
+    ns.CopyLink(url, problem, count and string.format("Compare page for %d applicant%s", count, count == 1 and "" or "s"))
 end
 
 local function build()
@@ -79,7 +79,7 @@ local function build()
     if button or not viewer then return end
     button = CreateFrame("Button", nil, viewer, "UIPanelButtonTemplate")
     button:SetSize(150, 22)
-    button:SetPoint("BOTTOM", viewer, "BOTTOM", 0, 4)
+    button:SetPoint("TOPRIGHT", PVEFrame, "BOTTOMRIGHT", 0, -2)
     button:SetText("Compare applicants")
     button:SetScript("OnClick", onClick)
     viewer:HookScript("OnShow", refresh)
@@ -95,5 +95,7 @@ function Compare.OnSwitch()
     refresh()
 end
 
+Compare.applicants = applicants
+Compare.group = group
 Compare.key = "compareButton"
 ns.RegisterModule("Compare", Compare)
