@@ -8,11 +8,18 @@ local CompareUrl = { MAX = 30 }
 local REGIONS = { [1] = "us", [2] = "kr", [3] = "eu", [4] = "tw", [5] = "cn" }
 local ROLES = { TANK = "tank", HEALER = "healer", DAMAGER = "dps" }
 
+local function safe(s)
+  return type(s) == "string" and s ~= "" and not string.find(s, "[,/&?#%%]")
+end
+
 local function entry(region, member)
-  local role = ROLES[member.role]
-  local slug = Realms.SlugFor(member.realm)
-  if not role or not slug or type(member.name) ~= "string" or member.name == "" or type(member.class) ~= "string" then return nil end
-  return table.concat({ region, slug, Realms.Lower(member.name), role, member.class }, "/")
+  local name = type(member.name) == "string" and Realms.Lower(member.name)
+  local parts = { region, Realms.SlugFor(member.realm), name, ROLES[member.role], member.class }
+  for i = 1, 5 do
+    if not safe(parts[i]) then return nil end
+  end
+  if not string.match(member.class, "^%u+$") then return nil end
+  return table.concat(parts, "/")
 end
 
 local function list(region, members, max)
@@ -30,11 +37,11 @@ function CompareUrl.Build(base, regionID, keyLevel, group, applicants)
   if not base then return nil, "no summary site set" end
   local region = REGIONS[regionID or 0]
   if not region then return nil, "unknown region" end
-  local p = list(region, applicants, CompareUrl.MAX)
+  local p = list(region, applicants or {}, CompareUrl.MAX)
   if #p == 0 then return nil, "no applicants to compare" end
-  local g = list(region, group, 5)
+  local g = list(region, group or {}, 5)
   local query = {}
-  if type(keyLevel) == "number" and keyLevel > 0 then query[#query + 1] = "key=" .. keyLevel end
+  if type(keyLevel) == "number" and math.floor(keyLevel) == keyLevel and keyLevel >= 1 and keyLevel <= 99 then query[#query + 1] = "key=" .. keyLevel end
   if #g > 0 then query[#query + 1] = "g=" .. table.concat(g, ",") end
   query[#query + 1] = "p=" .. table.concat(p, ",")
   return base .. "/compare?" .. table.concat(query, "&")
