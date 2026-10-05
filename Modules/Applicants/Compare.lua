@@ -65,7 +65,7 @@ local function build()
     if button or not viewer then return end
     button = CreateFrame("Button", nil, viewer, "UIPanelButtonTemplate")
     button:SetSize(150, 22)
-    button:SetPoint("TOPRIGHT", PVEFrame, "BOTTOMRIGHT", 0, -34)
+    button:SetPoint("TOPRIGHT", viewer.InfoBackground or viewer, "TOPRIGHT", -8, -8)
     button:SetText("Compare applicants")
     button:SetScript("OnClick", onClick)
     viewer:HookScript("OnShow", refresh)
