@@ -70,7 +70,8 @@ local function onClick()
         return
     end
     local key = C_MythicPlus.GetOwnedKeystoneLevel()
-    ns.CopyLink(ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group(), applicants()))
+    local url, problem, count = ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group(), applicants())
+    ns.CopyLink(url, problem, count and string.format("Compare page for %d applicants", count))
 end
 
 local function build()

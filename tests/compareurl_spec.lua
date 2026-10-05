@@ -46,9 +46,11 @@ describe("CompareUrl.Build", function()
     for i = 1, 40 do
       many[i] = { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = i <= 10 and "NONE" or "DAMAGER" }
     end
-    local url = CompareUrl.Build(BASE, EU, nil, {}, many)
+    local url, problem, count = CompareUrl.Build(BASE, EU, nil, {}, many)
     local _, commas = string.gsub(url, ",", ",")
     assert.equals(29, commas)
+    assert.is_nil(problem)
+    assert.equals(30, count)
   end)
 
   it("skips a name with a separator in it and a class that is not an upper-case token", function()

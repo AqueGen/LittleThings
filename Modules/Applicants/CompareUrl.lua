@@ -44,7 +44,7 @@ function CompareUrl.Build(base, regionID, keyLevel, group, applicants)
   if type(keyLevel) == "number" and math.floor(keyLevel) == keyLevel and keyLevel >= 1 and keyLevel <= 99 then query[#query + 1] = "key=" .. keyLevel end
   if #g > 0 then query[#query + 1] = "g=" .. table.concat(g, ",") end
   query[#query + 1] = "p=" .. table.concat(p, ",")
-  return base .. "/compare?" .. table.concat(query, "&")
+  return base .. "/compare?" .. table.concat(query, "&"), nil, #p
 end
 
 if ns then ns.CompareUrl = CompareUrl end

@@ -47,12 +47,12 @@ StaticPopupDialogs[POPUP] = {
     end,
 }
 
-local function copy(url, problem)
+local function copy(url, problem, label)
     if not url then
         ns.Print(problem or "no link")
         return
     end
-    StaticPopup_Show(POPUP, url, nil, { url = url })
+    StaticPopup_Show(POPUP, label or url, nil, { url = url })
 end
 ns.CopyLink = copy
 
