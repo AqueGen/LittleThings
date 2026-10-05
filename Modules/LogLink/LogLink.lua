@@ -35,36 +35,43 @@ StaticPopupDialogs[POPUP] = {
         box:SetText(data.url)
         box:HighlightText()
         box:SetFocus()
-        -- Escape closes the dialog rather than only unfocusing the box, and
-        -- Enter does the same: the box exists to be copied from, never typed
-        -- into.
-        box:SetScript("OnEscapePressed", function() self:Hide() end)
-        box:SetScript("OnEnterPressed", function() self:Hide() end)
-        -- A reader who starts typing would otherwise silently replace the link
-        -- and copy their own keystrokes.
-        box:SetScript("OnTextChanged", function(edit)
-            if edit:GetText() ~= data.url then
-                edit:SetText(data.url)
-                edit:HighlightText()
-            end
-        end)
+    end,
+    EditBoxOnEnterPressed = function(box) box:GetParent():Hide() end,
+    EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,
+    EditBoxOnTextChanged = function(box, data)
+        if box:GetText() ~= data.url then
+            box:SetText(data.url)
+            box:HighlightText()
+        end
     end,
 }
 
----@param name string
----@param realm string|nil
-local function show(name, realm)
-    if not usable(name) then return end
-    if not usable(realm) or realm == "" then realm = GetNormalizedRealmName() end
-
-    local url, problem = Link.For(name, realm, GetCurrentRegion())
+local function copy(url, problem)
     if not url then
         ns.Print(problem or "no link")
         return
     end
     StaticPopup_Show(POPUP, url, nil, { url = url })
 end
+
+local function resolve(name, realm)
+    if not usable(name) then return nil end
+    if not usable(realm) or realm == "" then realm = GetNormalizedRealmName() end
+    return name, realm
+end
+
+---@param name string
+---@param realm string|nil
+local function show(name, realm)
+    name, realm = resolve(name, realm)
+    if name then copy(Link.For(name, realm, GetCurrentRegion())) end
+end
 ns.ShowLogLink = show
+
+local function showHub(name, realm)
+    name, realm = resolve(name, realm)
+    if name then copy(Link.Hub(name, realm, GetCurrentRegion(), ns.db.logLinkHub)) end
+end
 
 -- The name and realm a menu is about. A unit menu carries a token; a chat or
 -- friends-list menu carries the name and server as text, and the name it carries
@@ -145,6 +152,9 @@ local function section(rootDescription, name, realm)
     rootDescription:CreateDivider()
     rootDescription:CreateTitle("Warcraft Logs")
     rootDescription:CreateButton(Link.ZONE_NAME, function() show(name, realm) end)
+    if Link.HubBase(ns.db.logLinkHub) then
+        rootDescription:CreateButton("Summary page", function() showHub(name, realm) end)
+    end
 end
 
 local function install()
@@ -210,3 +220,62 @@ end
 -- No key: the module is always loaded, and wanted() reads the switch per
 -- menu, so it goes on and off without a reload and /wcl works either way.
 ns.RegisterModule("LogLink", LogLink)
+
+local HUB_POPUP = "LITTLETHINGS_LOGLINK_HUB"
+
+local function saveHub(box)
+    local text = box:GetText()
+    if string.match(text, "^%s*$") then
+        ns.db.logLinkHub = nil
+        ns.Print("summary page removed from player menus")
+        return
+    end
+    local base = Link.HubBase(text)
+    if not base then
+        ns.Print("not an https:// address, nothing changed")
+        return
+    end
+    ns.db.logLinkHub = base
+    ns.Print("summary page: " .. base)
+end
+
+StaticPopupDialogs[HUB_POPUP] = {
+    text = "Summary site address (https://...). Leave empty to remove the menu entry.",
+    button1 = ACCEPT or "Accept",
+    button2 = CANCEL or "Cancel",
+    hasEditBox = true,
+    editBoxWidth = 350,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+    OnShow = function(self)
+        local box = self.editBox or self.EditBox
+        if not box then return end
+        box:SetText(ns.db.logLinkHub or "")
+        box:HighlightText()
+        box:SetFocus()
+    end,
+    OnAccept = function(self)
+        local box = self.editBox or self.EditBox
+        if box then saveHub(box) end
+    end,
+    EditBoxOnEnterPressed = function(box)
+        saveHub(box)
+        box:GetParent():Hide()
+    end,
+    EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,
+}
+
+local HubSettings = { key = "logLink" }
+
+function HubSettings.Pages(page)
+    local initializer = CreateSettingsButtonInitializer("Summary page", "Set address",
+        function() StaticPopup_Show(HUB_POPUP) end,
+        "Adds a Summary page entry under Warcraft Logs in player menus that copies a link to your guild's summary site. Paste the site's address here; empty removes the entry.",
+        true)
+    page.layout:AddInitializer(initializer)
+    ns.AddToPage(page, initializer)
+end
+
+ns.RegisterModule("LogLinkHub", HubSettings)
