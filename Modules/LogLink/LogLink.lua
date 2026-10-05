@@ -225,7 +225,7 @@ ns.RegisterModule("LogLink", LogLink)
 
 local HUB_POPUP = "LITTLETHINGS_LOGLINK_HUB"
 
-local function saveHub(box)
+local function storeHub(box)
     local text = box:GetText()
     if string.match(text, "^%s*$") then
         ns.db.logLinkHub = nil
@@ -239,6 +239,11 @@ local function saveHub(box)
     end
     ns.db.logLinkHub = base
     ns.Print("summary page: " .. base)
+end
+
+local function saveHub(box)
+    storeHub(box)
+    if ns.RefreshCompareButton then ns.RefreshCompareButton() end
 end
 
 StaticPopupDialogs[HUB_POPUP] = {
