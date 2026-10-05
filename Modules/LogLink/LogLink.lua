@@ -25,7 +25,7 @@ StaticPopupDialogs[POPUP] = {
     button1 = CLOSE or "Close",
     hasEditBox = true,
     editBoxWidth = 350,
-    maxLetters = 255,
+    maxLetters = 4000,
     timeout = 0,
     whileDead = true,
     hideOnEscape = true,
@@ -54,6 +54,7 @@ local function copy(url, problem)
     end
     StaticPopup_Show(POPUP, url, nil, { url = url })
 end
+ns.CopyLink = copy
 
 local function resolve(name, realm)
     if not usable(name) then return nil end

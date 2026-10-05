@@ -45,4 +45,6 @@ Modules/Applicants/FilterPanel.lua
 Modules/Applicants/DefaultPlaystyle.lua
 Modules/Applicants/KeystoneRules.lua
 Modules/Applicants/PartyKeys.lua
+Modules/Applicants/CompareUrl.lua
+Modules/Applicants/Compare.lua
 Modules/SignUpRoles.lua
