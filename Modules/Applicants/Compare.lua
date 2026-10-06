@@ -61,7 +61,7 @@ local function onClick()
     local group = ns.ApplicantData.Group(ns.ApplicantData.Listing() or {})
     local picked, dropped = ns.ComparePick.Pick(applications(), group.open)
     local url, problem, count = ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group.members, picked)
-    if not url and dropped > 0 then problem = "no applicant fits the open roles" end
+    if not url and #picked == 0 and dropped > 0 then problem = "no applicant fits the open roles" end
     local note = dropped > 0 and string.format(", %d dropped: role not needed", dropped) or ""
     ns.CopyLink(url, problem, count and string.format("Compare page for %d of %d applicants%s", count, #picked + dropped, note))
 end
