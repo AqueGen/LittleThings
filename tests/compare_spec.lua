@@ -10,7 +10,7 @@ local function load(state)
     GetApplicantInfo = function(id) return state.applications[id] end,
     GetApplicantMemberInfo = function(id, i)
       local m = state.applications[id].members[i]
-      return m.name, m.class, nil, nil, nil, nil, nil, nil, nil, m.role
+      return m.name, m.class, nil, nil, nil, nil, m.tank, m.healer, m.damage, m.role, nil, m.rating
     end,
   }
   loadfile("Modules/Applicants/Compare.lua")("LittleThings", ns)
@@ -21,36 +21,34 @@ local function application(status, members)
   return { applicationStatus = status, numMembers = #members, members = members }
 end
 
-describe("Compare.applicants", function()
+local function dps(name, class, rating)
+  return { name = name, class = class, role = "DAMAGER", damage = true, rating = rating }
+end
+
+describe("Compare.applications", function()
   it("reads only live applications, skips secret names and splits the realm", function()
     local compare = load({
       ids = { 1, 2, 3, 4 },
       applications = {
-        application("applied", { { name = "Cutlers-Silvermoon", class = "ROGUE", role = "DAMAGER" } }),
-        application("invited", { { name = "Medvedyk", class = "DRUID", role = "HEALER" }, { name = SECRET, class = "MAGE", role = "DAMAGER" } }),
-        application("declined", { { name = "Gone", class = "MAGE", role = "DAMAGER" } }),
-        application("cancelled", { { name = "Left", class = "MAGE", role = "DAMAGER" } }),
+        application("applied", { dps("Cutlers-Silvermoon", "ROGUE", 2900) }),
+        application("invited", { { name = "Medvedyk", class = "DRUID", role = "HEALER", healer = true, damage = true, rating = 2500 }, dps(SECRET, "MAGE", 3000) }),
+        application("declined", { dps("Gone", "MAGE", 3000) }),
+        application("cancelled", { dps("Left", "MAGE", 3000) }),
       },
     })
     assert.same({
-      { name = "Cutlers", realm = "Silvermoon", class = "ROGUE", role = "DAMAGER", app = 1 },
-      { name = "Medvedyk", realm = "TarrenMill", class = "DRUID", role = "HEALER", app = 2 },
-    }, compare.applicants())
+      { members = { { name = "Cutlers", realm = "Silvermoon", class = "ROGUE", role = "DAMAGER", rating = 2900, roles = { TANK = false, HEALER = false, DAMAGER = true } } } },
+      { members = { { name = "Medvedyk", realm = "TarrenMill", class = "DRUID", role = "HEALER", rating = 2500, roles = { TANK = false, HEALER = true, DAMAGER = true } } } },
+    }, compare.applications())
   end)
 
-  it("gives a duo one number and numbers only applications that add a member", function()
-    local compare = load({
-      ids = { 1, 2, 3 },
-      applications = {
-        application("applied", { { name = SECRET, class = "MAGE", role = "DAMAGER" } }),
-        application("applied", { { name = "Cutlers", class = "ROGUE", role = "DAMAGER" }, { name = "Medvedyk", class = "DRUID", role = "HEALER" } }),
-        application("applied", { { name = "Ктулху-Gordunni", class = "MAGE", role = "DAMAGER" } }),
-      },
-    })
-    assert.same({
-      { name = "Cutlers", realm = "TarrenMill", class = "ROGUE", role = "DAMAGER", app = 1 },
-      { name = "Medvedyk", realm = "TarrenMill", class = "DRUID", role = "HEALER", app = 1 },
-      { name = "Ктулху", realm = "Gordunni", class = "MAGE", role = "DAMAGER", app = 2 },
-    }, compare.applicants())
+  it("keeps an application whose members are all unreadable as an empty one", function()
+    local compare = load({ ids = { 1 }, applications = { application("applied", { dps(SECRET, "MAGE", 3000) }) } })
+    assert.same({ { members = {} } }, compare.applications())
+  end)
+
+  it("skips a member whose rating is secret", function()
+    local compare = load({ ids = { 1 }, applications = { application("applied", { dps("Cutlers", "ROGUE", SECRET) }) } })
+    assert.same({ { members = {} } }, compare.applications())
   end)
 end)

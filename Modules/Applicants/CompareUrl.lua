@@ -26,6 +26,8 @@ local function entry(region, member, numbered)
   if numbered then
     if not upTo99(member.app) then return nil end
     parts[6] = member.app
+    local rating = type(member.rating) == "number" and math.floor(member.rating)
+    if rating and rating >= 0 and rating <= 9999 then parts[7] = rating end
   end
   return table.concat(parts, "/")
 end

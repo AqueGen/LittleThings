@@ -63,6 +63,15 @@ describe("CompareUrl.Build", function()
     assert.equals(BASE .. "/compare?p=eu/tarren-mill/cutlers/dps/ROGUE/3", url)
   end)
 
+  it("writes a whole rating up to 9999 after the application number and leaves out anything else", function()
+    local url = CompareUrl.Build(BASE, EU, nil, {}, {
+      { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 1, rating = 2875.6 },
+      { name = "None", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 2 },
+      { name = "Huge", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 3, rating = 10000 },
+    })
+    assert.equals(BASE .. "/compare?p=eu/tarren-mill/cutlers/dps/ROGUE/1/2875,eu/tarren-mill/none/dps/ROGUE/2,eu/tarren-mill/huge/dps/ROGUE/3", url)
+  end)
+
   it("gives the members of one application the same number", function()
     local url = CompareUrl.Build(BASE, EU, nil, {}, {
       { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 1 },

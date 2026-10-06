@@ -18,22 +18,25 @@ local function splitName(full)
     return full, GetNormalizedRealmName()
 end
 
-local function applicants()
-    local list, app = {}, 0
+local function applications()
+    local list = {}
     local ids = C_LFGList.GetApplicants()
     if not readable(ids) or type(ids) ~= "table" then return list end
     for _, applicantID in ipairs(ids) do
         local info = readable(applicantID) and C_LFGList.GetApplicantInfo(applicantID)
         if info and readable(info) and readable(info.numMembers, info.applicationStatus) and LIVE[info.applicationStatus] then
-            local first = #list + 1
+            local members = {}
             for i = 1, info.numMembers do
-                local full, class, _, _, _, _, _, _, _, role = C_LFGList.GetApplicantMemberInfo(applicantID, i)
-                if readable(full, class, role) and type(full) == "string" then
+                local full, class, _, _, _, _, tank, healer, damage, role, _, rating = C_LFGList.GetApplicantMemberInfo(applicantID, i)
+                if readable(full, class, tank, healer, damage, role, rating) and type(full) == "string" then
                     local name, realm = splitName(full)
-                    list[#list + 1] = { name = name, realm = realm, class = class, role = role, app = app + 1 }
+                    members[#members + 1] = {
+                        name = name, realm = realm, class = class, role = role, rating = rating,
+                        roles = { TANK = tank == true, HEALER = healer == true, DAMAGER = damage == true },
+                    }
                 end
             end
-            if #list >= first then app = app + 1 end
+            list[#list + 1] = { members = members }
         end
     end
     return list
@@ -55,9 +58,12 @@ local function onClick()
         return
     end
     local key = C_MythicPlus.GetOwnedKeystoneLevel()
-    local group = ns.ApplicantData.Group(ns.ApplicantData.Listing() or {}).members
-    local url, problem, count = ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group, applicants())
-    ns.CopyLink(url, problem, count and string.format("Compare page for %d applicant%s", count, count == 1 and "" or "s"))
+    local group = ns.ApplicantData.Group(ns.ApplicantData.Listing() or {})
+    local picked, dropped = ns.ComparePick.Pick(applications(), group.open)
+    local url, problem, count = ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group.members, picked)
+    if not url and dropped > 0 then problem = "no applicant fits the open roles" end
+    local note = dropped > 0 and string.format(", %d dropped: role not needed", dropped) or ""
+    ns.CopyLink(url, problem, count and string.format("Compare page for %d of %d applicants%s", count, #picked + dropped, note))
 end
 
 local function build()
@@ -81,7 +87,7 @@ function Compare.OnSwitch()
     refresh()
 end
 
-Compare.applicants = applicants
+Compare.applications = applications
 ns.RefreshCompareButton = refresh
 Compare.key = "compareButton"
 ns.RegisterModule("Compare", Compare)
