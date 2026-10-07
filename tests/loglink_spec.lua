@@ -113,3 +113,37 @@ describe("Realms.Lower", function()
     assert.equals("hødzere", Realms.Lower("Hødzere"))
   end)
 end)
+
+describe("Link.Hub", function()
+  local BASE = "https://brag-sheet.example.workers.dev"
+
+  it("builds the summary page address from the same slug and name", function()
+    assert.equals(BASE .. "/eu/tarren-mill/cutlers", Link.Hub("Cutlers", "Tarren Mill", EU, BASE))
+    assert.equals(BASE .. "/eu/gordunni/ктулху", Link.Hub("Ктулху", "Гордунни", EU, BASE))
+    assert.equals(BASE .. "/us/silvermoon/medvedyk", Link.Hub("Medvedyk", "Silvermoon", US, BASE))
+  end)
+
+  it("tolerates spaces and trailing slashes around the base", function()
+    assert.equals(BASE .. "/eu/silvermoon/medvedyk", Link.Hub("Medvedyk", "Silvermoon", EU, "  " .. BASE .. "// "))
+  end)
+
+  it("refuses a base that is not an https address", function()
+    for _, bad in ipairs({ "", "   ", "http://x.dev", "javascript:alert(1)", "https://", "https://a b.dev", 42 }) do
+      local url, problem = Link.Hub("Medvedyk", "Silvermoon", EU, bad)
+      assert.is_nil(url)
+      assert.equals("no summary site set", problem)
+    end
+    local url, problem = Link.Hub("Medvedyk", "Silvermoon", EU, nil)
+    assert.is_nil(url)
+    assert.equals("no summary site set", problem)
+  end)
+
+  it("says what is missing the same way Link.For does", function()
+    local url, problem = Link.Hub("Medvedyk", nil, EU, BASE)
+    assert.is_nil(url)
+    assert.equals("no realm for Medvedyk", problem)
+    url, problem = Link.Hub("Medvedyk", "Silvermoon", 99, BASE)
+    assert.is_nil(url)
+    assert.equals("unknown region", problem)
+  end)
+end)

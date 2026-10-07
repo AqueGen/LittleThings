@@ -7,6 +7,8 @@ local function install(fakes)
   _G.C_LFGList = fakes.lfg
   _G.UnitExists = function(unit) return fakes.units[unit] ~= nil end
   _G.UnitClassBase = function(unit) return fakes.units[unit].class end
+  _G.UnitName = function(unit) return fakes.units[unit].name, fakes.units[unit].realm end
+  _G.GetNormalizedRealmName = function() return "TarrenMill" end
   _G.UnitGroupRolesAssigned = function(unit) return fakes.units[unit].role end
 end
 
@@ -133,6 +135,31 @@ describe("Data.Group, unassigned roles", function()
     _G.GetSpecializationRole = function(index) return index == 2 and "TANK" or nil end
     local group = load().Group({ fiveMan = true })
     assert.same({ TANK = 0, HEALER = 1, DAMAGER = 2 }, group.open)
+  end)
+end)
+
+describe("Data.Group members", function()
+  it("lists each member with realm, class and role, an unassigned party member as damage", function()
+    install({ lfg = lfg({}), units = {
+      player = { name = "Borshbringer", class = "PALADIN", role = "NONE" },
+      party1 = { name = "Ктулху", realm = "Gordunni", class = "MAGE", role = "NONE" },
+      party2 = { name = "Medvedyk", realm = "", class = "DRUID", role = "HEALER" },
+    } })
+    _G.GetSpecialization = function() return 2 end
+    _G.GetSpecializationRole = function(index) return index == 2 and "TANK" or nil end
+    assert.same({
+      { name = "Borshbringer", realm = "TarrenMill", class = "PALADIN", role = "TANK" },
+      { name = "Ктулху", realm = "Gordunni", class = "MAGE", role = "DAMAGER" },
+      { name = "Medvedyk", realm = "TarrenMill", class = "DRUID", role = "HEALER" },
+    }, load().Group({}).members)
+  end)
+
+  it("leaves out a member whose name is Secret", function()
+    install({ lfg = lfg({}), units = {
+      player = { name = "Borshbringer", class = "PALADIN", role = "TANK" },
+      party1 = { name = SECRET, class = "MAGE", role = "DAMAGER" },
+    } })
+    assert.same({ { name = "Borshbringer", realm = "TarrenMill", class = "PALADIN", role = "TANK" } }, load().Group({}).members)
   end)
 end)
 
