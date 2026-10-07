@@ -26,23 +26,25 @@ Setup: `/reload`, hit a target dummy so the meter has data, keep BugSack open. *
 - [ ] Dragging window 2 well away breaks the link.
 - [ ] Snapping window 3 to the right of window 2 matches heights instead of widths.
 - [ ] Chain: 3 under 2, 2 under 1. Resizing window 1 resizes both.
-- [ ] Lock window 2, resize window 1: window 2 does not resize.
+- [ ] Lock window 2, resize window 1: window 2 still follows the width (a matched axis is an anchor; the lock only stops dragging and the handle).
 - [ ] Detach window 2, `/reload`: it comes back where it was.
 - [ ] Hide a snapped window, show it again from the gear menu: it comes back attached.
 - [ ] Dropping a window near a screen edge with no window near lands it flush; the bars show on the window's and the screen's edge.
 - [ ] Gap of 6 on a linked window separates the pair by six pixels and survives a reload.
 - [ ] `/reload` keeps every link and size.
 - [ ] **With a matched link in place, `/reload`, touch nothing, fight**: no reload popup at login and BugSack stays empty. This is the case that used to taint every session.
-- [ ] Resizing window 2 by its handle while window 3 matches it shows the reload popup once; after the reload, BugSack stays empty in the next fight.
+- [ ] **Resizing window 1 or 2 by its handle while a neighbour matches it shows no reload popup, and the next fight leaves BugSack empty** - the matched size comes from anchors, not from our code.
+- [ ] A matched window's own handle: only the free axis resizes (width is held by the anchors when matched by width). Detaching it keeps a sensible size - note any jump to an old width.
+- [ ] Unticking match width on the page frees the width; ticking it again snaps it back to the target's width. The other axis's box is greyed out.
 
 ## 3a. Following an Edit Mode layout switch
 
 Needs two Edit Mode layouts whose damage meter sits in a different place, and whose Frame Width differs. Assign the second layout to a second specialization.
 
 - [ ] Switch layout by hand in the Edit Mode UI: window 1 moves with the layout and windows 2 and 3 stay attached to it.
-- [ ] Same switch with differing Frame Width: the matched windows take window 1's new width, and the reload popup appears once.
+- [ ] Same switch with differing Frame Width: the matched windows take window 1's new width, with no reload popup.
 - [ ] Switch specialization so the layout changes with the Edit Mode UI closed: the chain follows, both position and matched width.
-- [ ] Switch back to a layout whose width is the same as the current one: no reload popup (the size is only set when it differs).
+- [ ] Switch back and forth between layouts with different widths, then fight: no reload popup and BugSack stays empty.
 - [ ] `/reload` on a character whose layouts have different widths, touch nothing, fight: **no reload popup at login** and BugSack stays empty. Login must never push a size.
 
 ## 4. Transparency and layer

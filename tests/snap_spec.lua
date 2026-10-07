@@ -271,35 +271,68 @@ describe("Snap.FindScreenSnap", function()
     end)
 end)
 
-describe("Snap.OnLayoutChanged", function()
-    local applyAll, pushSize, calls
+describe("Snap.AnchorPoints", function()
+    it("anchors only the joined edge without a match flag", function()
+        local points = Snap.AnchorPoints({ point = "TOPLEFT", relPoint = "BOTTOMLEFT", gap = 2 })
 
-    before_each(function()
-        applyAll, pushSize = Snap.ApplyAll, Snap.PushSize
-        calls = {}
-
-        Snap.ApplyAll = function() table.insert(calls, "apply") end
-        Snap.PushSize = function(index) table.insert(calls, "push " .. tostring(index)) end
+        assert.are.same({ { "TOPLEFT", "BOTTOMLEFT", 0, -2 } }, points)
     end)
 
-    after_each(function()
-        Snap.ApplyAll, Snap.PushSize = applyAll, pushSize
-        Snap.loginSettled = false
+    it("matches width below a window by anchoring the right edges too", function()
+        local points = Snap.AnchorPoints({ point = "TOPLEFT", relPoint = "BOTTOMLEFT", gap = 2, matchWidth = true })
+
+        assert.are.same({
+            { "TOPLEFT", "BOTTOMLEFT", 0, -2 },
+            { "TOPRIGHT", "BOTTOMRIGHT", 0, -2 },
+        }, points)
     end)
 
-    it("re-anchors the links and pushes window 1's new size", function()
-        Snap.loginSettled = true
+    it("matches width above a window", function()
+        local points = Snap.AnchorPoints({ point = "BOTTOMLEFT", relPoint = "TOPLEFT", matchWidth = true })
 
-        Snap.OnLayoutChanged()
-
-        assert.are.same({ "apply", "push 1" }, calls)
+        assert.are.same({
+            { "BOTTOMLEFT", "TOPLEFT", 0, 0 },
+            { "BOTTOMRIGHT", "TOPRIGHT", 0, 0 },
+        }, points)
     end)
 
-    it("re-anchors but pushes no size before the first login pass is done", function()
-        Snap.loginSettled = false
+    it("matches height right of a window by anchoring the bottom edges too", function()
+        local points = Snap.AnchorPoints({ point = "TOPLEFT", relPoint = "TOPRIGHT", gap = 4, matchHeight = true })
 
-        Snap.OnLayoutChanged()
+        assert.are.same({
+            { "TOPLEFT", "TOPRIGHT", 4, 0 },
+            { "BOTTOMLEFT", "BOTTOMRIGHT", 4, 0 },
+        }, points)
+    end)
 
-        assert.are.same({ "apply" }, calls)
+    it("matches height left of a window", function()
+        local points = Snap.AnchorPoints({ point = "TOPRIGHT", relPoint = "TOPLEFT", matchHeight = true })
+
+        assert.are.same({
+            { "TOPRIGHT", "TOPLEFT", 0, 0 },
+            { "BOTTOMRIGHT", "BOTTOMLEFT", 0, 0 },
+        }, points)
+    end)
+
+    it("ignores a match flag across the joined axis", function()
+        local points = Snap.AnchorPoints({ point = "TOPLEFT", relPoint = "BOTTOMLEFT", matchHeight = true })
+
+        assert.are.equal(1, #points)
+    end)
+end)
+
+describe("Snap.MatchFlag", function()
+    it("names width for a window joined above or below", function()
+        assert.are.equal("matchWidth", Snap.MatchFlag({ point = "TOPLEFT", relPoint = "BOTTOMLEFT" }))
+        assert.are.equal("matchWidth", Snap.MatchFlag({ point = "BOTTOMLEFT", relPoint = "TOPLEFT" }))
+    end)
+
+    it("names height for a window joined at the side", function()
+        assert.are.equal("matchHeight", Snap.MatchFlag({ point = "TOPLEFT", relPoint = "TOPRIGHT" }))
+        assert.are.equal("matchHeight", Snap.MatchFlag({ point = "TOPRIGHT", relPoint = "TOPLEFT" }))
+    end)
+
+    it("names nothing for an unknown pair", function()
+        assert.is_nil(Snap.MatchFlag({ point = "CENTER", relPoint = "CENTER" }))
     end)
 end)

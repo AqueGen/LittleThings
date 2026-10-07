@@ -206,9 +206,6 @@ local function CreateSizeBox(row, index, dimension)
             -- the Edit Mode routing - so this box does not need to know which
             -- kind of window it is editing.
             if ns.Windows.SetSize(index, width, height) then
-                -- The OnSizeChanged hook pushes only hand resizes, so a typed
-                -- size carries its matched neighbours along from here.
-                ns.Snap.PushSize(index)
                 ns.RequestReload("size")
             end
         end
@@ -343,7 +340,7 @@ local function CreateRow(parent, index)
         local link = ns.charDb.links[index]
         if link then
             link.matchWidth = self:GetChecked()
-            ns.Snap.PushSize(link.to)
+            ns.Snap.ApplyLink(index)
             RefreshWindowPanel()
         end
     end)
@@ -355,7 +352,7 @@ local function CreateRow(parent, index)
         local link = ns.charDb.links[index]
         if link then
             link.matchHeight = self:GetChecked()
-            ns.Snap.PushSize(link.to)
+            ns.Snap.ApplyLink(index)
             RefreshWindowPanel()
         end
     end)
@@ -451,10 +448,11 @@ local function RefreshRow(row, index)
         row.Gap:SetText(link and (link.gap or 0) or "")
     end
 
+    local matchFlag = link and ns.Snap.MatchFlag(link)
     row.MatchWidth:SetChecked(link and link.matchWidth or false)
-    row.MatchWidth:SetEnabled(link ~= nil and not isPrimary)
+    row.MatchWidth:SetEnabled(not isPrimary and matchFlag == "matchWidth")
     row.MatchHeight:SetChecked(link and link.matchHeight or false)
-    row.MatchHeight:SetEnabled(link ~= nil and not isPrimary)
+    row.MatchHeight:SetEnabled(not isPrimary and matchFlag == "matchHeight")
     row.Detach:SetEnabled(link ~= nil and not isPrimary)
 
     -- Hiding is the only direction that is clean from addon code; see Windows.Hide.
