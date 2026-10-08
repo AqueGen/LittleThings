@@ -155,90 +155,6 @@ local function GetLinks()
     return ns.charDb.links
 end
 
-local applyingSize = false
-
--- Walks the links pointing at `index` and pushes this window's size onto each
--- one that asked to match an axis, then continues down that window's own
--- dependents.
---
--- The propagation is explicit rather than event-driven on purpose. Setting a
--- frame's size dispatches OnSizeChanged re-entrantly - Blizzard's own ScrollBox
--- nulls its handler during updates for exactly that reason - so the nested
--- event a SetWidth fires is swallowed by the guard below. Relying on it would
--- resize the first window in a chain and silently leave the rest behind.
---
--- A locked window is skipped: the lock means the user asked for that window to
--- stay put, and resizing it from a neighbour would break that promise.
---
--- A size is only set when it differs. Setting one runs the window's ScrollBox
--- update inside our taint (ScrollBox.lua:119-129, 762-792): its data range
--- fields and any rows it acquires are then ours, and every combat refresh
--- logs a warning per row until reload. At login Blizzard's frame cache has
--- already restored the matched sizes, so an equal size must be a no-op or
--- every session would start tainted. Returns whether anything was set.
-local function PushSizeFrom(index, visited)
-    if visited[index] then
-        return false
-    end
-
-    visited[index] = true
-
-    local source = Windows.Get(index)
-    if not source then
-        return false
-    end
-
-    local changed = false
-
-    for otherIndex, link in pairs(GetLinks()) do
-        if link.to == index then
-            local target = Windows.Get(otherIndex)
-            if target and target:CanMoveOrResize() then
-                if link.matchWidth then
-                    local width = Snap.Clamp(source:GetWidth(), Snap.MIN_WIDTH, Snap.MAX_WIDTH)
-                    if math.abs(target:GetWidth() - width) > 0.5 then
-                        target:SetWidth(width)
-                        changed = true
-                    end
-                end
-
-                if link.matchHeight then
-                    local height = Snap.Clamp(source:GetHeight(), Snap.MIN_HEIGHT, Snap.MAX_HEIGHT)
-                    if math.abs(target:GetHeight() - height) > 0.5 then
-                        target:SetHeight(height)
-                        changed = true
-                    end
-                end
-
-                if PushSizeFrom(otherIndex, visited) then
-                    changed = true
-                end
-            end
-        end
-    end
-
-    return changed
-end
-
--- The guard keeps the re-entrant OnSizeChanged events our own SetWidth and
--- SetHeight calls dispatch from starting a second walk on top of this one.
-function Snap.PushSize(index)
-    -- Out of combat only. SetWidth on a session window makes its ScrollBox
-    -- re-run its initializers inside our execution, and in combat those
-    -- compare Secret fields. A resize in combat is a rare gesture anyway.
-    if applyingSize or InCombatLockdown() then
-        return
-    end
-
-    applyingSize = true
-    local changed = PushSizeFrom(index, {})
-    applyingSize = false
-
-    if changed then
-        ns.RequestReload("size")
-    end
-end
-
 -- The gap always separates the two windows, so its sign follows from which
 -- edges were joined rather than being the caller's problem.
 local GAP_DIRECTION = {
@@ -258,11 +174,69 @@ function Snap.OffsetForGap(point, relPoint, gap)
     return direction[1] * gap, direction[2] * gap
 end
 
--- pushSize is passed only from a user gesture. At login this runs from the
--- SetupSessionWindow hook, before Blizzard's frame cache has restored the
--- windows' sizes, so a push here would resize template-sized windows from
--- our stack and taint them; the cache brings the matched sizes back itself.
-function Snap.ApplyLink(index, pushSize)
+-- A matched axis is a second anchor on the far edge, never a size we set.
+-- SetWidth from our code ran the window's ScrollBox update inside our taint
+-- (ScrollBox.lua:119-129, 762-792) and every combat refresh then warned per
+-- row. With both edges anchored the engine sizes the window itself when its
+-- target changes, so Blizzard's resize handle drives the whole chain and none
+-- of our code is on that stack. Only the axis the windows were joined across
+-- can be matched this way.
+local FAR_EDGE = {
+    ["TOPLEFT|BOTTOMLEFT"] = { flag = "matchWidth", point = "TOPRIGHT", relPoint = "BOTTOMRIGHT" },
+    ["BOTTOMLEFT|TOPLEFT"] = { flag = "matchWidth", point = "BOTTOMRIGHT", relPoint = "TOPRIGHT" },
+    ["TOPLEFT|TOPRIGHT"] = { flag = "matchHeight", point = "BOTTOMLEFT", relPoint = "BOTTOMRIGHT" },
+    ["TOPRIGHT|TOPLEFT"] = { flag = "matchHeight", point = "BOTTOMRIGHT", relPoint = "BOTTOMLEFT" },
+}
+
+function Snap.MatchFlag(link)
+    local far = FAR_EDGE[tostring(link.point) .. "|" .. tostring(link.relPoint)]
+    return far and far.flag
+end
+
+function Snap.AnchorPoints(link)
+    local x, y = Snap.OffsetForGap(link.point, link.relPoint, link.gap)
+    local points = { { link.point, link.relPoint, x, y } }
+    local far = FAR_EDGE[tostring(link.point) .. "|" .. tostring(link.relPoint)]
+
+    if far and link[far.flag] then
+        table.insert(points, { far.point, far.relPoint, x, y })
+    end
+
+    return points
+end
+
+-- The other axis has no anchor that can carry it, so it is a one-off copy of
+-- the target's size. That SetWidth/SetHeight runs the window's ScrollBox
+-- update in our taint, so the caller offers a reload; the frame cache keeps
+-- the size afterwards because linked windows are user-placed. Returns
+-- whether a size was set.
+function Snap.CopyCrossSize(index)
+    local link = GetLinks()[index]
+    local window = Windows.Get(index)
+    local target = link and Windows.Get(link.to)
+
+    if not window or not target or not window:CanMoveOrResize() or InCombatLockdown() then
+        return false
+    end
+
+    local changed = false
+
+    if link.matchWidth and Snap.MatchFlag(link) ~= "matchWidth"
+        and math.abs(window:GetWidth() - target:GetWidth()) > 0.5 then
+        window:SetWidth(target:GetWidth())
+        changed = true
+    end
+
+    if link.matchHeight and Snap.MatchFlag(link) ~= "matchHeight"
+        and math.abs(window:GetHeight() - target:GetHeight()) > 0.5 then
+        window:SetHeight(target:GetHeight())
+        changed = true
+    end
+
+    return changed
+end
+
+function Snap.ApplyLink(index)
     local link = GetLinks()[index]
     local window = Windows.Get(index)
     local target = link and Windows.Get(link.to)
@@ -282,51 +256,20 @@ function Snap.ApplyLink(index, pushSize)
     end
 
     window:ClearAllPoints()
-    local x, y = Snap.OffsetForGap(link.point, link.relPoint, link.gap)
-    window:SetPoint(link.point, target, link.relPoint, x, y)
+    for _, anchor in ipairs(Snap.AnchorPoints(link)) do
+        window:SetPoint(anchor[1], target, anchor[2], anchor[3], anchor[4])
+    end
 
     -- User-placed on purpose: Blizzard's frame cache saves only such frames,
-    -- and it saves their size along with their position - which is how a
-    -- matched size comes back after a reload without us setting it. The
-    -- cached absolute point is harmless: this anchor goes back on top of it.
+    -- and it saves their size along with their position, so a reload brings
+    -- the matched size back before these anchors restate it. The cached
+    -- absolute point is harmless: the anchors go back on top of it.
     window:SetUserPlaced(true)
-
-    if pushSize then
-        Snap.PushSize(link.to)
-    end
 end
 
 function Snap.ApplyAll()
     for _, index in ipairs(Snap.ApplyOrder(GetLinks())) do
         Snap.ApplyLink(index)
-    end
-end
-
--- Set once the login pass has re-applied the anchors. Until then a layout
--- change may only move windows, never size them - see OnLayoutChanged.
-Snap.loginSettled = false
-
--- Switching the Edit Mode layout moves and resizes the DamageMeter system
--- frame itself (EditModeSystemTemplates.lua:350-373, 3499-3507). Window 1 is
--- anchored to that frame (DamageMeter.lua:312-314) and so follows it, but
--- windows 2 and 3 are anchored to UIParent (DamageMeter.lua:318) and nothing
--- re-anchors them: SetupSessionWindow does not run on a layout change.
---
--- The size is the half the existing hooks cannot catch. A layout assigned to a
--- specialization switches with EditModeManagerFrame:IsEditModeActive() false
--- (EditModeManager.lua:193-199) and without Blizzard's isResizing flag, so
--- OnSizeChanged ignores window 1's new size and a matched chain is left at the
--- old one.
-function Snap.OnLayoutChanged()
-    Snap.ApplyAll()
-
-    -- Edit Mode publishes its layout during login too, and pushing a size then
-    -- is what commit 70fa60f had to undo: the frame cache has not restored the
-    -- windows' sizes yet, so every matched link would resize a template-sized
-    -- window from our stack and taint the session from its first fight.
-    -- Anchors are clean at any time; sizes wait for the login pass.
-    if Snap.loginSettled then
-        Snap.PushSize(1)
     end
 end
 
@@ -346,15 +289,15 @@ function Snap.SetLink(index, link)
     end
 
     GetLinks()[index] = link
-    Snap.ApplyLink(index, true)
+    Snap.ApplyLink(index)
 
     return true
 end
 
 -- Dropping a link has to hand the window back its own position. It is still
 -- anchored to its old target, so without this it would keep following that
--- window until the next reload. The size is left alone: the frame keeps it,
--- and setting it from here would run the ScrollBox update in our taint.
+-- window until the next reload. The size is not set from here: that would run
+-- the ScrollBox update in our taint.
 function Snap.ClearLink(index)
     local window = Windows.Get(index)
 
@@ -495,30 +438,18 @@ function Snap.Enable()
     -- OnDragStop script, and whether `method="OnDragStop"` resolves the
     -- function at load or at call time is not determinable from source. A
     -- script hook is correct under either.
-    -- Only a size change the player is making by hand propagates: Blizzard
-    -- flags a secondary window with isResizing while its handle is dragged
-    -- (DamageMeterSessionWindow.lua:536), and window 1 is sized in Edit Mode.
-    -- The other OnSizeChanged sources - the frame cache restoring sizes at
-    -- login, SetupSessionWindow - must not resize anything from our stack.
-    local function OnSizeChanged(window, index)
-        if window.isResizing or (index == 1 and EditModeManagerFrame:IsEditModeActive()) then
-            Snap.PushSize(index)
-        end
-    end
+    local hooked = {}
 
     local function AttachWindow(window, index)
+        hooked[window] = true
         window:HookScript("OnDragStop", OnDragStop)
         window:HookScript("OnDragStart", function() OnDragStart(window, index) end)
-
-        window.dmtSizeHooked = true
-        window:HookScript("OnSizeChanged", function() OnSizeChanged(window, index) end)
     end
 
     Windows.ForEach(AttachWindow)
 
-    -- Windows created later, through Show new window, need the same size and
-    -- drag hooks. DamageMeter already exists, so this one must be an instance
-    -- hook.
+    -- Windows created later, through Show new window, need the same drag
+    -- hooks. DamageMeter already exists, so this one must be an instance hook.
     --
     -- SetupSessionWindow also re-anchors the window to UIParent at a fixed
     -- offset every time it runs, including when it is reusing a frame that was
@@ -527,13 +458,8 @@ function Snap.Enable()
     -- at login gets its retry the moment that target comes back.
     ns.HookInstance(DamageMeter, "SetupSessionWindow", function(_, windowDataIndex, windowData)
         local window = windowData.sessionWindow
-        if window and not window.dmtSizeHooked then
-            window.dmtSizeHooked = true
-
-            window:HookScript("OnSizeChanged", function() OnSizeChanged(window, windowDataIndex) end)
-
-            window:HookScript("OnDragStop", OnDragStop)
-            window:HookScript("OnDragStart", function() OnDragStart(window, windowDataIndex) end)
+        if window and not hooked[window] then
+            AttachWindow(window, windowDataIndex)
         end
 
         Snap.ApplyAll()
@@ -551,20 +477,13 @@ function Snap.Enable()
 
     -- Fires for a manual switch in the Edit Mode UI and for a layout a
     -- specialization change brings in, which is the case no other hook sees.
+    -- Edit Mode re-anchors and resizes the system frame while handling it
+    -- (EditModeSystemTemplates.lua:350-373, 3499-3507); the next frame is when
+    -- our anchors go on top, and a matched chain takes the new size from them.
     reapply:RegisterEvent("EDIT_MODE_LAYOUTS_UPDATED")
 
-    reapply:SetScript("OnEvent", function(_, event)
-        if event == "EDIT_MODE_LAYOUTS_UPDATED" then
-            -- Edit Mode re-anchors and resizes the system frame while handling
-            -- this event; the next frame is when our anchors go on top.
-            C_Timer.After(0, Snap.OnLayoutChanged)
-            return
-        end
-
-        C_Timer.After(0, function()
-            Snap.ApplyAll()
-            Snap.loginSettled = true
-        end)
+    reapply:SetScript("OnEvent", function()
+        C_Timer.After(0, Snap.ApplyAll)
     end)
 end
 

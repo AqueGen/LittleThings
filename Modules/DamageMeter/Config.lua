@@ -206,9 +206,6 @@ local function CreateSizeBox(row, index, dimension)
             -- the Edit Mode routing - so this box does not need to know which
             -- kind of window it is editing.
             if ns.Windows.SetSize(index, width, height) then
-                -- The OnSizeChanged hook pushes only hand resizes, so a typed
-                -- size carries its matched neighbours along from here.
-                ns.Snap.PushSize(index)
                 ns.RequestReload("size")
             end
         end
@@ -281,26 +278,18 @@ local function CreateRow(parent, index)
     row.Height = CreateSizeBox(row, index, "height")
     row.Height:SetPoint("LEFT", row.Width, "RIGHT", 8, 0)
 
-    -- The same lock the window's own gear dropdown offers, brought here so the
-    -- page that sets a size can also stop that size being dragged away.
-    -- SetSessionWindowLocked rebuilds the gear menu's generator, which from
-    -- our stack is a tainted closure that errors if that menu is opened in
-    -- combat before a reload. No prompt here by the user's decision: a lock is
-    -- set once and the gear menu is rarely opened mid-fight. Blizzard's own
-    -- lock click rebuilds it clean, and so does a reload.
-    row.Lock = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-    row.Lock:SetPoint("LEFT", row.Height, "RIGHT", 16, 0)
-    row.Lock.Text:SetText("lock")
-    row.Lock:SetScript("OnClick", function(self)
-        local window = ns.Windows.Get(index)
-        if window then
-            window:GetDamageMeterOwner():SetSessionWindowLocked(window, self:GetChecked())
-        end
-        RefreshWindowPanel()
-    end)
+    -- Shown, not offered: locking from our stack writes the window's isLocked,
+    -- its OnUpdate reads it through CanMoveOrResize and then writes
+    -- onUpdateReasons, and every combat start trips over that in
+    -- ClearSessionTimer (DamageMeterSessionWindow.lua:232, 267, 930) until a
+    -- reload. The gear menu's own Lock window is clean.
+    row.Locked = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    row.Locked:SetPoint("LEFT", row.Height, "RIGHT", 16, 0)
+    row.Locked:SetWidth(50)
+    row.Locked:SetJustifyH("LEFT")
 
     row.Note = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    row.Note:SetPoint("LEFT", row.Lock.Text, "RIGHT", 16, 0)
+    row.Note:SetPoint("LEFT", row.Locked, "RIGHT", 16, 0)
 
     row.Link = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     row.Link:SetPoint("TOPLEFT", row.Shown, "BOTTOMLEFT", 0, -4)
@@ -334,31 +323,35 @@ local function CreateRow(parent, index)
         RefreshWindowPanel()
     end)
 
+    -- The axis the windows are joined across follows through anchors and is
+    -- clean; the other one is a one-off copy that needs a reload.
+    local function SetMatch(flag, checked)
+        local link = ns.charDb.links[index]
+        if not link then
+            return
+        end
+
+        link[flag] = checked
+        ns.Snap.ApplyLink(index)
+
+        if checked and ns.Snap.CopyCrossSize(index) then
+            ns.RequestReload("size")
+        end
+
+        RefreshWindowPanel()
+    end
+
     -- UICheckButtonTemplate already ships the caption font string as Text,
     -- anchored to the right of the box, so it only needs its text set.
     row.MatchWidth = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
     row.MatchWidth:SetPoint("LEFT", row.Gap, "RIGHT", 16, 0)
     row.MatchWidth.Text:SetText("match width")
-    row.MatchWidth:SetScript("OnClick", function(self)
-        local link = ns.charDb.links[index]
-        if link then
-            link.matchWidth = self:GetChecked()
-            ns.Snap.PushSize(link.to)
-            RefreshWindowPanel()
-        end
-    end)
+    row.MatchWidth:SetScript("OnClick", function(self) SetMatch("matchWidth", self:GetChecked()) end)
 
     row.MatchHeight = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
     row.MatchHeight:SetPoint("LEFT", row.MatchWidth.Text, "RIGHT", 20, 0)
     row.MatchHeight.Text:SetText("match height")
-    row.MatchHeight:SetScript("OnClick", function(self)
-        local link = ns.charDb.links[index]
-        if link then
-            link.matchHeight = self:GetChecked()
-            ns.Snap.PushSize(link.to)
-            RefreshWindowPanel()
-        end
-    end)
+    row.MatchHeight:SetScript("OnClick", function(self) SetMatch("matchHeight", self:GetChecked()) end)
 
     row.Detach = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
     row.Detach:SetSize(80, 22)
@@ -426,15 +419,10 @@ local function RefreshRow(row, index)
         row.Height:SetText(shown and math.floor(window:GetHeight() + 0.5) or "")
     end
 
-    -- Window 1 is never lockable: Blizzard's owner refuses to move or resize it
-    -- whatever the flag says, so offering the box would promise nothing.
-    row.Lock:SetChecked(shown and window:IsLocked() or false)
-    row.Lock:SetEnabled(shown and not isPrimary)
+    row.Locked:SetText((shown and not isPrimary and window:IsLocked()) and "locked" or "")
 
     if isPrimary then
         row.Note:SetText("Size comes from Edit Mode.")
-    elseif not shown then
-        row.Note:SetText("Ticking Shown reloads the UI afterwards - see the tooltip.")
     else
         row.Note:SetText("")
     end
@@ -497,8 +485,14 @@ function Config.Pages(modulePage)
     -- A plain frame, not SettingsListTemplate: the canvas subcategory sizes the
     -- frame to fill the panel, and the template would add a list we do not use.
     windowPanel = CreateFrame("Frame")
-    windowPanel:SetSize(600, 240)
+    windowPanel:SetSize(600, 280)
     windowPanel:Hide()
+
+    windowPanel.ReloadNote = windowPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    windowPanel.ReloadNote:SetPoint("TOPLEFT", 20, -16)
+    windowPanel.ReloadNote:SetWidth(560)
+    windowPanel.ReloadNote:SetJustifyH("LEFT")
+    windowPanel.ReloadNote:SetText("Shown, the size boxes, and match height on stacked windows (match width on side-by-side ones) go through Blizzard's code and need a /reload afterwards - the addon offers one. Until then the meter can log errors in combat. Sizes stay as set after the reload. Dragging, snapping, the gap and the other match are always safe.")
 
     -- Rows are pooled by window index.
     windowPanel.rows = {}
@@ -512,34 +506,11 @@ function Config.Pages(modulePage)
         end
 
         row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -20 - (position - 1) * 70)
+        row:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -60 - (position - 1) * 70)
         row:Show()
 
         return row
     end
-
-    -- Window 1 is skipped: its owner refuses the lock regardless.
-    local function SetAllLocked(locked)
-        ns.Windows.ForEach(function(window, index)
-            if index ~= 1 then
-                window:GetDamageMeterOwner():SetSessionWindowLocked(window, locked)
-            end
-        end)
-
-        RefreshWindowPanel()
-    end
-
-    windowPanel.LockAll = CreateFrame("Button", nil, windowPanel, "UIPanelButtonTemplate")
-    windowPanel.LockAll:SetSize(100, 22)
-    windowPanel.LockAll:SetPoint("BOTTOMLEFT", windowPanel, "BOTTOMLEFT", 20, 20)
-    windowPanel.LockAll:SetText("Lock all")
-    windowPanel.LockAll:SetScript("OnClick", function() SetAllLocked(true) end)
-
-    windowPanel.UnlockAll = CreateFrame("Button", nil, windowPanel, "UIPanelButtonTemplate")
-    windowPanel.UnlockAll:SetSize(100, 22)
-    windowPanel.UnlockAll:SetPoint("LEFT", windowPanel.LockAll, "RIGHT", 8, 0)
-    windowPanel.UnlockAll:SetText("Unlock all")
-    windowPanel.UnlockAll:SetScript("OnClick", function() SetAllLocked(false) end)
 
     windowPanel:SetScript("OnShow", RefreshWindowPanel)
 

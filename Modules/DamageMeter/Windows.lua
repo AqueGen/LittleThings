@@ -139,9 +139,8 @@ local function SetPrimarySize(width, height)
 end
 
 -- Routes window 1 through Edit Mode (the only path that can move its size)
--- and everything else through SetSize. Either path trips OnSizeChanged, so
--- Snap.PushSize still propagates a matched size the same way a mouse resize
--- would.
+-- and everything else through SetSize. Matched neighbours follow through
+-- their anchors, as they do for a mouse resize.
 function Windows.SetSize(index, width, height)
     local window = Windows.Get(index)
 
@@ -164,6 +163,10 @@ function Windows.SetSize(index, width, height)
     end
 
     window:SetSize(width, height)
+
+    -- The frame cache saves only user-placed frames, and a window never
+    -- dragged is not one, so without this a typed size is lost on reload.
+    window:SetUserPlaced(true)
 
     return true
 end
