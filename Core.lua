@@ -580,6 +580,45 @@ function ns.Diagnose()
     end
 end
 
+local function ReportTainted(label, tbl)
+    local found = 0
+
+    for key in pairs(tbl) do
+        local ok, secure, taintedBy = pcall(issecurevariable, tbl, key)
+        if ok and not secure then
+            found = found + 1
+            ns.Print(("%s.%s tainted by %s"):format(label, tostring(key), tostring(taintedBy)))
+        end
+    end
+
+    return found
+end
+
+-- Names every field in the meter's windows that addon code has written, so a
+-- gesture can be checked right after it instead of waiting for a fight to fail.
+function ns.TaintReport()
+    local windowDataList = DamageMeter:GetWindowDataList()
+    local found = ReportTainted("windowDataList", windowDataList)
+
+    for index, windowData in pairs(windowDataList) do
+        found = found + ReportTainted("windowData" .. index, windowData)
+
+        local window = windowData.sessionWindow
+        if window then
+            found = found + ReportTainted("window" .. index, window)
+            found = found + ReportTainted("window" .. index .. ".ScrollBox", window:GetScrollBox())
+
+            if window.onUpdateReasons then
+                found = found + ReportTainted("window" .. index .. ".onUpdateReasons", window.onUpdateReasons)
+            end
+        end
+    end
+
+    if found == 0 then
+        ns.Print("no tainted fields in the meter's windows")
+    end
+end
+
 local function HandleSlashCommand(input)
     local command = string.lower(string.trim(input or ""))
     local meter = ns.db.damageMeter and ns.IsAvailable()
@@ -594,11 +633,13 @@ local function HandleSlashCommand(input)
         ns.Probe()
     elseif command == "diag" then
         ns.Diagnose()
+    elseif command == "taint" then
+        ns.TaintReport()
     elseif command == "snap" or command == "format" then
         ns.db[command] = not ns.db[command]
         ns.Print(command .. ": " .. tostring(ns.db[command]))
     else
-        ns.Print("commands: cpu, diag, probe, format, snap")
+        ns.Print("commands: cpu, diag, probe, taint, format, snap")
     end
 end
 
