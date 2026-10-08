@@ -115,34 +115,19 @@ describe("Realms.Lower", function()
 end)
 
 describe("Link.Hub", function()
-  local BASE = "https://brag-sheet.example.workers.dev"
+  local BASE = "https://brag-sheet.aquegen.workers.dev"
 
   it("builds the summary page address from the same slug and name", function()
-    assert.equals(BASE .. "/eu/tarren-mill/cutlers", Link.Hub("Cutlers", "Tarren Mill", EU, BASE))
-    assert.equals(BASE .. "/eu/gordunni/ктулху", Link.Hub("Ктулху", "Гордунни", EU, BASE))
-    assert.equals(BASE .. "/us/silvermoon/medvedyk", Link.Hub("Medvedyk", "Silvermoon", US, BASE))
-  end)
-
-  it("tolerates spaces and trailing slashes around the base", function()
-    assert.equals(BASE .. "/eu/silvermoon/medvedyk", Link.Hub("Medvedyk", "Silvermoon", EU, "  " .. BASE .. "// "))
-  end)
-
-  it("refuses a base that is not an https address", function()
-    for _, bad in ipairs({ "", "   ", "http://x.dev", "javascript:alert(1)", "https://", "https://a b.dev", 42 }) do
-      local url, problem = Link.Hub("Medvedyk", "Silvermoon", EU, bad)
-      assert.is_nil(url)
-      assert.equals("no summary site set", problem)
-    end
-    local url, problem = Link.Hub("Medvedyk", "Silvermoon", EU, nil)
-    assert.is_nil(url)
-    assert.equals("no summary site set", problem)
+    assert.equals(BASE .. "/eu/tarren-mill/cutlers", Link.Hub("Cutlers", "Tarren Mill", EU))
+    assert.equals(BASE .. "/eu/gordunni/ктулху", Link.Hub("Ктулху", "Гордунни", EU))
+    assert.equals(BASE .. "/us/silvermoon/medvedyk", Link.Hub("Medvedyk", "Silvermoon", US))
   end)
 
   it("says what is missing the same way Link.For does", function()
-    local url, problem = Link.Hub("Medvedyk", nil, EU, BASE)
+    local url, problem = Link.Hub("Medvedyk", nil, EU)
     assert.is_nil(url)
     assert.equals("no realm for Medvedyk", problem)
-    url, problem = Link.Hub("Medvedyk", "Silvermoon", 99, BASE)
+    url, problem = Link.Hub("Medvedyk", "Silvermoon", 99)
     assert.is_nil(url)
     assert.equals("unknown region", problem)
   end)

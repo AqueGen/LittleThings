@@ -47,20 +47,12 @@ function Link.For(name, realm, regionID, zone)
   return url .. "?zone=" .. tostring(zone or Link.ZONE)
 end
 
-function Link.HubBase(text)
-  if type(text) ~= "string" then return nil end
-  local base = string.gsub(string.match(text, "^%s*(.-)%s*$"), "/+$", "")
-  if string.find(base, "%s") or not string.match(base, "^https://[^%s/]+") then return nil end
-  return base
-end
+Link.HUB = "https://brag-sheet.aquegen.workers.dev"
 
-function Link.Hub(name, realm, regionID, base)
-  base = Link.HubBase(base)
-  if not base then return nil, "no summary site set" end
-
+function Link.Hub(name, realm, regionID)
   local path, problem = parts(name, realm, regionID)
   if not path then return nil, problem end
-  return base .. "/" .. path
+  return Link.HUB .. "/" .. path
 end
 
 if ns then ns.Link = Link end

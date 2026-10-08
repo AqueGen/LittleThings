@@ -47,9 +47,7 @@ local function list(region, members, max, numbered)
   return out
 end
 
-function CompareUrl.Build(base, regionID, keyLevel, group, applicants)
-  base = Link.HubBase(base)
-  if not base then return nil, "no summary site set" end
+function CompareUrl.Build(regionID, keyLevel, group, applicants)
   local region = REGIONS[regionID or 0]
   if not region then return nil, "unknown region" end
   local p = list(region, applicants or {}, CompareUrl.MAX, true)
@@ -59,7 +57,7 @@ function CompareUrl.Build(base, regionID, keyLevel, group, applicants)
   if upTo99(keyLevel) then query[#query + 1] = "key=" .. keyLevel end
   if #g > 0 then query[#query + 1] = "g=" .. table.concat(g, ",") end
   query[#query + 1] = "p=" .. table.concat(p, ",")
-  return base .. "/compare?" .. table.concat(query, "&"), nil, #p
+  return Link.HUB .. "/compare?" .. table.concat(query, "&"), nil, #p
 end
 
 if ns then ns.CompareUrl = CompareUrl end

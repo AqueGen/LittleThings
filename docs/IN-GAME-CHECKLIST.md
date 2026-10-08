@@ -161,3 +161,9 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Sign up to a group: Blizzard's dialog opens with the roles the icons show. With PGF's skip-dialog on, the application goes out with those roles (the group's applicant list shows them).
 - [ ] Click a role in combat: either it works, or chat says the role icons were turned off and the switch is off. BugSack has no "Interface action failed" either way.
 - [ ] Switch off: the icons go at once.
+
+## 14. Summary site links
+
+- [ ] Fresh install or a profile that never had it: Group finder page shows Summary site links unticked; no Compare applicants button on a Mythic+ listing and no Summary page entry in player menus.
+- [ ] Tick it: the button appears on a Mythic+ listing at once, and right-clicking a player shows Summary page under LittleThings. No Set address button anywhere.
+- [ ] Press Compare applicants: the popup holds a full https://brag-sheet.aquegen.workers.dev/compare?... link; pasted into the browser it starts checking the first batch (with a saved WCL key), and Open link from clipboard on an open compare page loads it too.
