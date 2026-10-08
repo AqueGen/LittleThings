@@ -20,13 +20,7 @@ Link.ZONE_NAME = "Mythic+ Season 2"
 local REGIONS = { [1] = "us", [2] = "kr", [3] = "eu", [4] = "tw", [5] = "cn" }
 Link.REGIONS = REGIONS
 
----@param name string
----@param realm string
----@param regionID number|nil @defaults to the client's own region
----@param zone number|nil @defaults to Link.ZONE, false for no zone at all
----@return string|nil url
----@return string|nil problem @why there is no url
-function Link.For(name, realm, regionID, zone)
+local function parts(name, realm, regionID)
   if type(name) ~= "string" or name == "" then return nil, "no character name" end
 
   local slug = Realms.SlugFor(realm)
@@ -35,15 +29,38 @@ function Link.For(name, realm, regionID, zone)
   local region = REGIONS[regionID or 0]
   if not region then return nil, "unknown region" end
 
-  -- The name is lowercased the same way the realm is: the site accepts either
-  -- case, and matching what it canonicalises to keeps the copied link identical
-  -- to the one the reader would get from the site itself.
-  local character = Realms.Lower(name)
+  return string.format("%s/%s/%s", region, slug, Realms.Lower(name))
+end
 
-  local url = string.format("https://www.warcraftlogs.com/character/%s/%s/%s",
-    region, slug, character)
+---@param name string
+---@param realm string
+---@param regionID number|nil @defaults to the client's own region
+---@param zone number|nil @defaults to Link.ZONE, false for no zone at all
+---@return string|nil url
+---@return string|nil problem @why there is no url
+function Link.For(name, realm, regionID, zone)
+  local path, problem = parts(name, realm, regionID)
+  if not path then return nil, problem end
+
+  local url = "https://www.warcraftlogs.com/character/" .. path
   if zone == false then return url end
   return url .. "?zone=" .. tostring(zone or Link.ZONE)
+end
+
+function Link.HubBase(text)
+  if type(text) ~= "string" then return nil end
+  local base = string.gsub(string.match(text, "^%s*(.-)%s*$"), "/+$", "")
+  if string.find(base, "%s") or not string.match(base, "^https://[^%s/]+") then return nil end
+  return base
+end
+
+function Link.Hub(name, realm, regionID, base)
+  base = Link.HubBase(base)
+  if not base then return nil, "no summary site set" end
+
+  local path, problem = parts(name, realm, regionID)
+  if not path then return nil, problem end
+  return base .. "/" .. path
 end
 
 if ns then ns.Link = Link end

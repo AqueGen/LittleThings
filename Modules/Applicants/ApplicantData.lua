@@ -102,7 +102,7 @@ end
 local UNITS = { "player", "party1", "party2", "party3", "party4" }
 
 function Data.Group(listing)
-    local group = { hasBloodlust = false, hasBattleRes = false }
+    local group = { hasBloodlust = false, hasBattleRes = false, members = {} }
     if listing.fiveMan then
         group.open = { TANK = 1, HEALER = 1, DAMAGER = 3 }
     end
@@ -117,6 +117,10 @@ function Data.Group(listing)
             end
             if group.open and group.open[role] then
                 group.open[role] = math.max(0, group.open[role] - 1)
+            end
+            local name, realm = UnitName(unit)
+            if not AnySecret(name, realm, class, role) and type(name) == "string" then
+                group.members[#group.members + 1] = { name = name, realm = (realm and realm ~= "") and realm or GetNormalizedRealmName(), class = class, role = role }
             end
         end
     end
