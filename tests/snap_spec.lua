@@ -321,6 +321,48 @@ describe("Snap.AnchorPoints", function()
     end)
 end)
 
+describe("Snap.CopyCrossSize", function()
+    local function FakeWindow(width, height)
+        local window = { width = width, height = height }
+        function window:GetWidth() return self.width end
+        function window:GetHeight() return self.height end
+        function window:SetWidth(value) self.width = value end
+        function window:SetHeight(value) self.height = value end
+        function window:CanMoveOrResize() return true end
+        return window
+    end
+
+    local windows
+
+    before_each(function()
+        windows = { [1] = FakeWindow(300, 170), [2] = FakeWindow(300, 120) }
+        ns.Windows.Get = function(index) return windows[index] end
+        _G.InCombatLockdown = function() return false end
+    end)
+
+    it("copies the target's height onto a stacked window", function()
+        ns.charDb = { links = { [2] = { to = 1, point = "BOTTOMLEFT", relPoint = "TOPLEFT", matchHeight = true } } }
+
+        assert.is_true(Snap.CopyCrossSize(2))
+        assert.are.equal(170, windows[2].height)
+    end)
+
+    it("leaves the joined axis to the anchors", function()
+        windows[2].width = 250
+        ns.charDb = { links = { [2] = { to = 1, point = "BOTTOMLEFT", relPoint = "TOPLEFT", matchWidth = true } } }
+
+        assert.is_false(Snap.CopyCrossSize(2))
+        assert.are.equal(250, windows[2].width)
+    end)
+
+    it("sets nothing when the size already agrees", function()
+        windows[2].height = 170
+        ns.charDb = { links = { [2] = { to = 1, point = "BOTTOMLEFT", relPoint = "TOPLEFT", matchHeight = true } } }
+
+        assert.is_false(Snap.CopyCrossSize(2))
+    end)
+end)
+
 describe("Snap.MatchFlag", function()
     it("names width for a window joined above or below", function()
         assert.are.equal("matchWidth", Snap.MatchFlag({ point = "TOPLEFT", relPoint = "BOTTOMLEFT" }))

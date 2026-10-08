@@ -164,6 +164,10 @@ function Windows.SetSize(index, width, height)
 
     window:SetSize(width, height)
 
+    -- The frame cache saves only user-placed frames, and a window never
+    -- dragged is not one, so without this a typed size is lost on reload.
+    window:SetUserPlaced(true)
+
     return true
 end
 

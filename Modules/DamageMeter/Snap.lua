@@ -205,6 +205,37 @@ function Snap.AnchorPoints(link)
     return points
 end
 
+-- The other axis has no anchor that can carry it, so it is a one-off copy of
+-- the target's size. That SetWidth/SetHeight runs the window's ScrollBox
+-- update in our taint, so the caller offers a reload; the frame cache keeps
+-- the size afterwards because linked windows are user-placed. Returns
+-- whether a size was set.
+function Snap.CopyCrossSize(index)
+    local link = GetLinks()[index]
+    local window = Windows.Get(index)
+    local target = link and Windows.Get(link.to)
+
+    if not window or not target or not window:CanMoveOrResize() or InCombatLockdown() then
+        return false
+    end
+
+    local changed = false
+
+    if link.matchWidth and Snap.MatchFlag(link) ~= "matchWidth"
+        and math.abs(window:GetWidth() - target:GetWidth()) > 0.5 then
+        window:SetWidth(target:GetWidth())
+        changed = true
+    end
+
+    if link.matchHeight and Snap.MatchFlag(link) ~= "matchHeight"
+        and math.abs(window:GetHeight() - target:GetHeight()) > 0.5 then
+        window:SetHeight(target:GetHeight())
+        changed = true
+    end
+
+    return changed
+end
+
 function Snap.ApplyLink(index)
     local link = GetLinks()[index]
     local window = Windows.Get(index)

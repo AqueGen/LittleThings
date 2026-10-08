@@ -323,31 +323,35 @@ local function CreateRow(parent, index)
         RefreshWindowPanel()
     end)
 
+    -- The axis the windows are joined across follows through anchors and is
+    -- clean; the other one is a one-off copy that needs a reload.
+    local function SetMatch(flag, checked)
+        local link = ns.charDb.links[index]
+        if not link then
+            return
+        end
+
+        link[flag] = checked
+        ns.Snap.ApplyLink(index)
+
+        if checked and ns.Snap.CopyCrossSize(index) then
+            ns.RequestReload("size")
+        end
+
+        RefreshWindowPanel()
+    end
+
     -- UICheckButtonTemplate already ships the caption font string as Text,
     -- anchored to the right of the box, so it only needs its text set.
     row.MatchWidth = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
     row.MatchWidth:SetPoint("LEFT", row.Gap, "RIGHT", 16, 0)
     row.MatchWidth.Text:SetText("match width")
-    row.MatchWidth:SetScript("OnClick", function(self)
-        local link = ns.charDb.links[index]
-        if link then
-            link.matchWidth = self:GetChecked()
-            ns.Snap.ApplyLink(index)
-            RefreshWindowPanel()
-        end
-    end)
+    row.MatchWidth:SetScript("OnClick", function(self) SetMatch("matchWidth", self:GetChecked()) end)
 
     row.MatchHeight = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
     row.MatchHeight:SetPoint("LEFT", row.MatchWidth.Text, "RIGHT", 20, 0)
     row.MatchHeight.Text:SetText("match height")
-    row.MatchHeight:SetScript("OnClick", function(self)
-        local link = ns.charDb.links[index]
-        if link then
-            link.matchHeight = self:GetChecked()
-            ns.Snap.ApplyLink(index)
-            RefreshWindowPanel()
-        end
-    end)
+    row.MatchHeight:SetScript("OnClick", function(self) SetMatch("matchHeight", self:GetChecked()) end)
 
     row.Detach = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
     row.Detach:SetSize(80, 22)
@@ -419,8 +423,6 @@ local function RefreshRow(row, index)
 
     if isPrimary then
         row.Note:SetText("Size comes from Edit Mode.")
-    elseif not shown then
-        row.Note:SetText("Ticking Shown reloads the UI afterwards - see the tooltip.")
     else
         row.Note:SetText("")
     end
@@ -437,11 +439,10 @@ local function RefreshRow(row, index)
         row.Gap:SetText(link and (link.gap or 0) or "")
     end
 
-    local matchFlag = link and ns.Snap.MatchFlag(link)
     row.MatchWidth:SetChecked(link and link.matchWidth or false)
-    row.MatchWidth:SetEnabled(not isPrimary and matchFlag == "matchWidth")
+    row.MatchWidth:SetEnabled(link ~= nil and not isPrimary)
     row.MatchHeight:SetChecked(link and link.matchHeight or false)
-    row.MatchHeight:SetEnabled(not isPrimary and matchFlag == "matchHeight")
+    row.MatchHeight:SetEnabled(link ~= nil and not isPrimary)
     row.Detach:SetEnabled(link ~= nil and not isPrimary)
 
     -- Hiding is the only direction that is clean from addon code; see Windows.Hide.
@@ -484,8 +485,14 @@ function Config.Pages(modulePage)
     -- A plain frame, not SettingsListTemplate: the canvas subcategory sizes the
     -- frame to fill the panel, and the template would add a list we do not use.
     windowPanel = CreateFrame("Frame")
-    windowPanel:SetSize(600, 240)
+    windowPanel:SetSize(600, 280)
     windowPanel:Hide()
+
+    windowPanel.ReloadNote = windowPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    windowPanel.ReloadNote:SetPoint("TOPLEFT", 20, -16)
+    windowPanel.ReloadNote:SetWidth(560)
+    windowPanel.ReloadNote:SetJustifyH("LEFT")
+    windowPanel.ReloadNote:SetText("Shown, the size boxes, and match height on stacked windows (match width on side-by-side ones) go through Blizzard's code and need a /reload afterwards - the addon offers one. Until then the meter can log errors in combat. Sizes stay as set after the reload. Dragging, snapping, the gap and the other match are always safe.")
 
     -- Rows are pooled by window index.
     windowPanel.rows = {}
@@ -499,7 +506,7 @@ function Config.Pages(modulePage)
         end
 
         row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -20 - (position - 1) * 70)
+        row:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -60 - (position - 1) * 70)
         row:Show()
 
         return row

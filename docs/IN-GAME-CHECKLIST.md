@@ -35,7 +35,9 @@ Setup: `/reload`, hit a target dummy so the meter has data, keep BugSack open. *
 - [ ] **With a matched link in place, `/reload`, touch nothing, fight**: no reload popup at login and BugSack stays empty. This is the case that used to taint every session.
 - [ ] **Resizing window 1 or 2 by its handle while a neighbour matches it shows no reload popup, and the next fight leaves BugSack empty** - the matched size comes from anchors, not from our code.
 - [ ] A matched window's own handle: only the free axis resizes (width is held by the anchors when matched by width). Detaching it keeps a sensible size - note any jump to an old width.
-- [ ] Unticking match width on the page frees the width; ticking it again snaps it back to the target's width. The other axis's box is greyed out.
+- [ ] Unticking match width on the page frees the width; ticking it again snaps it back to the target's width.
+- [ ] Window 2 stacked on window 1, tick match height: window 2 takes window 1's height at once and the reload popup appears. After the reload the height is still the same and the next fight leaves BugSack empty.
+- [ ] Type a size for a window that was never dragged, reload: the size is still there.
 
 ## 3a. Following an Edit Mode layout switch
 
