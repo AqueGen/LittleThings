@@ -43,7 +43,7 @@ local function applications()
 end
 
 local function wanted()
-    if not (ns.db and ns.IsOn("compareButton") and ns.Link.HubBase(ns.db.logLinkHub)) then return false end
+    if not (ns.db and ns.IsOn("summarySite")) then return false end
     local listing = ns.ApplicantData.Listing()
     return listing ~= nil and listing.isMythicPlus
 end
@@ -60,7 +60,7 @@ local function onClick()
     local key = C_MythicPlus.GetOwnedKeystoneLevel()
     local group = ns.ApplicantData.Group(ns.ApplicantData.Listing() or {})
     local picked, dropped = ns.ComparePick.Pick(applications(), group.open)
-    local url, problem, count = ns.CompareUrl.Build(ns.db.logLinkHub, GetCurrentRegion(), key, group.members, picked)
+    local url, problem, count = ns.CompareUrl.Build(GetCurrentRegion(), key, group.members, picked)
     if not url and #picked == 0 and dropped > 0 then problem = "no applicant fits the open roles" end
     local note = dropped > 0 and string.format(", %d dropped: role not needed", dropped) or ""
     ns.CopyLink(url, problem, count and string.format("Compare page for %d of %d applicants%s", count, #picked + dropped, note))
@@ -88,6 +88,5 @@ function Compare.OnSwitch()
 end
 
 Compare.applications = applications
-ns.RefreshCompareButton = refresh
-Compare.key = "compareButton"
+Compare.key = "summarySite"
 ns.RegisterModule("Compare", Compare)

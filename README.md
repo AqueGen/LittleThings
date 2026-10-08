@@ -36,9 +36,11 @@ Off by default. Two bars of icons next to the character panel: your specializati
 
 ### Group finder
 
-One switch on the LittleThings page, on by default. While on, it brings up the Group finder page, where each of the tools below has its own switch (all on) and its options, in four sections: Applicants, Creating a group, Searching for a group, Player menus.
+One switch on the LittleThings page, on by default. While on, it brings up the Group finder page, where each of the tools below has its own switch (all on except Summary site links) and its options, in five sections: Applicants, Creating a group, Searching for a group, Player menus, Summary site.
 
 **Warcraft Logs link.** Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
+
+**Summary site links.** Off by default. Links to the brag-sheet summary site (brag-sheet.aquegen.workers.dev), which shows a character's Mythic+ and raid logs and ranks applicants. While your group is listed for a Mythic+ dungeon, a Compare applicants button copies one link with every applicant and your group in it; paste it into the browser and the site starts checking them, or press Open link from clipboard on a page that is already open. Player menus get a Summary page entry under LittleThings. The site reads Warcraft Logs with your own API key, which you save on the site once.
 
 **Keys and raid progress on applicants.** When your group is listed for a Mythic+ dungeon, each row shows two small numbers right of the rating, as the column label says: the applicant's best key anywhere on top in blue and their best key in the listed dungeon below in green, dimmed to grey-blue or grey when not timed. In raid listings, with Raider.IO installed, the same column shows raid progress from its public API instead, both for the listed raid only: its best difficulty with kills on top, the listed difficulty below (for example 9/9 over 6/9, right up against the wide Invite button raids get), coloured by difficulty: green Normal, blue Heroic, purple Mythic, with that legend over the column in place of Best / Here. Raider.IO has no LFR progress, so LFR has no colour. Without Raider.IO, or for a player it has no data on, the column stays empty; PvP and other listings are left alone. The switch takes effect the next time the list updates, with no reload.
 

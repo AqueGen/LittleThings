@@ -9,7 +9,7 @@ local MINE = { name = "Borshbringer", realm = "Tarren Mill", class = "PALADIN", 
 
 describe("CompareUrl.Build", function()
   it("lists the group and the applicants with slug, lowercased name, role and class", function()
-    local url = CompareUrl.Build(BASE, EU, 15, { ME }, {
+    local url = CompareUrl.Build(EU, 15, { ME }, {
       { name = "Ктулху", realm = "Гордунни", class = "MAGE", role = "DAMAGER", app = 1 },
       { name = "Medvedyk", realm = "Silvermoon", class = "DRUID", role = "HEALER", app = 2 },
     })
@@ -17,7 +17,7 @@ describe("CompareUrl.Build", function()
   end)
 
   it("leaves out the key when there is none and skips members it cannot place", function()
-    local url = CompareUrl.Build(BASE .. "/", EU, nil, {}, {
+    local url = CompareUrl.Build(EU, nil, {}, {
       { name = "Medvedyk", realm = "Silvermoon", class = "DRUID", role = "NONE", app = 1 },
       { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 2 },
       { name = "Nobody", realm = nil, class = "ROGUE", role = "DAMAGER", app = 3 },
@@ -28,7 +28,7 @@ describe("CompareUrl.Build", function()
   it("caps the applicants at 30", function()
     local many = {}
     for i = 1, 31 do many[i] = { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = i } end
-    local url = CompareUrl.Build(BASE, EU, 15, {}, many)
+    local url = CompareUrl.Build(EU, 15, {}, many)
     local _, commas = string.gsub(url, ",", ",")
     assert.equals(29, commas)
   end)
@@ -36,7 +36,7 @@ describe("CompareUrl.Build", function()
   it("keeps at most five group members", function()
     local six = {}
     for i = 1, 6 do six[i] = ME end
-    local url = CompareUrl.Build(BASE, EU, nil, six, { { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 1 } })
+    local url = CompareUrl.Build(EU, nil, six, { { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 1 } })
     local g = string.match(url, "g=([^&]*)")
     local _, commas = string.gsub(g, ",", ",")
     assert.equals(4, commas)
@@ -47,7 +47,7 @@ describe("CompareUrl.Build", function()
     for i = 1, 40 do
       many[i] = { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = i <= 10 and "NONE" or "DAMAGER", app = i }
     end
-    local url, problem, count = CompareUrl.Build(BASE, EU, nil, {}, many)
+    local url, problem, count = CompareUrl.Build(EU, nil, {}, many)
     local _, commas = string.gsub(url, ",", ",")
     assert.equals(29, commas)
     assert.is_nil(problem)
@@ -55,7 +55,7 @@ describe("CompareUrl.Build", function()
   end)
 
   it("skips a name with a separator in it and a class that is not an upper-case token", function()
-    local url = CompareUrl.Build(BASE, EU, nil, {}, {
+    local url = CompareUrl.Build(EU, nil, {}, {
       { name = "Bad,Name", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 1 },
       { name = "Lower", realm = "Tarren Mill", class = "mage", role = "DAMAGER", app = 2 },
       { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 3 },
@@ -64,7 +64,7 @@ describe("CompareUrl.Build", function()
   end)
 
   it("writes a whole rating up to 9999 after the application number and leaves out anything else", function()
-    local url = CompareUrl.Build(BASE, EU, nil, {}, {
+    local url = CompareUrl.Build(EU, nil, {}, {
       { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 1, rating = 2875.6 },
       { name = "None", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 2 },
       { name = "Huge", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 3, rating = 10000 },
@@ -73,7 +73,7 @@ describe("CompareUrl.Build", function()
   end)
 
   it("gives the members of one application the same number", function()
-    local url = CompareUrl.Build(BASE, EU, nil, {}, {
+    local url = CompareUrl.Build(EU, nil, {}, {
       { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 1 },
       { name = "Medvedyk", realm = "Silvermoon", class = "DRUID", role = "HEALER", app = 1 },
       { name = "Ктулху", realm = "Гордунни", class = "MAGE", role = "DAMAGER", app = 2 },
@@ -82,7 +82,7 @@ describe("CompareUrl.Build", function()
   end)
 
   it("skips an applicant whose application number is not a whole number from 1 to 99", function()
-    local url = CompareUrl.Build(BASE, EU, nil, {}, {
+    local url = CompareUrl.Build(EU, nil, {}, {
       { name = "None", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER" },
       { name = "Zero", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 0 },
       { name = "Half", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = 1.5 },
@@ -97,25 +97,24 @@ describe("CompareUrl.Build", function()
     for i = 1, 28 do many[i] = { name = "Cutlers", realm = "Tarren Mill", class = "ROGUE", role = "DAMAGER", app = i } end
     for i = 29, 31 do many[i] = { name = "Trio", realm = "Tarren Mill", class = "MAGE", role = "DAMAGER", app = 29 } end
     many[32] = { name = "Solo", realm = "Tarren Mill", class = "MAGE", role = "DAMAGER", app = 30 }
-    local url, _, count = CompareUrl.Build(BASE, EU, nil, {}, many)
+    local url, _, count = CompareUrl.Build(EU, nil, {}, many)
     assert.equals(28, count)
     assert.is_nil(string.find(url, "trio"))
   end)
 
   it("leaves out a key level that is not a whole number from 1 to 99", function()
     local only = BASE .. "/compare?p=eu/tarren-mill/borshbringer/tank/PALADIN/1"
-    assert.equals(only, CompareUrl.Build(BASE, EU, 15.5, {}, { MINE }))
-    assert.equals(only, CompareUrl.Build(BASE, EU, 150, {}, { MINE }))
+    assert.equals(only, CompareUrl.Build(EU, 15.5, {}, { MINE }))
+    assert.equals(only, CompareUrl.Build(EU, 150, {}, { MINE }))
   end)
 
   it("treats a missing group or applicant list as empty", function()
-    assert.equals(BASE .. "/compare?p=eu/tarren-mill/borshbringer/tank/PALADIN/1", CompareUrl.Build(BASE, EU, nil, nil, { MINE }))
-    assert.same({ nil, "no applicants to compare" }, { CompareUrl.Build(BASE, EU, nil, { ME }, nil) })
+    assert.equals(BASE .. "/compare?p=eu/tarren-mill/borshbringer/tank/PALADIN/1", CompareUrl.Build(EU, nil, nil, { MINE }))
+    assert.same({ nil, "no applicants to compare" }, { CompareUrl.Build(EU, nil, { ME }, nil) })
   end)
 
   it("says why there is no link", function()
-    assert.same({ nil, "no summary site set" }, { CompareUrl.Build(nil, EU, 15, {}, { MINE }) })
-    assert.same({ nil, "unknown region" }, { CompareUrl.Build(BASE, 99, 15, {}, { MINE }) })
-    assert.same({ nil, "no applicants to compare" }, { CompareUrl.Build(BASE, EU, 15, { ME }, {}) })
+    assert.same({ nil, "unknown region" }, { CompareUrl.Build(99, 15, {}, { MINE }) })
+    assert.same({ nil, "no applicants to compare" }, { CompareUrl.Build(EU, 15, { ME }, {}) })
   end)
 end)

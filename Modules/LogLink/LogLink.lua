@@ -72,7 +72,7 @@ ns.ShowLogLink = show
 
 local function showHub(name, realm)
     name, realm = resolve(name, realm)
-    if name then copy(Link.Hub(name, realm, GetCurrentRegion(), ns.db.logLinkHub)) end
+    if name then copy(Link.Hub(name, realm, GetCurrentRegion())) end
 end
 
 -- The name and realm a menu is about. A unit menu carries a token; a chat or
@@ -154,7 +154,7 @@ local function section(rootDescription, name, realm)
     rootDescription:CreateDivider()
     rootDescription:CreateTitle("LittleThings")
     rootDescription:CreateButton("WCL " .. Link.ZONE_NAME, function() show(name, realm) end)
-    if Link.HubBase(ns.db.logLinkHub) then
+    if ns.IsOn("summarySite") then
         rootDescription:CreateButton("Summary page", function() showHub(name, realm) end)
     end
 end
@@ -222,68 +222,3 @@ end
 -- No key: the module is always loaded, and wanted() reads the switch per
 -- menu, so it goes on and off without a reload and /wcl works either way.
 ns.RegisterModule("LogLink", LogLink)
-
-local HUB_POPUP = "LITTLETHINGS_LOGLINK_HUB"
-
-local function storeHub(box)
-    local text = box:GetText()
-    if string.match(text, "^%s*$") then
-        ns.db.logLinkHub = nil
-        ns.Print("summary page removed from player menus")
-        return
-    end
-    local base = Link.HubBase(text)
-    if not base then
-        ns.Print("not an https:// address, nothing changed")
-        return
-    end
-    ns.db.logLinkHub = base
-    ns.Print("summary page: " .. base)
-end
-
-local function saveHub(box)
-    storeHub(box)
-    if ns.RefreshCompareButton then ns.RefreshCompareButton() end
-end
-
-StaticPopupDialogs[HUB_POPUP] = {
-    text = "Summary site address (https://...). Leave empty to remove the menu entry.",
-    button1 = ACCEPT or "Accept",
-    button2 = CANCEL or "Cancel",
-    hasEditBox = true,
-    editBoxWidth = 350,
-    maxLetters = 255,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-    OnShow = function(self)
-        local box = self.editBox or self.EditBox
-        if not box then return end
-        box:SetText(ns.db.logLinkHub or "")
-        box:HighlightText()
-        box:SetFocus()
-    end,
-    OnAccept = function(self)
-        local box = self.editBox or self.EditBox
-        if box then saveHub(box) end
-    end,
-    EditBoxOnEnterPressed = function(box)
-        saveHub(box)
-        box:GetParent():Hide()
-    end,
-    EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,
-}
-
-local HubSettings = { key = "logLink" }
-
-function HubSettings.Pages(page)
-    local initializer = CreateSettingsButtonInitializer("Summary page", "Set address",
-        function() StaticPopup_Show(HUB_POPUP) end,
-        "Adds a Summary page entry under LittleThings in player menus that copies a link to your guild's summary site. Paste the site's address here; empty removes the entry.",
-        true)
-    page.layout:AddInitializer(initializer)
-    ns.AddToPage(page, initializer)
-end
-
-ns.RegisterModule("LogLinkHub", HubSettings)
