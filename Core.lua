@@ -75,10 +75,10 @@ function ns.Print(message)
     print("|cff33ff99LittleThings|r: " .. message)
 end
 
--- One reload prompt per session. A lock, a size or a show that goes through
+-- One reload prompt per session. A size or a show that goes through
 -- Blizzard's own code runs it inside our taint (docs/DECISIONS.md), and a
--- reload is what clears that: Blizzard restores the lock, the size and the
--- window itself at login, untainted. Asking once is enough - the taint does
+-- reload is what clears that: Blizzard restores the size and the window
+-- itself at login, untainted. Asking once is enough - the taint does
 -- not get worse, and the popup would otherwise follow every keystroke.
 local reloadRequested = false
 

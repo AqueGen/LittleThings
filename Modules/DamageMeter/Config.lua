@@ -278,26 +278,18 @@ local function CreateRow(parent, index)
     row.Height = CreateSizeBox(row, index, "height")
     row.Height:SetPoint("LEFT", row.Width, "RIGHT", 8, 0)
 
-    -- The same lock the window's own gear dropdown offers, brought here so the
-    -- page that sets a size can also stop that size being dragged away.
-    -- SetSessionWindowLocked rebuilds the gear menu's generator, which from
-    -- our stack is a tainted closure that errors if that menu is opened in
-    -- combat before a reload. No prompt here by the user's decision: a lock is
-    -- set once and the gear menu is rarely opened mid-fight. Blizzard's own
-    -- lock click rebuilds it clean, and so does a reload.
-    row.Lock = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-    row.Lock:SetPoint("LEFT", row.Height, "RIGHT", 16, 0)
-    row.Lock.Text:SetText("lock")
-    row.Lock:SetScript("OnClick", function(self)
-        local window = ns.Windows.Get(index)
-        if window then
-            window:GetDamageMeterOwner():SetSessionWindowLocked(window, self:GetChecked())
-        end
-        RefreshWindowPanel()
-    end)
+    -- Shown, not offered: locking from our stack writes the window's isLocked,
+    -- its OnUpdate reads it through CanMoveOrResize and then writes
+    -- onUpdateReasons, and every combat start trips over that in
+    -- ClearSessionTimer (DamageMeterSessionWindow.lua:232, 267, 930) until a
+    -- reload. The gear menu's own Lock window is clean.
+    row.Locked = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    row.Locked:SetPoint("LEFT", row.Height, "RIGHT", 16, 0)
+    row.Locked:SetWidth(50)
+    row.Locked:SetJustifyH("LEFT")
 
     row.Note = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    row.Note:SetPoint("LEFT", row.Lock.Text, "RIGHT", 16, 0)
+    row.Note:SetPoint("LEFT", row.Locked, "RIGHT", 16, 0)
 
     row.Link = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     row.Link:SetPoint("TOPLEFT", row.Shown, "BOTTOMLEFT", 0, -4)
@@ -423,10 +415,7 @@ local function RefreshRow(row, index)
         row.Height:SetText(shown and math.floor(window:GetHeight() + 0.5) or "")
     end
 
-    -- Window 1 is never lockable: Blizzard's owner refuses to move or resize it
-    -- whatever the flag says, so offering the box would promise nothing.
-    row.Lock:SetChecked(shown and window:IsLocked() or false)
-    row.Lock:SetEnabled(shown and not isPrimary)
+    row.Locked:SetText((shown and not isPrimary and window:IsLocked()) and "locked" or "")
 
     if isPrimary then
         row.Note:SetText("Size comes from Edit Mode.")
@@ -515,29 +504,6 @@ function Config.Pages(modulePage)
 
         return row
     end
-
-    -- Window 1 is skipped: its owner refuses the lock regardless.
-    local function SetAllLocked(locked)
-        ns.Windows.ForEach(function(window, index)
-            if index ~= 1 then
-                window:GetDamageMeterOwner():SetSessionWindowLocked(window, locked)
-            end
-        end)
-
-        RefreshWindowPanel()
-    end
-
-    windowPanel.LockAll = CreateFrame("Button", nil, windowPanel, "UIPanelButtonTemplate")
-    windowPanel.LockAll:SetSize(100, 22)
-    windowPanel.LockAll:SetPoint("BOTTOMLEFT", windowPanel, "BOTTOMLEFT", 20, 20)
-    windowPanel.LockAll:SetText("Lock all")
-    windowPanel.LockAll:SetScript("OnClick", function() SetAllLocked(true) end)
-
-    windowPanel.UnlockAll = CreateFrame("Button", nil, windowPanel, "UIPanelButtonTemplate")
-    windowPanel.UnlockAll:SetSize(100, 22)
-    windowPanel.UnlockAll:SetPoint("LEFT", windowPanel.LockAll, "RIGHT", 8, 0)
-    windowPanel.UnlockAll:SetText("Unlock all")
-    windowPanel.UnlockAll:SetScript("OnClick", function() SetAllLocked(false) end)
 
     windowPanel:SetScript("OnShow", RefreshWindowPanel)
 

@@ -16,7 +16,7 @@ A companion for Blizzard's built-in Damage Meter. It computes nothing itself - e
 
 **Window snapping.** Drag a window near another and a green bar shows which edges will meet. Release and they attach: the pair moves together, and the axis you joined on matches size. Windows chain, a gap between them is configurable, and a window dropped near a screen edge lands flush with it.
 
-**A window page.** Lists Blizzard's three windows with their exact size in pixels, what is attached to what, the gap, a lock per window and Lock all / Unlock all. Window 1's size is routed through Edit Mode, which is the only thing allowed to set it.
+**A window page.** Lists Blizzard's three windows with their exact size in pixels, what is attached to what, the gap, and which windows are locked (the lock itself is in the meter's gear menu). Window 1's size is routed through Edit Mode, which is the only thing allowed to set it.
 
 **Transparency and layer.** The meter dims when the mouse is away and comes back when it is over it, as a fraction of the Edit Mode transparency you already set. The frame layer is a dropdown, for when another addon covers the meter.
 
@@ -26,7 +26,7 @@ A companion for Blizzard's built-in Damage Meter. It computes nothing itself - e
 
 What it deliberately does not do, and why: on 12.x the meter's data is Secret to addons in combat, and anything an addon writes into Blizzard's meter windows taints them: their own refresh then logs a warning per row, in combat, until you reload. So this module never opens Blizzard's own breakdown (click it - that is Blizzard's own, untainted handler), does not switch a window's type or segment (the header dropdowns do, untainted), does not create windows beyond Blizzard's three, and does not show a hidden window (the gear menu's Show new window does). Each of those was built, seen to taint the meter, and removed. The reasoning with line references is in `docs/DECISIONS.md`.
 
-Three things on the window page do go through Blizzard's code and taint it the same way: locking a window, typing a size, and showing a hidden slot. They stay because a reload clears them completely - Blizzard restores the lock, the size and the window itself at login. A size change or a show offers a reload, once per session; a lock does not (its only effect is on the gear menu opened in combat). Dragging, snapping, the gap and size matching are anchors only and never need it.
+Two things on the window page do go through Blizzard's code and taint it the same way: typing a size and showing a hidden slot. They stay because a reload clears them completely - Blizzard restores the size and the window itself at login - and either one offers that reload, once per session. Dragging, snapping, the gap and size matching are anchors only and never need it.
 
 No parsing, no storage, no analysis, no skins, no report-to-chat. Blizzard's meter is the meter. If you want a meter of your own, use Details.
 
