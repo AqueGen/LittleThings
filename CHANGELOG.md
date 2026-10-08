@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.15.0](https://github.com/AqueGen/LittleThings/compare/v0.14.1...v0.15.0) (2026-10-08)
+
+
+### Features
+
+* **loglink:** summary page link ([#31](https://github.com/AqueGen/LittleThings/issues/31)) ([2e8608b](https://github.com/AqueGen/LittleThings/commit/2e8608b7312c2ae461ea7605f0d3dac24244d369))
+* **loglink:** summary site links built in, behind one switch that starts off ([#35](https://github.com/AqueGen/LittleThings/issues/35)) ([69556e9](https://github.com/AqueGen/LittleThings/commit/69556e98eac7e4c5d9aae384d583ff624ed6f33d))
+
+
+### Bug Fixes
+
+* **meter:** matched sizes through anchors, lock only from the gear menu ([#32](https://github.com/AqueGen/LittleThings/issues/32)) ([9507f93](https://github.com/AqueGen/LittleThings/commit/9507f93ebc4d73d7028e844f2ddf5d82e86f765a))
+
 ## [0.14.1](https://github.com/AqueGen/LittleThings/compare/v0.14.0...v0.14.1) (2026-10-04)
 
 
