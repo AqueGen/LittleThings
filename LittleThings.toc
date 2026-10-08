@@ -1,4 +1,4 @@
-## Interface: 120100
+## Interface: 120100, 120105
 ## Title: LittleThings
 ## Notes: Small touches on the default UI, the bits that were missing. Nothing replaced, nothing heavy: readable numbers and snapping for the built-in damage meter, one-click spec and loot spec, a Warcraft Logs link in player menus, loot spec icons in the Adventure Guide, Mythic+ applicants sorted by rating or item level, an applicant filter panel, a leader crown on party and raid frames.
 ## Author: AqueGen
