@@ -240,43 +240,38 @@ local function Repaint()
     end
 end
 
+local function CornerOptions()
+    local list = {}
+    for _, key in ipairs(CORNER_ORDER) do
+        list[#list + 1] = { value = key, text = CORNERS[key].label }
+    end
+    return list
+end
+
+local function Option(key, spec)
+    spec.default = JournalLoot.defaults[key]
+    spec.get = function() return Options()[key] end
+    spec.set = function(value)
+        Options()[key] = value
+        Repaint()
+    end
+    return spec
+end
+
 function JournalLoot.Pages(page)
-    local category = page.category
-    local function Proxy(key, varType, label)
-        return Settings.RegisterProxySetting(category, "LT_journalLoot_" .. key, varType, label,
-            JournalLoot.defaults[key],
-            function() return Options()[key] end,
-            function(value)
-                Options()[key] = value
-                Repaint()
-            end)
-    end
+    local group = page:Group("Loot icons")
+    group:Check(Option("allClasses", { label = "All classes",
+        tooltip = "Show every class's specs, folded into a class, role or everyone icon where they all get the item. Off shows the class picked in the journal's filter, or yours." }))
+    group:Dropdown(Option("corner", { label = "Position", options = CornerOptions,
+        tooltip = "Bottom right corner: one column at the right edge of every row, on the boss line where the row has one. Where the icons would cover the armor type it moves left of them. Name line: right of the item name, clear of a transmog addon's corner mark, but a long name can run under the icons." }))
+    group:Slider(Option("size", { label = "Icon size", min = 12, max = 24,
+        tooltip = "Icon size in pixels." }))
 
-    ns.AddToPage(page, Settings.CreateCheckbox(category, Proxy("allClasses", Settings.VarType.Boolean, "All classes"),
-        "Show every class's specs, folded into a class, role or everyone icon where they all get the item. Off shows the class picked in the journal's filter, or yours."))
-
-    local function CornerOptions()
-        local container = Settings.CreateControlTextContainer()
-        for _, key in ipairs(CORNER_ORDER) do
-            container:Add(key, CORNERS[key].label)
-        end
-        return container:GetData()
-    end
-    ns.AddToPage(page, Settings.CreateDropdown(category, Proxy("corner", Settings.VarType.String, "Position"),
-        CornerOptions, "Bottom right corner: one column at the right edge of every row, on the boss line where the row has one. Where the icons would cover the armor type it moves left of them. Name line: right of the item name, clear of a transmog addon's corner mark, but a long name can run under the icons."))
-
-    ns.AddToPage(page, Settings.CreateCheckbox(category, Proxy("lootSpecButtons", Settings.VarType.Boolean, "Loot specialization buttons"),
-        "Your loot specialization icons below a boss's loot list, so you can pick it right after looking at what drops."))
-
-    local specSizeOptions = Settings.CreateSliderOptions(16, 48, 1)
-    specSizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-    ns.AddToPage(page, Settings.CreateSlider(category, Proxy("lootSpecSize", Settings.VarType.Number, "Loot specialization button size"),
-        specSizeOptions, "Size of the loot specialization buttons in pixels."))
-
-    local sizeOptions = Settings.CreateSliderOptions(12, 24, 1)
-    sizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-    ns.AddToPage(page, Settings.CreateSlider(category, Proxy("size", Settings.VarType.Number, "Icon size"),
-        sizeOptions, "Icon size in pixels."))
+    local buttons = page:Group("Loot specialization")
+    buttons:Check(Option("lootSpecButtons", { label = "Loot specialization buttons",
+        tooltip = "Your loot specialization icons below a boss's loot list, so you can pick it right after looking at what drops." }))
+    buttons:Slider(Option("lootSpecSize", { label = "Button size", min = 16, max = 48,
+        tooltip = "Size of the loot specialization buttons in pixels." }))
 end
 
 function JournalLoot.Enable()
