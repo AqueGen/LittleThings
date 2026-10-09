@@ -16,6 +16,7 @@
 Core.lua
 UI/WidgetRules.lua
 UI/MenuModel.lua
+UI/Widgets.lua
 Modules/DamageMeter/Windows.lua
 Modules/DamageMeter/Format.lua
 Modules/DamageMeter/Snap.lua
