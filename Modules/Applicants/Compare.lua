@@ -27,11 +27,12 @@ local function applications()
         if info and readable(info) and readable(info.numMembers, info.applicationStatus) and LIVE[info.applicationStatus] then
             local members = {}
             for i = 1, info.numMembers do
-                local full, class, _, _, _, _, tank, healer, damage, role, _, rating = C_LFGList.GetApplicantMemberInfo(applicantID, i)
+                local full, class, _, _, _, _, tank, healer, damage, role, _, rating, _, _, _, specID = C_LFGList.GetApplicantMemberInfo(applicantID, i)
                 if readable(full, class, tank, healer, damage, role, rating) and type(full) == "string" then
                     local name, realm = splitName(full)
                     members[#members + 1] = {
                         name = name, realm = realm, class = class, role = role, rating = rating,
+                        spec = (readable(specID) and type(specID) == "number") and specID or nil,
                         roles = { TANK = tank == true, HEALER = healer == true, DAMAGER = damage == true },
                     }
                 end
