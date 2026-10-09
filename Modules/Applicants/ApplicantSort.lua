@@ -70,29 +70,20 @@ local function OnRestrictionChange()
     end
 end
 
+local function SortOptions()
+    local list = {}
+    for _, key in ipairs(CHOICES.order) do
+        list[#list + 1] = { value = key, text = CHOICES.names[key] }
+    end
+    return list
+end
+
 function ApplicantSort.Pages(page)
-    if not CHOICES.names[Options().by] then
-        Options().by = ApplicantSort.defaults.by
-    end
-
-    local setting = Settings.RegisterProxySetting(page.category, "LT_applicantSort_by", Settings.VarType.String,
-        CHOICES.label, ApplicantSort.defaults.by,
-        function() return Options().by end,
-        function(value)
-            Options().by = value
-            StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", CHOICES.label, "to " .. CHOICES.names[value])
-        end)
-
-    local function Names()
-        local container = Settings.CreateControlTextContainer()
-        for _, key in ipairs(CHOICES.order) do
-            container:Add(key, CHOICES.names[key])
-        end
-        return container:GetData()
-    end
-
-    ns.AddToPage(page, Settings.CreateDropdown(page.category, setting, Names,
-        CHOICES.tooltip .. " A group that applies together counts as the player who sent the application.|n|n|cff808080Takes effect after /reload.|r"))
+    page:Group():Dropdown({ label = CHOICES.label, options = SortOptions, reload = true,
+        default = ApplicantSort.defaults.by,
+        tooltip = CHOICES.tooltip .. " A group that applies together counts as the player who sent the application.",
+        get = function() return Options().by end,
+        set = function(value) Options().by = value end })
 end
 
 function ApplicantSort.Enable()

@@ -61,33 +61,24 @@ local function OnBlocked(_, _, blockedAddon, blockedFunction)
     end
 end
 
+local function StyleOptions()
+    local list = {}
+    for index, key in ipairs(STYLES) do
+        list[#list + 1] = { value = key, text = _G["GROUP_FINDER_GENERAL_PLAYSTYLE" .. index] or key }
+    end
+    return list
+end
+
 function DefaultPlaystyle.Pages(page)
-    local setting = Settings.RegisterProxySetting(page.category, "LT_defaultPlaystyle_style", Settings.VarType.String,
-        "Playstyle", DefaultPlaystyle.defaults.style,
-        function() return Options().style end,
-        function(value) Options().style = value end)
-
-    local function StyleOptions()
-        local container = Settings.CreateControlTextContainer()
-        for index, key in ipairs(STYLES) do
-            container:Add(key, _G["GROUP_FINDER_GENERAL_PLAYSTYLE" .. index] or key)
-        end
-        return container:GetData()
-    end
-
-    ns.AddToPage(page, Settings.CreateDropdown(page.category, setting, StyleOptions,
-        "The playstyle already picked when you create a listing. You can still change it before listing."))
-
-    local function Checkbox(key, label, tooltip)
-        local check = Settings.RegisterProxySetting(page.category, "LT_defaultPlaystyle_" .. key, Settings.VarType.Boolean,
-            label, DefaultPlaystyle.defaults[key],
-            function() return Options()[key] end,
-            function(value) Options()[key] = value end)
-        ns.AddToPage(page, Settings.CreateCheckbox(page.category, check, tooltip))
-    end
-
-    Checkbox("preferMythicPlus", "Pick Mythic+ when you choose a dungeon",
-        "Choosing a dungeon picks its Mythic Keystone difficulty instead of plain Mythic, so listing someone else's key needs no extra click. Picking Mythic yourself afterwards is left alone.")
+    local group = page:Group()
+    group:Dropdown({ label = "Playstyle", options = StyleOptions, default = DefaultPlaystyle.defaults.style,
+        tooltip = "The playstyle already picked when you create a listing. You can still change it before listing.",
+        get = function() return Options().style end,
+        set = function(value) Options().style = value end })
+    group:Check({ label = "Pick Mythic+ when you choose a dungeon",
+        tooltip = "Choosing a dungeon picks its Mythic Keystone difficulty instead of plain Mythic, so listing someone else's key needs no extra click. Picking Mythic yourself afterwards is left alone.",
+        get = function() return Options().preferMythicPlus end,
+        set = function(value) Options().preferMythicPlus = value end })
 end
 
 function DefaultPlaystyle.Enable()

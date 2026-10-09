@@ -158,17 +158,14 @@ local function Build()
 end
 
 function PartyKeys.Pages(page)
-    local options = ns.DefaultPlaystyle.Options()
-    local setting = Settings.RegisterProxySetting(page.category, "LT_defaultPlaystyle_partyKeys", Settings.VarType.Boolean,
-        "Show the group's keystones", true,
-        function() return options.partyKeys end,
-        function(value)
-            options.partyKeys = value
+    page:Group():Check({ label = "Show the group's keystones",
+        tooltip = "A list beside the group creation screen with the keystones your group shares (yours first), for players running DBM, BigWigs or another addon with LibKeystone. Click one to pick its dungeon at Mythic+ and put the cursor in the title, with a grey hint of the level to type, such as +16: the game does not let addons write the title.",
+        get = function() return ns.DefaultPlaystyle.Options().partyKeys end,
+        set = function(value)
+            ns.DefaultPlaystyle.Options().partyKeys = value
             Request()
             Refresh()
-        end)
-    ns.AddToPage(page, Settings.CreateCheckbox(page.category, setting,
-        "A list beside the group creation screen with the keystones your group shares (yours first), for players running DBM, BigWigs or another addon with LibKeystone. Click one to pick its dungeon at Mythic+ and put the cursor in the title, with a grey hint of the level to type, such as +16: the game does not let addons write the title."))
+        end })
 end
 
 function PartyKeys.Enable()

@@ -342,40 +342,32 @@ local function Build()
     Sync()
 end
 
-local function SideOptions()
-    local container = Settings.CreateControlTextContainer()
-    for _, key in ipairs(SIDE_ORDER) do
-        container:Add(key, SIDES[key].label)
-    end
-    return container:GetData()
+local SIDE_OPTIONS = {}
+for _, key in ipairs(SIDE_ORDER) do
+    SIDE_OPTIONS[#SIDE_OPTIONS + 1] = { value = key, text = SIDES[key].label }
 end
 
 function Filter.Pages(page)
-    local remove = Settings.RegisterProxySetting(page.category, "LT_applicantFilter_removeFinished", Settings.VarType.Boolean,
-        "Remove closed applications", true,
-        function() return Filter.Options().removeFinished end,
-        function(value) Filter.Options().removeFinished = value end)
-    ns.AddToPage(page, Settings.CreateCheckbox(page.category, remove,
-        "Applications that were cancelled, timed out, declined or turned the invite down leave the list at once, as if you clicked their X."))
-
-    local category = page.category
-    local function Proxy(key, varType, label)
-        return Settings.RegisterProxySetting(category, "LT_applicantPanel_" .. key, varType, label,
-            POSITION_DEFAULTS[key],
-            function() return Position()[key] end,
-            function(value)
+    local group = page:Group()
+    group:Check({ label = "Remove closed applications",
+        tooltip = "Applications that were cancelled, timed out, declined or turned the invite down leave the list at once, as if you clicked their X.",
+        get = function() return Filter.Options().removeFinished end,
+        set = function(value) Filter.Options().removeFinished = value end })
+    group:Dropdown({ label = "Panel side", options = SIDE_OPTIONS, default = POSITION_DEFAULTS.side,
+        tooltip = "Which side of the group finder the applicant filter panel sits on.",
+        get = function() return Position().side end,
+        set = function(value)
+            Position().side = value
+            Place()
+        end })
+    for _, key in ipairs({ "x", "y" }) do
+        group:Slider({ label = "Panel " .. key:upper() .. " offset", min = -800, max = 800,
+            tooltip = "Pixels to move the panel from its side of the group finder. X moves it right, Y moves it up. Dragging the panel sets these for you.",
+            get = function() return Position()[key] end,
+            set = function(value)
                 Position()[key] = value
                 Place()
-            end)
-    end
-
-    ns.AddToPage(page, Settings.CreateDropdown(category, Proxy("side", Settings.VarType.String, "Panel side"),
-        SideOptions, "Which side of the group finder the applicant filter panel sits on."))
-    for _, key in ipairs({ "x", "y" }) do
-        local options = Settings.CreateSliderOptions(-800, 800, 1)
-        options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-        ns.AddToPage(page, Settings.CreateSlider(category, Proxy(key, Settings.VarType.Number, "Panel " .. key:upper() .. " offset"),
-            options, "Pixels to move the panel from its side of the group finder. X moves it right, Y moves it up. Dragging the panel sets these for you."))
+            end })
     end
 end
 
