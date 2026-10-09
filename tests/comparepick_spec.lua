@@ -10,7 +10,7 @@ end
 
 local function summary(list)
   local out = {}
-  for i, m in ipairs(list) do out[i] = { m.name, m.role, m.app } end
+  for i, m in ipairs(list) do out[i] = { m.name, table.concat(m.roles, "-"), m.app } end
   return out
 end
 
@@ -23,7 +23,7 @@ describe("ComparePick.Pick", function()
 
   it("tries the assigned role first when it fits", function()
     local list = ComparePick.Pick({ { members = { member("Flex", "DAMAGER", 3000, { "TANK", "DAMAGER" }) } } }, { TANK = 1, HEALER = 0, DAMAGER = 1 })
-    assert.same({ { "Flex", "DAMAGER", 1 } }, summary(list))
+    assert.same({ { "Flex", "DAMAGER-TANK", 1 } }, summary(list))
   end)
 
   it("drops a whole party that does not fit the open slots and counts its members", function()
@@ -39,7 +39,7 @@ describe("ComparePick.Pick", function()
     local list = ComparePick.Pick({
       { members = { member("Heal", "HEALER", 3000), member("Flex", "HEALER", 3000, { "HEALER", "TANK" }) } },
     }, { TANK = 1, HEALER = 1, DAMAGER = 0 })
-    assert.same({ { "Heal", "HEALER", 1 }, { "Flex", "TANK", 1 } }, summary(list))
+    assert.same({ { "Heal", "HEALER", 1 }, { "Flex", "HEALER-TANK", 1 } }, summary(list))
   end)
 
   it("keeps everyone in their assigned role when the open slots are unknown", function()
@@ -60,8 +60,20 @@ describe("ComparePick.Pick", function()
     assert.same({ { "High", "DAMAGER", 1 }, { "PartyA", "DAMAGER", 2 }, { "PartyB", "HEALER", 2 }, { "Low", "DAMAGER", 3 }, { "Tie", "TANK", 4 }, { "NoRating", "DAMAGER", 5 } }, summary(list))
   end)
 
-  it("skips applications with no readable member and keeps name, realm, class and rating", function()
-    local list = ComparePick.Pick({ { members = {} }, { members = { member("A", "DAMAGER", 2875.6) } } }, { TANK = 0, HEALER = 0, DAMAGER = 1 })
-    assert.same({ { name = "A", realm = "Silvermoon", class = "MAGE", role = "DAMAGER", rating = 2875.6, app = 1 } }, list)
+  it("skips applications with no readable member and keeps name, realm, class, spec and rating", function()
+    local flex = member("A", "DAMAGER", 2875.6)
+    flex.spec = 63
+    local list = ComparePick.Pick({ { members = {} }, { members = { flex } } }, { TANK = 0, HEALER = 0, DAMAGER = 1 })
+    assert.same({ { name = "A", realm = "Silvermoon", class = "MAGE", roles = { "DAMAGER" }, spec = 63, rating = 2875.6, app = 1 } }, list)
+  end)
+
+  it("offers only the roles that are still open, assigned role first", function()
+    local list = ComparePick.Pick({ { members = { member("Flex", "DAMAGER", 3000, { "TANK", "HEALER", "DAMAGER" }) } } }, { TANK = 1, HEALER = 0, DAMAGER = 2 })
+    assert.same({ { "Flex", "DAMAGER-TANK", 1 } }, summary(list))
+  end)
+
+  it("offers every applied role when the open slots are unknown", function()
+    local list = ComparePick.Pick({ { members = { member("Flex", "HEALER", 3000, { "TANK", "HEALER", "DAMAGER" }) } } }, nil)
+    assert.same({ { "Flex", "HEALER-TANK-DAMAGER", 1 } }, summary(list))
   end)
 end)

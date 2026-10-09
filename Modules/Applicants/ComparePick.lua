@@ -32,17 +32,21 @@ local function mean(members)
   return sum / #members
 end
 
+local function offered(member, open)
+  local out = {}
+  for _, role in ipairs(choices(member)) do
+    if not open or (open[role] or 0) > 0 then out[#out + 1] = role end
+  end
+  return out
+end
+
 function ComparePick.Pick(applications, open)
   local kept, dropped = {}, 0
   for n, application in ipairs(applications) do
     local members = application.members
     if #members > 0 then
-      local roles = {}
-      if not open then
-        for i, m in ipairs(members) do roles[i] = m.role end
-      end
-      if not open or assign(members, open, 1, {}, roles) then
-        kept[#kept + 1] = { members = members, roles = roles, rating = mean(members), n = n }
+      if not open or assign(members, open, 1, {}, {}) then
+        kept[#kept + 1] = { members = members, rating = mean(members), n = n }
       else
         dropped = dropped + #members
       end
@@ -54,8 +58,8 @@ function ComparePick.Pick(applications, open)
   end)
   local list = {}
   for app, k in ipairs(kept) do
-    for i, m in ipairs(k.members) do
-      list[#list + 1] = { name = m.name, realm = m.realm, class = m.class, role = k.roles[i], rating = m.rating, app = app }
+    for _, m in ipairs(k.members) do
+      list[#list + 1] = { name = m.name, realm = m.realm, class = m.class, roles = offered(m, open), spec = m.spec, rating = m.rating, app = app }
     end
   end
   return list, dropped
