@@ -117,4 +117,22 @@ describe("CompareUrl.Build", function()
     assert.same({ nil, "unknown region" }, { CompareUrl.Build(99, 15, {}, { MINE }) })
     assert.same({ nil, "no applicants to compare" }, { CompareUrl.Build(EU, 15, { ME }, {}) })
   end)
+
+  it("joins a role list with dashes and appends the specID to the class", function()
+    local url = CompareUrl.Build(EU, nil, { ME }, {
+      { name = "Flex", realm = "Tarren Mill", class = "DEMONHUNTER", roles = { "TANK", "DAMAGER" }, spec = 581, app = 1, rating = 2900 },
+      { name = "Plain", realm = "Tarren Mill", class = "ROGUE", roles = { "DAMAGER" }, app = 2 },
+    })
+    assert.equals(BASE .. "/compare?g=eu/tarren-mill/borshbringer/tank/PALADIN&p=eu/tarren-mill/flex/tank-dps/DEMONHUNTER-581/1/2900,eu/tarren-mill/plain/dps/ROGUE/2", url)
+  end)
+
+  it("skips a member with no usable role and leaves out a spec that is not a whole number from 1 to 9999", function()
+    local url = CompareUrl.Build(EU, nil, {}, {
+      { name = "Empty", realm = "Tarren Mill", class = "ROGUE", roles = {}, app = 1 },
+      { name = "Odd", realm = "Tarren Mill", class = "ROGUE", roles = { "DAMAGER", "PET" }, app = 2 },
+      { name = "Half", realm = "Tarren Mill", class = "ROGUE", roles = { "DAMAGER" }, spec = 1.5, app = 3 },
+      { name = "Big", realm = "Tarren Mill", class = "ROGUE", roles = { "DAMAGER" }, spec = 10000, app = 4 },
+    })
+    assert.equals(BASE .. "/compare?p=eu/tarren-mill/half/dps/ROGUE/3,eu/tarren-mill/big/dps/ROGUE/4", url)
+  end)
 end)

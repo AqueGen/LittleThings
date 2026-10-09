@@ -12,19 +12,35 @@ local function safe(s)
   return type(s) == "string" and s ~= "" and not string.find(s, "[,/&?#%%]")
 end
 
-local function upTo99(n)
-  return type(n) == "number" and math.floor(n) == n and n >= 1 and n <= 99
+local function whole(n, max)
+  return type(n) == "number" and math.floor(n) == n and n >= 1 and n <= max
+end
+
+local function roleToken(member)
+  local list = member.roles or { member.role }
+  local out = {}
+  for _, role in ipairs(list) do
+    if not ROLES[role] then return nil end
+    out[#out + 1] = ROLES[role]
+  end
+  if #out == 0 then return nil end
+  return table.concat(out, "-")
+end
+
+local function classToken(member)
+  if type(member.class) ~= "string" or not string.match(member.class, "^%u+$") then return nil end
+  if member.spec == nil or not whole(member.spec, 9999) then return member.class end
+  return member.class .. "-" .. member.spec
 end
 
 local function entry(region, member, numbered)
   local name = type(member.name) == "string" and Realms.Lower(member.name)
-  local parts = { region, Realms.SlugFor(member.realm), name, ROLES[member.role], member.class }
+  local parts = { region, Realms.SlugFor(member.realm), name, roleToken(member), classToken(member) }
   for i = 1, 5 do
     if not safe(parts[i]) then return nil end
   end
-  if not string.match(member.class, "^%u+$") then return nil end
   if numbered then
-    if not upTo99(member.app) then return nil end
+    if not whole(member.app, 99) then return nil end
     parts[6] = member.app
     local rating = type(member.rating) == "number" and math.floor(member.rating)
     if rating and rating >= 0 and rating <= 9999 then parts[7] = rating end
@@ -54,7 +70,7 @@ function CompareUrl.Build(regionID, keyLevel, group, applicants)
   if #p == 0 then return nil, "no applicants to compare" end
   local g = list(region, group or {}, 5)
   local query = {}
-  if upTo99(keyLevel) then query[#query + 1] = "key=" .. keyLevel end
+  if whole(keyLevel, 99) then query[#query + 1] = "key=" .. keyLevel end
   if #g > 0 then query[#query + 1] = "g=" .. table.concat(g, ",") end
   query[#query + 1] = "p=" .. table.concat(p, ",")
   return Link.HUB .. "/compare?" .. table.concat(query, "&"), nil, #p
