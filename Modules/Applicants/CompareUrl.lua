@@ -29,7 +29,7 @@ end
 
 local function classToken(member)
   if type(member.class) ~= "string" or not string.match(member.class, "^%u+$") then return nil end
-  if member.spec == nil or not whole(member.spec, 9999) then return member.class end
+  if not whole(member.spec, 9999) then return member.class end
   return member.class .. "-" .. member.spec
 end
 
