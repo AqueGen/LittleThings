@@ -164,7 +164,7 @@ local function AddSettingsToWindowDropdown()
 end
 
 function Config.Open()
-    ns.OpenSettings(category)
+    ns.OpenSettings("damageMeter")
 end
 
 function Config.Enable()

@@ -274,8 +274,6 @@ StaticPopupDialogs["LITTLETHINGS_MODULE_RELOAD"] = {
     preferredIndex = 3,
 }
 
-local hosts = {}
-
 local function Registered(key)
     local found = {}
     for _, registered in ipairs(moduleOrder) do
@@ -286,115 +284,10 @@ local function Registered(key)
     return found
 end
 
-local function HasContent(host)
-    for _, row in ipairs(host.rows) do
-        if row.parent then
-            return true
-        end
-        for _, registered in ipairs(Registered(row.key)) do
-            if registered.Pages then
-                return true
-            end
-        end
-    end
-    return false
-end
-
-local function HostOf(key)
-    local row = rows[key]
-    local title = row.parent and rows[row.parent].label or row.label
-    for _, host in ipairs(hosts) do
-        if host.title == title then
-            return host
-        end
-    end
-end
-
-local function AddModuleSwitch(category, row)
-    local setting = Settings.RegisterProxySetting(category, "LT_module_" .. row.key,
-        Settings.VarType.Boolean, row.label, ns.defaults[row.key],
-        function() return ns.db[row.key] end,
-        function(value)
-            ns.SetSwitch(row.key, value)
-
-            if not row.live then
-                StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", row.label, value and "on" or "off")
-            end
-        end)
-
-    local tooltip = row.tooltip
-    if not row.live then
-        tooltip = tooltip .. "|n|n|cff808080Takes effect after /reload.|r"
-    end
-    return Settings.CreateCheckbox(category, setting, tooltip)
-end
-
-local function ParentOn(row)
-    return function() return ns.db[row.parent] == true end
-end
-
-local function BuildHost(host)
-    host.category, host.layout = ns.RegisterSubcategory(host.title)
-    local section
-    for _, row in ipairs(host.rows) do
-        local page = { key = row.key, category = host.category, layout = host.layout }
-        if row.parent then
-            if row.section and row.section ~= section and host.layout and CreateSettingsListSectionHeaderInitializer then
-                section = row.section
-                local header = CreateSettingsListSectionHeaderInitializer(section)
-                header:AddShownPredicate(ParentOn(row))
-                host.layout:AddInitializer(header)
-            end
-            page.switch = AddModuleSwitch(host.category, row)
-            page.switch:AddShownPredicate(ParentOn(row))
-        end
-
-        ns.pages[row.key] = page
-        for _, registered in ipairs(Registered(row.key)) do
-            if registered.Pages then
-                registered.Pages(page)
-            end
-        end
-    end
-end
-
-local function EnsurePage(key)
-    local host = HostOf(key)
-    if host and not host.category and HasContent(host) then
-        BuildHost(host)
-    end
-end
-
--- Blizzard has no call to take a page out of the list, so the list of our pages
--- is rewritten in place: only modules that are on keep one, in root order.
-local function SyncPages(host)
-    local list = ns.category:GetSubcategories()
-    for index = #list, 1, -1 do
-        for _, other in ipairs(hosts) do
-            if list[index] == other.category then
-                table.remove(list, index)
-                break
-            end
-        end
-    end
-    for _, other in ipairs(hosts) do
-        if other.category and ns.db[other.rows[1].key] then
-            table.insert(list, other.category)
-        end
-    end
-    if host and host.category then
-        Settings.RegisterAddOnCategory(host.category)
-    end
-end
+ns.ModulesFor = Registered
 
 function ns.SetSwitch(key, value)
     ns.db[key] = value
-    if value then
-        EnsurePage(key)
-    end
-    if not rows[key].parent then
-        SyncPages(HostOf(key))
-    end
     for _, row in ipairs(ns.MODULES) do
         if row.key == key or row.parent == key then
             for _, registered in ipairs(Registered(row.key)) do
@@ -404,29 +297,7 @@ function ns.SetSwitch(key, value)
             end
         end
     end
-end
-
--- Options of a module whose switch is on its page hang indented under it.
-function ns.AddToPage(page, initializer)
-    if page.switch then
-        initializer:SetParentInitializer(page.switch)
-    end
-    initializer:AddShownPredicate(function() return ns.IsOn(page.key) end)
-    return initializer
-end
-
-function ns.AddHeader(page, text)
-    if page.layout and CreateSettingsListSectionHeaderInitializer then
-        local initializer = CreateSettingsListSectionHeaderInitializer(text)
-        page.layout:AddInitializer(initializer)
-        return ns.AddToPage(page, initializer)
-    end
-end
-
-function ns.RegisterSubcategory(name)
-    local category, layout = Settings.RegisterVerticalLayoutSubcategory(ns.category, name)
-    Settings.RegisterAddOnCategory(category)
-    return category, layout
+    ns.Window.Refresh()
 end
 
 local function IsEnabled(module)
@@ -441,54 +312,36 @@ local function IsEnabled(module)
     return true
 end
 
--- The root page holds one switch per module, its description in the tooltip.
--- A module's page is built at login when the module is on, or the moment it is
--- switched on. Group finder's tools each have their own switch on its page.
-local function RegisterSettings()
-    local layout
-    ns.category, layout = Settings.RegisterVerticalLayoutCategory("LittleThings")
-    -- A section header is the only plain-text initializer Blizzard's settings
-    -- list offers, and it is guarded because a client without it should lose
-    -- the text rather than the panel.
-    if layout and CreateSettingsListSectionHeaderInitializer then
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Switch a module on to get its page in the list."))
-        layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("|cFF0057B7Made|r |cFFFFD700in Ukraine|r"))
-    end
+local function RegisterSettingsSignpost()
+    local panel = CreateFrame("Frame")
+
+    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 16, -16)
+    title:SetText("LittleThings")
+
+    local blurb = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    blurb:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
+    blurb:SetWidth(520)
+    blurb:SetJustifyH("LEFT")
+    blurb:SetText("Every LittleThings setting is in its own window. Open it with |cffffd100/lt|r or the button below.")
+
+    local open = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    open:SetSize(180, 24)
+    open:SetPoint("TOPLEFT", blurb, "BOTTOMLEFT", 0, -16)
+    open:SetText("Open LittleThings")
+    open:SetScript("OnClick", function()
+        if SettingsPanel and SettingsPanel:IsShown() then
+            HideUIPanel(SettingsPanel)
+        end
+        ns.OpenSettings()
+    end)
+
+    ns.category = Settings.RegisterCanvasLayoutCategory(panel, "LittleThings")
     Settings.RegisterAddOnCategory(ns.category)
-
-    ns.pages = {}
-    local group
-    for _, row in ipairs(ns.MODULES) do
-        if row.parent then
-            table.insert(HostOf(row.key).rows, row)
-        else
-            if row.group ~= group and layout and CreateSettingsListSectionHeaderInitializer then
-                group = row.group
-                layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(group))
-            end
-            hosts[#hosts + 1] = { title = row.label, rows = { row } }
-            AddModuleSwitch(ns.category, row)
-        end
-    end
-
-    for _, row in ipairs(ns.MODULES) do
-        if not row.parent and ns.db[row.key] then
-            EnsurePage(row.key)
-        end
-    end
 end
 
--- Settings.OpenToCategory reaches the protected OpenSettingsPanel, which an
--- addon may not call in combat. Blizzard's own entries work because their
--- code is not tainted; ours is blocked and would otherwise fail silently
--- apart from a line in the error log.
-function ns.OpenSettings(category)
-    if InCombatLockdown() then
-        ns.Print("the settings panel cannot be opened in combat")
-        return
-    end
-
-    Settings.OpenToCategory((category or ns.category):GetID())
+function ns.OpenSettings(key)
+    ns.Window.Show(key)
 end
 
 -- Prints what the design assumes about secrecy and CVar access so the
@@ -694,7 +547,7 @@ local bootstrap = CreateFrame("Frame")
 bootstrap:RegisterEvent("PLAYER_LOGIN")
 bootstrap:SetScript("OnEvent", function()
     InitializeSavedVariables()
-    RegisterSettings()
+    RegisterSettingsSignpost()
 
     if ns.db.damageMeter and not ns.IsAvailable() then
         ns.Print("Blizzard Damage Meter not found, the damage meter module was not installed.")
