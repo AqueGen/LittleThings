@@ -3,10 +3,6 @@ local addonName, ns = ...
 ns.Config = {}
 local Config = ns.Config
 
-local category
-local categoryLayout
-local page
-
 -- The options are on the page whether the module is running or not, so a
 -- change made before the reload that starts it must not reach into modules
 -- that were never enabled.
@@ -20,120 +16,78 @@ local function Wrap(onChange)
     end
 end
 
-local function AddCheckbox(variableKey, name, tooltip, onChange)
-    local setting = Settings.RegisterProxySetting(category, "DMC_" .. variableKey,
-        Settings.VarType.Boolean, name, ns.defaults[variableKey],
-        function() return ns.db[variableKey] end,
-        function(value)
-            ns.db[variableKey] = value
-            Wrap(onChange)()
-        end)
-
-    return ns.AddToPage(page, Settings.CreateCheckbox(category, setting, tooltip))
+local function Db(key, spec, onChange)
+    spec.get = function() return ns.db[key] end
+    spec.set = function(value)
+        ns.db[key] = value
+        Wrap(onChange)()
+    end
+    return spec
 end
 
--- labelFormat is a format string, applied to the value shown beside the slider.
--- Without it a fractional slider prints the raw number, float noise and all.
-local function AddSlider(variableKey, name, tooltip, minimum, maximum, step, labelFormat, onChange)
-    local setting = Settings.RegisterProxySetting(category, "DMC_" .. variableKey,
-        Settings.VarType.Number, name, ns.defaults[variableKey],
-        function() return ns.db[variableKey] end,
-        function(value)
-            ns.db[variableKey] = value
-            Wrap(onChange)()
-        end)
-
-    local options = Settings.CreateSliderOptions(minimum, maximum, step)
-
-    -- CreateMinimalSliderFormatter treats a non-function second argument as a
-    -- constant label, so the format string has to be applied in a closure.
-    options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, labelFormat and function(value)
-        return labelFormat:format(value)
-    end or nil)
-
-    ns.AddToPage(page, Settings.CreateSlider(category, setting, options, tooltip))
-end
-
--- The game's own two damage meter switches, mirrored so that everything about
--- the meter is on one page. They are the CVars Blizzard's Gameplay
--- Enhancements page edits, read and written through C_CVar under our own
--- setting names so nothing collides with Blizzard's registration of the same
--- CVars. The labels and tooltips are Blizzard's strings, so they read the same
--- in every locale, and the section says whose settings these are.
-local function AddBlizzardCVarCheckbox(cvar, variableKey, label, tooltip)
-    local setting = Settings.RegisterProxySetting(category, "DMC_blizzard_" .. variableKey,
-        Settings.VarType.Boolean, label, true,
-        function() return C_CVar.GetCVarBool(cvar) end,
-        function(value)
-            -- SetCVar signals refusal by returning false rather than by
-            -- throwing, and the meter's enable switch is one it can refuse in
-            -- combat - say so rather than show a box that silently reverts.
+local function AddBlizzardCVarCheck(group, cvar, label, tooltip)
+    group:Check({
+        label = label,
+        combatLocked = true,
+        tooltip = function()
+            local isAvailable, failureReason = C_DamageMeter.IsDamageMeterAvailable()
+            local text = tooltip .. "|n|n|cff808080The game's own setting, from Gameplay Enhancements. Shown here so the meter is configured in one place.|r"
+            if not isAvailable then
+                text = text .. "|n|n" .. failureReason
+            end
+            return text
+        end,
+        get = function() return C_CVar.GetCVarBool(cvar) end,
+        set = function(value)
             local ok, result = pcall(C_CVar.SetCVar, cvar, value and "1" or "0")
             if not ok or result == false then
                 ns.Print("the game refused to change " .. label .. " right now")
             end
-        end)
-
-    ns.AddToPage(page, Settings.CreateCheckbox(category, setting, function()
-        local isAvailable, failureReason = C_DamageMeter.IsDamageMeterAvailable()
-        local text = tooltip .. "|n|n|cff808080The game's own setting, from Gameplay Enhancements. Shown here so the meter is configured in one place.|r"
-        if not isAvailable then
-            text = text .. "|n|n" .. failureReason
-        end
-        return text
-    end))
+        end,
+    })
 end
 
-local function BuildBlizzardOptions()
-    ns.AddHeader(page, DAMAGE_METER_LABEL .. " (Blizzard)")
-
-    AddBlizzardCVarCheckbox("damageMeterEnabled", "enabled", ENABLE_DAMAGE_METER, ENABLE_DAMAGE_METER_TOOLTIP)
-    AddBlizzardCVarCheckbox("damageMeterResetOnNewInstance", "autoReset", AUTO_RESET_DAMAGE_METER, AUTO_RESET_DAMAGE_METER_TOOLTIP)
+local function StrataOptions()
+    local list = {}
+    for _, strata in ipairs(ns.Presence.STRATA_ORDER) do
+        list[#list + 1] = { value = strata, text = strata }
+    end
+    return list
 end
 
-local function BuildBehaviourOptions()
-    AddCheckbox("format", "Readable numbers",
-        "Show 56.72M instead of 56716 K. The percentage is shown only out of combat, because it is the one part that needs arithmetic on values that are Secret in combat.",
+local function BuildBehaviourOptions(page)
+    local group = page:Group("Behaviour")
+
+    group:Check(Db("format", { label = "Readable numbers",
+        tooltip = "Show 56.72M instead of 56716 K. The percentage is shown only out of combat, because it is the one part that needs arithmetic on values that are Secret in combat." },
         function()
-            -- Switching on needs nothing: the sweep paints within a fifth of a
-            -- second. Switching off has to put Blizzard's own text back.
             if not ns.db.format then
                 ns.Format.Restore()
             end
-        end)
+        end))
 
-    AddCheckbox("snap", "Snap windows together",
-        "Dragging a window near another attaches it, and they move and resize together.")
+    group:Check(Db("snap", { label = "Snap windows together",
+        tooltip = "Dragging a window near another attaches it, and they move and resize together." }))
 
-    AddSlider("snapThreshold", "Snap distance",
-        "How close an edge must be, in pixels, before it snaps.", 5, 50, 1)
+    group:Slider(Db("snapThreshold", { label = "Snap distance", min = 5, max = 50,
+        tooltip = "How close an edge must be, in pixels, before it snaps." }))
 
-    AddSlider("idleAlpha", "Idle transparency",
-        "How visible the meter is when the mouse is not on it, as a fraction of the Edit Mode transparency. "
-            .. "A window set to uninteractable stays at the idle value, because its mouse is disabled.",
-        0.1, 1, 0.05, "%.2f", function()
-            ns.Presence.ApplyAlphaToAll()
-        end)
+    group:Slider(Db("idleAlpha", { label = "Idle transparency", min = 0.1, max = 1, step = 0.05, format = "%.2f",
+        tooltip = "How visible the meter is when the mouse is not on it, as a fraction of the Edit Mode transparency. "
+            .. "A window set to uninteractable stays at the idle value, because its mouse is disabled." },
+        function() ns.Presence.ApplyAlphaToAll() end))
 
-    local strataSetting = Settings.RegisterProxySetting(category, "DMC_strata",
-        Settings.VarType.String, "Layer", ns.defaults.strata,
-        -- Resolved, not raw: a hand-edited saved variable can hold a strata the
-        -- meter refuses, and the dropdown must show what is actually applied.
-        function() return ns.Presence.ResolveStrata(ns.db.strata) end,
-        function(value)
+    group:Dropdown({ label = "Layer", default = ns.defaults.strata, options = StrataOptions,
+        tooltip = "Which layer the meter draws on. Raise it if another addon covers it.",
+        get = function() return ns.Presence.ResolveStrata(ns.db.strata) end,
+        set = function(value)
             ns.db.strata = value
             Wrap(ns.Presence.ApplyStrata)()
-        end)
+        end })
 
-    ns.AddToPage(page, Settings.CreateDropdown(category, strataSetting, function()
-        local container = Settings.CreateControlTextContainer()
-        for _, strata in ipairs(ns.Presence.STRATA_ORDER) do
-            container:Add(strata, strata)
-        end
-        return container:GetData()
-    end, "Which layer the meter draws on. Raise it if another addon covers it."))
-
-    BuildBlizzardOptions()
+    local blizzard = page:Group(DAMAGE_METER_LABEL .. " (Blizzard)")
+    AddBlizzardCVarCheck(blizzard, "damageMeterEnabled", ENABLE_DAMAGE_METER, ENABLE_DAMAGE_METER_TOOLTIP)
+    AddBlizzardCVarCheck(blizzard, "damageMeterResetOnNewInstance", AUTO_RESET_DAMAGE_METER, AUTO_RESET_DAMAGE_METER_TOOLTIP)
 end
 
 -- The gear dropdown on every meter window is tagged, which is Blizzard's own
@@ -387,10 +341,11 @@ local function RefreshRow(row, index)
     local isPrimary = index == 1
     local link = ns.charDb.links[index]
     local shown = window ~= nil and window:IsShown()
+    local fighting = InCombatLockdown()
 
     row.Title:SetText(isPrimary and "Window 1 (primary)" or ("Window " .. index))
     row.Shown:SetChecked(shown)
-    row.Shown:SetEnabled(not isPrimary)
+    row.Shown:SetEnabled(not isPrimary and not fighting)
 
     if shown then
         row.Size:SetText(("%d x %d"):format(window:GetWidth(), window:GetHeight()))
@@ -404,9 +359,9 @@ local function RefreshRow(row, index)
     local resizable = shown and (index == 1 or window:CanMoveOrResize())
 
     row.Width:SetShown(true)
-    row.Width:SetEnabled(resizable)
+    row.Width:SetEnabled(resizable and not fighting)
     row.Height:SetShown(true)
-    row.Height:SetEnabled(resizable)
+    row.Height:SetEnabled(resizable and not fighting)
 
     -- Never overwrite a box the user is typing in; the throttled refresh below
     -- runs while the page is open, and hiding the window from this same row is
@@ -440,9 +395,9 @@ local function RefreshRow(row, index)
     end
 
     row.MatchWidth:SetChecked(link and link.matchWidth or false)
-    row.MatchWidth:SetEnabled(link ~= nil and not isPrimary)
+    row.MatchWidth:SetEnabled(link ~= nil and not isPrimary and not fighting)
     row.MatchHeight:SetChecked(link and link.matchHeight or false)
-    row.MatchHeight:SetEnabled(link ~= nil and not isPrimary)
+    row.MatchHeight:SetEnabled(link ~= nil and not isPrimary and not fighting)
     row.Detach:SetEnabled(link ~= nil and not isPrimary)
 
     -- Hiding is the only direction that is clean from addon code; see Windows.Hide.
@@ -471,22 +426,18 @@ end
 -- The panel deliberately offers no way to attach a window: snapping is a drag
 -- gesture, and a control duplicating it would be a second way to do the same
 -- thing. The page shows the link, its gap, its match flags and a Detach button.
-function Config.Pages(modulePage)
-    page = modulePage
-    category, categoryLayout = page.category, page.layout
-    BuildBehaviourOptions()
+function Config.Pages(page)
+    BuildBehaviourOptions(page)
+end
 
-    -- The window page reads the meter's windows, so without the module there
-    -- is nothing for it to show.
+local function BuildWindowsPage(page)
     if not ns.db.damageMeter or not ns.IsAvailable() then
+        page:Group("Meter windows"):Note("Switch the Damage meter module on and reload to manage its windows here.")
         return
     end
 
-    -- A plain frame, not SettingsListTemplate: the canvas subcategory sizes the
-    -- frame to fill the panel, and the template would add a list we do not use.
     windowPanel = CreateFrame("Frame")
     windowPanel:SetSize(600, 280)
-    windowPanel:Hide()
 
     windowPanel.ReloadNote = windowPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     windowPanel.ReloadNote:SetPoint("TOPLEFT", 20, -16)
@@ -526,9 +477,10 @@ function Config.Pages(modulePage)
         end
     end)
 
-    local subcategory = Settings.RegisterCanvasLayoutSubcategory(category, windowPanel, "Windows")
-    Settings.RegisterAddOnCategory(subcategory)
+    page:Embed(windowPanel, 280)
 end
+
+ns.Window.Register("damageMeterWindows", BuildWindowsPage)
 
 Config.key = "damageMeter"
 ns.RegisterModule("Config", Config)
