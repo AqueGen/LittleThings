@@ -10,7 +10,7 @@ local function load(state)
     GetApplicantInfo = function(id) return state.applications[id] end,
     GetApplicantMemberInfo = function(id, i)
       local m = state.applications[id].members[i]
-      return m.name, m.class, nil, nil, nil, nil, m.tank, m.healer, m.damage, m.role, nil, m.rating
+      return m.name, m.class, nil, nil, nil, nil, m.tank, m.healer, m.damage, m.role, nil, m.rating, nil, nil, nil, m.spec
     end,
   }
   loadfile("Modules/Applicants/Compare.lua")("LittleThings", ns)
@@ -50,5 +50,18 @@ describe("Compare.applications", function()
   it("skips a member whose rating is secret", function()
     local compare = load({ ids = { 1 }, applications = { application("applied", { dps("Cutlers", "ROGUE", SECRET) }) } })
     assert.same({ { members = {} } }, compare.applications())
+  end)
+
+  it("reads the specID and drops it when it is secret or missing", function()
+    local compare = load({ ids = { 1 }, applications = { application("applied", {
+      { name = "Flex", class = "DEMONHUNTER", role = "DAMAGER", tank = true, damage = true, rating = 2900, spec = 1480 },
+      { name = "Hidden", class = "MAGE", role = "DAMAGER", damage = true, rating = 2500, spec = SECRET },
+      dps("Plain", "ROGUE", 2400),
+    }) } })
+    local members = compare.applications()[1].members
+    assert.equals(1480, members[1].spec)
+    assert.is_nil(members[2].spec)
+    assert.equals("Hidden", members[2].name)
+    assert.is_nil(members[3].spec)
   end)
 end)
