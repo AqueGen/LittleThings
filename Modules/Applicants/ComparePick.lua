@@ -13,13 +13,12 @@ local function choices(member)
   return out
 end
 
-local function assign(members, open, i, used, roles)
+local function assign(members, open, i, used)
   if i > #members then return true end
   for _, role in ipairs(choices(members[i])) do
     if (used[role] or 0) < (open[role] or 0) then
       used[role] = (used[role] or 0) + 1
-      roles[i] = role
-      if assign(members, open, i + 1, used, roles) then return true end
+      if assign(members, open, i + 1, used) then return true end
       used[role] = used[role] - 1
     end
   end
@@ -45,7 +44,7 @@ function ComparePick.Pick(applications, open)
   for n, application in ipairs(applications) do
     local members = application.members
     if #members > 0 then
-      if not open or assign(members, open, 1, {}, {}) then
+      if not open or assign(members, open, 1, {}) then
         kept[#kept + 1] = { members = members, rating = mean(members), n = n }
       else
         dropped = dropped + #members
