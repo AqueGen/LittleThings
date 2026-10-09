@@ -34,8 +34,14 @@ local function ShowTooltip(owner, spec)
 end
 
 local function Hover(region, spec)
+    if region.SetMotionScriptsWhileDisabled then region:SetMotionScriptsWhileDisabled(true) end
     region:SetScript("OnEnter", function(self) ShowTooltip(self, spec) end)
     region:SetScript("OnLeave", GameTooltip_Hide)
+end
+
+local function HookHover(region, spec)
+    region:HookScript("OnEnter", function(self) ShowTooltip(self, spec) end)
+    region:HookScript("OnLeave", GameTooltip_Hide)
 end
 
 local function AskReload(spec, valueText)
@@ -76,19 +82,24 @@ function Group:Check(spec)
     check.text:SetPoint("LEFT", check, "RIGHT", 4, 0)
     check.text:SetText(spec.label)
     check:SetHitRectInsets(0, -(check.text:GetStringWidth() + 6), 0, 0)
+    local function Refresh()
+        check:SetChecked(spec.get() and true or false)
+        local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
+        check:SetEnabled(enabled)
+        check.text:SetTextColor(unpack(enabled and T.text or T.muted))
+    end
     check:SetScript("OnClick", function(self)
+        if Locked(spec) then
+            Refresh()
+            return
+        end
         local on = self:GetChecked() and true or false
         spec.set(on)
         AskReload(spec, on and "on" or "off")
         group.page:Refresh()
     end)
     Hover(check, spec)
-    self:Add(check, 24, function()
-        check:SetChecked(spec.get() and true or false)
-        local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
-        check:SetEnabled(enabled)
-        check.text:SetTextColor(unpack(enabled and T.text or T.muted))
-    end, spec.visible)
+    self:Add(check, 24, Refresh, spec.visible)
 end
 
 function Group:Slider(spec)
@@ -108,20 +119,30 @@ function Group:Slider(spec)
     local function Caption(value)
         label:SetText(spec.label .. ": " .. format:format(value))
     end
+    HookHover(slider.Slider, spec)
     slider:Init(spec.get(), spec.min, spec.max, (spec.max - spec.min) / step, {})
-    slider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, value)
-        if suppress then return end
-        value = math.floor(value / step + 0.5) * step
-        spec.set(value)
-        Caption(value)
-    end, holder)
-    self:Add(holder, 24, function()
-        local value = spec.get()
+    local function SetShown(value)
         suppress = true
         slider:SetValue(value)
         suppress = false
         Caption(value)
-        slider:SetEnabled(not Locked(spec))
+    end
+    slider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, value)
+        if suppress then return end
+        if Locked(spec) then
+            SetShown(spec.get())
+            return
+        end
+        value = spec.min + math.floor((value - spec.min) / step + 0.5) * step
+        value = tonumber(("%.4f"):format(value))
+        spec.set(value)
+        Caption(value)
+    end, holder)
+    self:Add(holder, 24, function()
+        SetShown(spec.get())
+        local locked = Locked(spec)
+        slider:SetEnabled(not locked)
+        label:SetTextColor(unpack(locked and T.muted or T.text))
     end, spec.visible)
 end
 
@@ -147,6 +168,7 @@ function Group:Dropdown(spec)
             root:CreateRadio(option.text,
                 function(value) return spec.get() == value end,
                 function(value)
+                    if Locked(spec) then return end
                     spec.set(value)
                     AskReload(spec, "to " .. option.text)
                     group.page:Refresh()
@@ -154,13 +176,17 @@ function Group:Dropdown(spec)
                 option.value)
         end
     end)
+    HookHover(dropdown, spec)
     self:Add(holder, 26, function()
         local current = spec.get()
-        if spec.default ~= nil and Rules.Known(Options(), current, spec.default) ~= current then
+        local options = Options()
+        if spec.default ~= nil and #options > 0 and Rules.Known(options, current, spec.default) ~= current then
             spec.set(spec.default)
         end
         dropdown:GenerateMenu()
-        dropdown:SetEnabled(not Locked(spec))
+        local locked = Locked(spec)
+        dropdown:SetEnabled(not locked)
+        label:SetTextColor(unpack(locked and T.muted or T.text))
     end, spec.visible)
 end
 
@@ -168,6 +194,7 @@ function Group:Button(spec)
     local group = self
     local button = Widgets.Button(self.frame, spec.text or spec.label, spec.width or 180)
     button:SetScript("OnClick", function()
+        if Locked(spec) then return end
         spec.onClick()
         group.page:Refresh()
     end)
@@ -194,7 +221,8 @@ function Group:Scoped(predicate)
     for _, name in ipairs({ "Check", "Slider", "Dropdown", "Button", "Note" }) do
         proxy[name] = function(_, spec)
             if type(spec) == "string" then spec = { text = spec } end
-            spec.visible = predicate
+            local own = spec.visible
+            spec.visible = own and function() return predicate() and own() end or predicate
             return group[name](group, spec)
         end
     end
@@ -260,7 +288,7 @@ function Page:Refresh()
     for index, group in ipairs(self.groups) do
         local shown = not group.visible or group.visible()
         group.frame:SetShown(shown)
-        local height = group.height
+        local height = group.embedded and Height(group) or nil
         if shown and not group.embedded then
             height = LayoutGroup(group)
         end
