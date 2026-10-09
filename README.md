@@ -1,10 +1,10 @@
 # LittleThings
 
-Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. The LittleThings page has one switch per module, with what it does in the tooltip. Group finder and Journal loot start on, the rest start off. Switch one on and its settings page appears under LittleThings; switch it off and the page goes. Off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
+Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. Settings live in the addon's own window (/lt): a menu on the left with every module, grouped, and the module's switch and options on the right. Group finder and Journal loot start on, the rest start off; a module that is off shows greyed in the menu and only its switch on its page. The window opens in combat too, with the switches and the options that change the game's own settings locked until combat ends. Off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
 
 Retail only, patch 12.1. No libraries, no dependencies.
 
-Formerly DamageMeterCompanion. Everything it did is the Damage meter module, settings and key bindings carry over, and `/dmc` still opens the page.
+Formerly DamageMeterCompanion. Everything it did is the Damage meter module, settings and key bindings carry over, and `/dmc` still opens the settings window.
 
 ## Modules
 
@@ -36,7 +36,7 @@ Off by default. Two bars of icons next to the character panel: your specializati
 
 ### Group finder
 
-One switch on the LittleThings page, on by default. While on, it brings up the Group finder page, where each of the tools below has its own switch (all on except Summary site links) and its options, in five sections: Applicants, Creating a group, Searching for a group, Player menus, Summary site.
+One switch at the top of the Group finder page, on by default. While on, each of the tools below has its own switch on that page (all on except Summary site links) and its options, in five sections: Applicants, Creating a group, Searching for a group, Player menus, Summary site.
 
 **Warcraft Logs link.** Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
 
@@ -74,7 +74,7 @@ Off by default. The page has Graphics, Memory and Addons sections.
 
 ## Commands
 
-- `/lt` (or `/littlethings`, `/dmc`) - settings
+- `/lt` (or `/littlethings`, `/dmc`) - the settings window
 - `/lt format`, `/lt snap` - toggle one damage meter feature
 - `/lt cpu` - the addon performance table, also in combat
 - `/lt diag` - what the addon sees, per meter window; useful when reporting a bug
@@ -85,4 +85,4 @@ Off by default. The page has Graphics, Memory and Addons sections.
 
 `busted tests` runs the pure-logic suite - number composition, snap geometry, the drop preview and the transparency rules. Everything frame-bound is verified in game against `docs/IN-GAME-CHECKLIST.md`.
 
-A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key` (a module with no key is always enabled and reads its switch itself); a switch is a row in `ns.MODULES` in `Core.lua`. A row without a `parent` is a switch on the root page and owns a settings page, `ns.pages[key]`, built at login when it is on or the moment it is switched on, and listed only while it is on; the module adds its options to it from `Pages`. A row with a `parent` is a switch on its parent's page, its options indented under it, and it is on only while its parent is: modules read `ns.IsOn(key)`, never `ns.db[key]`.
+A module is one file (or one folder) under `Modules/`. It registers itself with `ns.RegisterModule(name, module)` and names its switch in `module.key` (a module with no key is always enabled and reads its switch itself); a switch is a row in `ns.MODULES` in `Core.lua`. A row without a `parent` is a menu entry in the settings window with its own page, built the first time it is opened; the module adds its options to it from `Pages` through `page:Group(title)` and the controls in `UI/Widgets.lua`. A row with a `parent` is a switch in its own section on its parent's page, and it is on only while its parent is: modules read `ns.IsOn(key)`, never `ns.db[key]`.

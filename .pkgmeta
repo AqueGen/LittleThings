@@ -7,7 +7,7 @@ manual-changelog:
   markup-type: markdown
 
 # No externals: the addon deliberately has no library dependencies. Everything
-# it needs is Blizzard's own damage meter and the stock Settings API.
+# it needs is Blizzard's own damage meter and stock frame templates.
 
 ignore:
   - README.md
