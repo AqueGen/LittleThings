@@ -331,7 +331,7 @@ local function RegisterSettingsSignpost()
     open:SetText("Open LittleThings")
     open:SetScript("OnClick", function()
         if SettingsPanel and SettingsPanel:IsShown() then
-            HideUIPanel(SettingsPanel)
+            SettingsPanel:Close(true)
         end
         ns.OpenSettings()
     end)

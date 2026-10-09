@@ -50,9 +50,14 @@ local function SwitchSpec(row)
     }
 end
 
-local function CallPages(key, page)
+local function CallPages(key, page, fallback)
     for _, module in ipairs(ns.ModulesFor(key)) do
-        if module.Pages then module.Pages(page) end
+        if module.Pages then
+            local ok = xpcall(module.Pages, function(err) geterrorhandler()(err) end, page)
+            if not ok then
+                fallback():Note("This part failed to build. The error is in the error log (BugSack). The switch above and every other page still work.")
+            end
+        end
     end
 end
 
@@ -72,11 +77,13 @@ local function BuildModulePage(page, row)
             end
             group:Check(SwitchSpec(child))
             local scoped = group:Scoped(function() return ns.IsOn(child.key) end)
-            CallPages(child.key, { Group = function() return scoped end })
+            CallPages(child.key, { Group = function() return scoped end }, function() return scoped end)
         end
     end
 
-    CallPages(row.key, page)
+    CallPages(row.key, page, function()
+        return page:Group("This part failed to build")
+    end)
 end
 
 local function BuildPage(key)
@@ -187,6 +194,7 @@ local function Build()
 
     local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 2)
+    close:SetScript("OnClick", function() frame:Hide() end)
 
     menu = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     menu:SetPoint("TOPLEFT", 0, -TITLE_H)
