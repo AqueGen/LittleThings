@@ -191,7 +191,7 @@ end
 local function SortMenu(_, root)
     local choices = Sort.Choices(Data.Listing())
     if not choices then return end
-    root:CreateRadio("Blizzard order",
+    root:CreateRadio("Off",
         function() return not ns.IsOn("applicantOrder") end,
         function() ns.SetSwitch("applicantOrder", false) end)
     for _, key in ipairs(choices.order) do
@@ -210,7 +210,7 @@ local function BuildList()
     Heading(sortRow, "List")
     local label = sortRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     label:SetPoint("TOPLEFT", PAD, -24)
-    label:SetText("Sort by")
+    label:SetText("Rank by")
     panel.sortBy = CreateFrame("DropdownButton", nil, sortRow, "WowStyle1DropdownTemplate")
     panel.sortBy:SetWidth(120)
     panel.sortBy:SetPoint("TOPRIGHT", -PAD - 2, -18)

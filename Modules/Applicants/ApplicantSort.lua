@@ -10,7 +10,7 @@ local ApplicantSort = {}
 local CHOICES = {
     mythicPlus = {
         option = "by",
-        label = "Mythic+ sort by",
+        label = "Mythic+ rank by",
         order = { "rating", "itemLevel", "dungeon" },
         names = {
             rating = "Rating, then item level",
@@ -18,18 +18,18 @@ local CHOICES = {
             dungeon = "This dungeon, then rating",
         },
         short = { rating = "Rating", itemLevel = "Item level", dungeon = "This dungeon" },
-        tooltip = "What puts a Mythic+ applicant higher. The second value only decides between applicants who tie on the first. This dungeon is the applicant's rating in the listed dungeon.",
+        tooltip = "What gives a Mythic+ applicant a better rank. The second value only decides between applicants who tie on the first. This dungeon is the applicant's rating in the listed dungeon.",
     },
     raid = {
         option = "raidBy",
-        label = "Raid sort by",
+        label = "Raid rank by",
         order = { "progress", "itemLevel" },
         names = {
             progress = "Progress, then item level",
             itemLevel = "Item level, then progress",
         },
         short = { progress = "Progress", itemLevel = "Item level" },
-        tooltip = "What puts a raid applicant higher. Progress is the applicant's kills in the listed raid from Raider.IO: any Mythic kills rank above Heroic, Heroic above Normal, then the number of bosses. Without Raider.IO every applicant ties on progress.",
+        tooltip = "What gives a raid applicant a better rank. Progress is the applicant's kills in the listed raid from Raider.IO: any Mythic kills rank above Heroic, Heroic above Normal, then the number of bosses. Without Raider.IO every applicant ties on progress.",
     },
 }
 
@@ -61,11 +61,11 @@ function ApplicantSort.SetBy(choices, value)
     Pipeline.Refresh()
 end
 
--- 12.x: reordering the applicants table taints the viewer, and its roster update then dies on
--- secret values (LFGList.lua:1699, :1760). Secrets only appear under addon restrictions, so the
--- list is never sorted while one is active.
-local function Sort(applicants)
-    if not ns.IsOn("applicantOrder") or Data.Restricted() then return end
+local ranks = {}
+
+local function Rank(applicants)
+    ranks = {}
+    if not ns.IsOn("applicantOrder") then return end
     local listing = Data.Listing()
     local choices = Choices(listing)
     if not choices then return end
@@ -99,14 +99,18 @@ local function Sort(applicants)
     else
         keys = { passes, rating, itemLevel }
     end
-    Order.Sort(applicants, keys)
+    ranks = Order.Rank(applicants, keys)
 end
 
-local function OnRestrictionChange()
-    local viewer = LFGListFrame and LFGListFrame.ApplicationViewer
-    if ns.IsOn("applicantOrder") and viewer and viewer:IsVisible() then
-        C_LFGList.RefreshApplicants()
+local function ShowRank(member, applicantID, memberIndex)
+    if memberIndex ~= 1 then return end
+    local button = member:GetParent()
+    if not button.ltRank then
+        button.ltRank = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        button.ltRank:SetPoint("LEFT", member, "LEFT", 5, 0)
     end
+    local rank = ns.IsOn("applicantOrder") and not issecretvalue(applicantID) and ranks[applicantID]
+    button.ltRank:SetText(rank and ("#" .. rank) or "")
 end
 
 function ApplicantSort.Pages(page)
@@ -138,10 +142,8 @@ end
 function ApplicantSort.Enable()
     if enabled then return end
     enabled = true
-    Pipeline.Add(Pipeline.SORT, Sort)
-    local events = CreateFrame("Frame")
-    events:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
-    events:SetScript("OnEvent", OnRestrictionChange)
+    Pipeline.Add(Pipeline.SORT, Rank)
+    hooksecurefunc("LFGListApplicationViewer_UpdateApplicantMember", ShowRank)
 end
 
 function ApplicantSort.OnSwitch(on)
