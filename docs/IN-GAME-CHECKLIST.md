@@ -7,7 +7,7 @@ Setup: `/reload`, hit a target dummy so the meter has data, keep BugSack open. *
 ## 1. It loads at all
 
 - [ ] No Lua error on login.
-- [ ] `/dmc` opens the settings panel; the meter's own gear menu has a DamageMeterCompanion settings entry out of combat; in combat the entry is absent and the menu opens without error.
+- [ ] `/dmc` opens the settings window; the meter's own gear menu has a LittleThings settings entry out of combat; in combat the entry is absent and the menu opens without error.
 - [ ] `/dmc probe` and `/dmc diag` print without error.
 
 ## 2. Numbers
@@ -64,13 +64,13 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Hide all hides windows 2 and 3; they come back through the gear menu's Show new window.
 - [ ] Reset clears the meter like the gear menu's Reset.
 
-## 6. Settings panel
+## 6. Settings pages
 
-- [ ] Fresh profile: the LittleThings page has four switches, Damage meter, Character panel, Group finder and Journal loot, all off, each with its description on hover, and no module pages under it. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
-- [ ] Switch Journal loot on: its page appears under LittleThings at once. Switch it off: the page leaves the list at once. Pages keep the root page's order whichever is switched on first.
-- [ ] Switch Group finder on: its page shows Sort Mythic+ applicants, Applicant filter panel, Group creation helpers and Warcraft Logs link, all ticked, each with its options indented under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page goes, and the tools keep their own ticks for next time.
+- [ ] Fresh profile: Damage meter, Group leader icons, Character panel and Performance are off, Group finder and Journal loot are on, each module's switch on its page with its description. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
+- [ ] Switch Journal loot on: its options appear on its page at once. Switch it off: the options go and only the switch and description stay, and the menu entry greys.
+- [ ] Switch Group finder on: its page shows Sort Mythic+ applicants, Applicant filter panel, Group creation helpers and Warcraft Logs link, all ticked, each with its options under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page shows only the switch and description, and the tools keep their own ticks for next time.
 - [ ] The behaviour page has readable numbers, snapping, snap distance, idle transparency, layer, and at the bottom a Blizzard section with Enable Damage Meter and Auto Reset that mirror Gameplay Enhancements both ways.
-- [ ] The addon list has one Damage meter entry, with Windows nested under it. The Windows page lists three rows. Ticking Shown on a hidden slot shows the window and offers a reload; after the reload the window is there and combat logs nothing. Window 1's size boxes route through Edit Mode; a size Edit Mode refuses prints a message.
+- [ ] The menu has Damage meter and Meter windows entries. The Meter windows page lists three rows. Ticking Shown on a hidden slot shows the window and offers a reload; after the reload the window is there and combat logs nothing. Window 1's size boxes route through Edit Mode; a size Edit Mode refuses prints a message.
 - [ ] Typing an out-of-range width comes back clamped. A locked window's boxes are greyed.
 - [ ] The page shows "locked" next to a window locked from its gear menu and nothing once it is unlocked there; `/lt taint` after either stays clean.
 - [ ] **Lock window 2 from the panel, reload, fight, open window 2's gear menu in combat**: it opens, BugSack stays empty. (Without the reload the gear menu errors in combat - known, accepted.)
@@ -78,6 +78,18 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Hide on a row hides the window; the row stays.
 - [ ] Snapping two windows and reopening the page shows the link, gap and match flags; Detach drops it.
 - [ ] **After typing a size for window 1, open Edit Mode and press Save**: no "Interface action failed because of an addon".
+
+## Settings window
+
+- [ ] `/lt` opens the window; `/lt` again while open keeps it open on the same page. Esc and the X close it. Game > Options > AddOns > LittleThings shows a short page with Open LittleThings, which closes the game's options and opens the window. The damage meter gear menu's LittleThings settings opens the Damage meter page.
+- [ ] The menu shows Group content (Group finder, Group leader icons), Combat (Damage meter, Meter windows), Character and loot (Character panel, Journal loot), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
+- [ ] Drag by the title moves the window, the corner grip resizes it, it never goes below 800x480 and never changes size by itself. Position and size are the same after /reload.
+- [ ] Every page's controls do what the old Blizzard pages did: damage meter behaviour, layer, the two Blizzard switches, the Meter windows rows; both character panel bars; journal loot icons and loot spec buttons; group finder sections with their own switches; Memory, Graphics and Addons buttons. Values changed elsewhere (filter panel, /lt format) show on the page when it is opened again.
+- [ ] Changing Mythic+ sort by, Sort Mythic+ applicants or Damage meter offers a reload, as before.
+- [ ] Enter combat with the window open: module switches, the Blizzard meter switches, Graphics buttons, Collect garbage and the Meter windows shown / size / match controls go grey; everything else still works; after combat they come back. Open the window in combat with /lt: it opens.
+- [ ] No new BugSack errors from any of the above, including opening each page once.
+- [ ] Performance page, Show addon CPU: the addon CPU window opens in front of the settings window; clicking either brings it forward.
+- [ ] A reload prompt or the Graphics confirmation shows in front of the window; if the window is clicked while one is open the popup can end up behind it - known, the popup stays until answered.
 
 ## 7. Journal loot
 
@@ -96,7 +108,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## 8. Applicant keys
 
 - [ ] Switch on Keys and raid progress on applicants, list a Mythic+ key: the key numbers appear without a reload.
-- [ ] Sort Mythic+ applicants on, Mythic+ sort by Rating: bright applicants come first, highest rating on top, dimmed ones below them. Pick Item level on the settings page: a reload prompt appears and the order changes only after the reload. Untick the switch: same prompt, Blizzard's order after the reload. A raid listing keeps Blizzard's order.
+- [ ] Sort Mythic+ applicants on, Mythic+ sort by Rating: bright applicants come first, highest rating on top, dimmed ones below them. Pick Item level on the Group finder page: a reload prompt appears and the order changes only after the reload. Untick the switch: same prompt, Blizzard's order after the reload. A raid listing keeps Blizzard's order.
 - [ ] Only missing roles on, a healer slot open: healers rise to the top. Someone joins as healer: healers drop down and the next missing role rises, without touching anything.
 - [ ] Mythic+ listing, sorted, with applicants arriving and people being invited and leaving: count the "secret" errors from LFGList.lua 1699 / 1760 in BugSack per key, and check invite and decline still work and the header (Auto Accept, Browse Groups, Remove Listing) still looks right.
 - [ ] Listed, with applicants waiting, someone joins or leaves the group, in and out of an instance: BugSack has no errors from LFGList.lua (no "secret" at 1760 or 1699), invite and decline work.
@@ -116,7 +128,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top in blue, this dungeon below in green, each dimmed when not timed, label colours matching, clear of the invite buttons; nothing on cancelled rows.
 - [ ] List a raid with Raider.IO installed: each row shows two small progress lines (kills/bosses, no letter) just left of the Invite button and clear of it, this raid only (older raids never show): its best difficulty on top, the listed difficulty below, coloured N green / H blue / M purple; empty for players Raider.IO does not know. Without Raider.IO: no error, no text.
 - [ ] An applicant cancels, times out or is declined: the row leaves the list at once. Remove closed applications off: the row stays with its X, as Blizzard shows it.
-- [ ] List section: no sort menu. Show keys and progress and Remove closed applications match the settings page and act without a reload.
+- [ ] List section: no sort menu. Show keys and progress and Remove closed applications match the Group finder page and act without a reload.
 - [ ] Reset clears everything. Invite and decline from a filtered list work, BugSack stays empty.
 - [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them. Values saved for the removed options (minimum rating, keys) have no effect.
 - [ ] Switch off: the panel disappears and the list is Blizzard's again at once.
@@ -132,16 +144,16 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 11. Performance
 
-- [ ] Switch on Performance: a Performance page appears with a Graphics section (Optimize my FPS, Restore my settings) and a Memory section (Smoother garbage collection and Clean up in the open world ticked, Collect garbage) and an Addons section (Show addon CPU). Every label in the confirmation window reads like the game's own graphics menu (Fair, Disabled, a 1-10 number for view distance), none is a bare number or blank.
+- [ ] Switch on Performance: its page shows a Graphics section (Optimize my FPS, Restore my settings) and a Memory section (Smoother garbage collection and Clean up in the open world ticked, Collect garbage) and an Addons section (Show addon CPU). Every label in the confirmation window reads like the game's own graphics menu (Fair, Disabled, a 1-10 number for view distance), none is a bare number or blank.
 - [ ] Raise shadows and view distance in the game's graphics menu, press Optimize: the window lists only what differs, as before > after. Cancel changes nothing. Apply: the game's graphics menu shows the new values, no error.
 - [ ] Press Optimize again: chat says the settings are already optimized, no window.
 - [ ] Press Restore: the window lists the values from before the first Optimize. Apply puts them back. Restore again: chat says nothing to restore.
-- [ ] Open the page in combat and press either button: chat says it cannot be done in combat, nothing changes.
+- [ ] Open the window in combat: the Graphics buttons are greyed, and if one is pressed anyway chat says it cannot be done in combat, nothing changes.
 - [ ] With SmartGarbageCollector disabled: `/run local p = collectgarbage("setpause", 100) collectgarbage("setpause", p) print(p)` prints 110 while Smoother garbage collection is on. Untick it and run the line again: it prints the game's own value. Tick it again, switch Performance off, run it: the game's own value.
 - [ ] In a city, out of combat, with Clean up in the open world on: `/run C_Timer.NewTicker(5, function() print(floor(collectgarbage("count") / 1024)) end)` shows Lua memory dropping every 40 seconds without a visible hitch. In a dungeon or in combat it only climbs. Untick it: no more drops in the city. `/reload` stops the printing.
 - [ ] Collect garbage out of combat: chat prints Lua memory before > after, the freed amount and five addons with sizes. In combat: chat refuses, no stall.
 - [ ] Show addon CPU opens the Addon performance window: every loaded addon in a row, columns lined up under their headers, Average highlighted and sorted highest first. Now changes every second, Memory does not until Refresh memory. Clicking Addon sorts by name, clicking Hitches puts red rows on top. Drag moves it, Esc and the X close it, the button again toggles it.
-- [ ] In combat, `/lt cpu` opens and closes the window, no error, no "Interface action failed". `/lt` with no argument still opens the settings.
+- [ ] In combat, `/lt cpu` opens and closes the window, no error, no "Interface action failed". `/lt` with no argument still opens the settings window.
 - [ ] A few hours of play with SmartGarbageCollector removed, then Show addon CPU: no addon has more frames over 50 ms than before the switch, and the game does not feel less even.
 
 ## 12. Group leader icons

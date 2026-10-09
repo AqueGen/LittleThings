@@ -101,34 +101,23 @@ local function CollectGarbage()
 end
 
 function Memory.Pages(page)
-    local category = page.category
-
-    ns.AddHeader(page, "Memory")
-
-    local smooth = Settings.RegisterProxySetting(category, "LT_smoothGarbageCollection", Settings.VarType.Boolean,
-        "Smoother garbage collection", true,
-        function() return ns.db.smoothGarbageCollection end,
-        function(value)
+    local group = page:Group("Memory")
+    group:Check({ label = "Smoother garbage collection",
+        tooltip = "The game frees addon memory in one large pass after it has doubled, which shows as a hitch. This starts a pass after 10% growth instead, so the work is spread over many small steps. Off returns the game's own values.",
+        get = function() return ns.db.smoothGarbageCollection end,
+        set = function(value)
             ns.db.smoothGarbageCollection = value
             ApplyCollection()
-        end)
-    ns.AddToPage(page, Settings.CreateCheckbox(category, smooth,
-        "The game frees addon memory in one large pass after it has doubled, which shows as a hitch. This starts a pass after 10% growth instead, so the work is spread over many small steps. Off returns the game's own values."))
-
-    local cleanup = Settings.RegisterProxySetting(category, "LT_openWorldCleanup", Settings.VarType.Boolean,
-        "Clean up in the open world", true,
-        function() return ns.db.openWorldCleanup end,
-        function(value)
+        end })
+    group:Check({ label = "Clean up in the open world",
+        tooltip = ("Every %d seconds, frees thrown-away memory in small steps over up to %d seconds, so less is left for the game to collect later. Only outside instances, never in combat or on a loading screen."):format(CLEANUP_INTERVAL, CLEANUP_SECONDS),
+        get = function() return ns.db.openWorldCleanup end,
+        set = function(value)
             ns.db.openWorldCleanup = value
             ApplyCleanup()
-        end)
-    ns.AddToPage(page, Settings.CreateCheckbox(category, cleanup,
-        ("Every %d seconds, frees thrown-away memory in small steps over up to %d seconds, so less is left for the game to collect later. Only outside instances, never in combat or on a loading screen."):format(CLEANUP_INTERVAL, CLEANUP_SECONDS)))
-
-    local button = CreateSettingsButtonInitializer("Collect garbage", "Collect garbage", CollectGarbage,
-        "Frees the memory addons have thrown away and prints how much that was, and the five addons holding the most after it. The game stalls for a moment while it runs and gains no frames: most of what an addon shows before a collection is garbage the game frees on its own.", true)
-    page.layout:AddInitializer(button)
-    ns.AddToPage(page, button)
+        end })
+    group:Button({ label = "Collect garbage", text = "Collect garbage", combatLocked = true, onClick = CollectGarbage,
+        tooltip = "Frees the memory addons have thrown away and prints how much that was, and the five addons holding the most after it. The game stalls for a moment while it runs and gains no frames: most of what an addon shows before a collection is garbage the game frees on its own." })
 end
 
 Memory.Enable = Apply

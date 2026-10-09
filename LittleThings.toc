@@ -14,6 +14,10 @@
 ## X-Category: Miscellaneous
 
 Core.lua
+UI/WidgetRules.lua
+UI/MenuModel.lua
+UI/Widgets.lua
+UI/Window.lua
 Modules/DamageMeter/Windows.lua
 Modules/DamageMeter/Format.lua
 Modules/DamageMeter/Snap.lua

@@ -119,34 +119,31 @@ local function RefreshIfShown()
     end
 end
 
-local function Proxy(category, bar, key, varType, label, onChange)
-    return Settings.RegisterProxySetting(category, "LT_" .. bar.key .. "_" .. key, varType, label, bar.defaults[key],
-        function() return ns.db[bar.key][key] end,
-        function(value)
-            ns.db[bar.key][key] = value
-            if bars[bar.key] then
-                onChange(bars[bar.key])
-            end
-        end)
+local function Bar(bar, key, spec, onChange)
+    spec.default = bar.defaults[key]
+    spec.get = function() return ns.db[bar.key][key] end
+    spec.set = function(value)
+        ns.db[bar.key][key] = value
+        if bars[bar.key] then
+            onChange(bars[bar.key])
+        end
+    end
+    return spec
 end
 
-local function CornerOptions()
-    local container = Settings.CreateControlTextContainer()
-    container:Add("bottomleft", "Below the panel, left")
-    container:Add("bottomright", "Below the panel, right")
-    container:Add("topleft", "Above the panel, left")
-    container:Add("topright", "Above the panel, right")
-    return container:GetData()
-end
+local CORNER_OPTIONS = {
+    { value = "bottomleft", text = "Below the panel, left" },
+    { value = "bottomright", text = "Below the panel, right" },
+    { value = "topleft", text = "Above the panel, left" },
+    { value = "topright", text = "Above the panel, right" },
+}
 
-local function HeaderOptions()
-    local container = Settings.CreateControlTextContainer()
-    container:Add("bottom", "Below the icons")
-    container:Add("top", "Above the icons")
-    container:Add("left", "Left of the icons")
-    container:Add("right", "Right of the icons")
-    return container:GetData()
-end
+local HEADER_OPTIONS = {
+    { value = "bottom", text = "Below the icons" },
+    { value = "top", text = "Above the icons" },
+    { value = "left", text = "Left of the icons" },
+    { value = "right", text = "Right of the icons" },
+}
 
 -- The layout of one bar was saved under one table before the bars split;
 -- the specialization bar keeps that position.
@@ -162,45 +159,26 @@ local function InitializeDb()
     end
 end
 
--- The options exist whether or not the module is on: the page is where the
--- module is switched on, and a page with one checkbox says nothing about
--- what it switches.
 function CharacterPanel.Pages(page)
     InitializeDb()
 
-    local category = page.category
-
-    local lock = Settings.RegisterProxySetting(category, "LT_characterPanel_locked", Settings.VarType.Boolean,
-        "Lock bars", false,
-        function() return ns.db.characterPanelLocked == true end,
-        function(value)
-            ns.db.characterPanelLocked = value
-        end)
-    ns.AddToPage(page, Settings.CreateCheckbox(category, lock,
-        "Drag a bar on the character panel to place it, fine-tune with the offsets below, then lock it so it cannot be dragged."))
+    page:Group("Bars"):Check({ label = "Lock bars",
+        tooltip = "Drag a bar on the character panel to place it, fine-tune with the offsets below, then lock it so it cannot be dragged.",
+        get = function() return ns.db.characterPanelLocked == true end,
+        set = function(value) ns.db.characterPanelLocked = value end })
 
     for _, bar in ipairs(BARS) do
-        ns.AddHeader(page, bar.label)
-
-        ns.AddToPage(page, Settings.CreateDropdown(category,
-            Proxy(category, bar, "header", Settings.VarType.String, "Header", RefreshIfShown),
-            HeaderOptions, "Where the bar's title sits."))
-        ns.AddToPage(page, Settings.CreateDropdown(category,
-            Proxy(category, bar, "corner", Settings.VarType.String, "Anchor corner", Anchor),
-            CornerOptions, "Which corner of the character panel the bar hangs from."))
-
+        local group = page:Group(bar.label)
+        group:Dropdown(Bar(bar, "header", { label = "Header", options = HEADER_OPTIONS,
+            tooltip = "Where the bar's title sits." }, RefreshIfShown))
+        group:Dropdown(Bar(bar, "corner", { label = "Anchor corner", options = CORNER_OPTIONS,
+            tooltip = "Which corner of the character panel the bar hangs from." }, Anchor))
         for _, key in ipairs({ "x", "y" }) do
-            local setting = Proxy(category, bar, key, Settings.VarType.Number, key:upper() .. " offset", Anchor)
-            local options = Settings.CreateSliderOptions(-400, 400, 1)
-            options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-            ns.AddToPage(page, Settings.CreateSlider(category, setting, options, "Pixels from the chosen corner."))
+            group:Slider(Bar(bar, key, { label = key:upper() .. " offset", min = -400, max = 400,
+                tooltip = "Pixels from the chosen corner." }, Anchor))
         end
-
-        local sizeOptions = Settings.CreateSliderOptions(16, 48, 1)
-        sizeOptions:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right)
-        ns.AddToPage(page, Settings.CreateSlider(category,
-            Proxy(category, bar, "size", Settings.VarType.Number, "Icon size", RefreshIfShown),
-            sizeOptions, "Icon size in pixels."))
+        group:Slider(Bar(bar, "size", { label = "Icon size", min = 16, max = 48,
+            tooltip = "Icon size in pixels." }, RefreshIfShown))
     end
 end
 
