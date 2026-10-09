@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.16.0](https://github.com/AqueGen/LittleThings/compare/v0.15.0...v0.16.0) (2026-10-09)
+
+
+### Features
+
+* **compare:** applicant spec and every open role in the compare link ([#39](https://github.com/AqueGen/LittleThings/issues/39)) ([6b7d246](https://github.com/AqueGen/LittleThings/commit/6b7d246940cbcac9046131271f67f6eecc14e652))
+* own settings window replaces the Blizzard Settings pages ([#38](https://github.com/AqueGen/LittleThings/issues/38)) ([dcfad50](https://github.com/AqueGen/LittleThings/commit/dcfad50b0aa3779b21fbdf2fecaecae9e9925fcd))
+
+
+### Bug Fixes
+
+* sort only Mythic+ applicants, set at login ([#36](https://github.com/AqueGen/LittleThings/issues/36)) ([7ceda26](https://github.com/AqueGen/LittleThings/commit/7ceda2616d3212c12043e3f487f3f2e93f0a8d5d))
+
 ## [0.15.0](https://github.com/AqueGen/LittleThings/compare/v0.14.1...v0.15.0) (2026-10-08)
 
 
