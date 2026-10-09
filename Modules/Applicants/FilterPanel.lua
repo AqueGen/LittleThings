@@ -256,7 +256,11 @@ local function Sync()
 end
 
 local function Position()
-    return ns.db.applicantPanel
+    ns.db.applicantPanel = ns.db.applicantPanel or {}
+    local position = ns.db.applicantPanel
+    ns.ApplyDefaults(position, POSITION_DEFAULTS)
+    if not SIDES[position.side] then position.side = POSITION_DEFAULTS.side end
+    return position
 end
 
 function Filter.PlaceBeside(frame)
@@ -353,10 +357,6 @@ function Filter.Pages(page)
         function(value) Filter.Options().removeFinished = value end)
     ns.AddToPage(page, Settings.CreateCheckbox(page.category, remove,
         "Applications that were cancelled, timed out, declined or turned the invite down leave the list at once, as if you clicked their X."))
-
-    ns.db.applicantPanel = ns.db.applicantPanel or {}
-    ns.ApplyDefaults(ns.db.applicantPanel, POSITION_DEFAULTS)
-    if not SIDES[Position().side] then Position().side = POSITION_DEFAULTS.side end
 
     local category = page.category
     local function Proxy(key, varType, label)

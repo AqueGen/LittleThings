@@ -23,9 +23,21 @@ local cache = {}
 local hooked, waiting = false, false
 local specBar
 
+local options
+
 local function Options()
-    return ns.db.journalLootOptions
+    if not options then
+        ns.db.journalLootOptions = ns.db.journalLootOptions or {}
+        ns.ApplyDefaults(ns.db.journalLootOptions, JournalLoot.defaults)
+        options = ns.db.journalLootOptions
+    end
+    if not CORNERS[options.corner] then
+        options.corner = JournalLoot.defaults.corner
+    end
+    return options
 end
+
+JournalLoot.Options = Options
 
 local function BuildClasses()
     classes = {}
@@ -229,12 +241,6 @@ local function Repaint()
 end
 
 function JournalLoot.Pages(page)
-    ns.db.journalLootOptions = ns.db.journalLootOptions or {}
-    ns.ApplyDefaults(ns.db.journalLootOptions, JournalLoot.defaults)
-    if not CORNERS[Options().corner] then
-        Options().corner = JournalLoot.defaults.corner
-    end
-
     local category = page.category
     local function Proxy(key, varType, label)
         return Settings.RegisterProxySetting(category, "LT_journalLoot_" .. key, varType, label,

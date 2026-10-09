@@ -8,8 +8,15 @@ DefaultPlaystyle.defaults = { style = "FunSerious", preferMythicPlus = true, par
 
 local hooked = false
 
+local options
+
 local function Options()
-    return ns.db.defaultPlaystyleOptions
+    if not options then
+        ns.db.defaultPlaystyleOptions = ns.db.defaultPlaystyleOptions or {}
+        ns.ApplyDefaults(ns.db.defaultPlaystyleOptions, DefaultPlaystyle.defaults)
+        options = ns.db.defaultPlaystyleOptions
+    end
+    return options
 end
 
 DefaultPlaystyle.Options = Options
@@ -55,9 +62,6 @@ local function OnBlocked(_, _, blockedAddon, blockedFunction)
 end
 
 function DefaultPlaystyle.Pages(page)
-    ns.db.defaultPlaystyleOptions = ns.db.defaultPlaystyleOptions or {}
-    ns.ApplyDefaults(ns.db.defaultPlaystyleOptions, DefaultPlaystyle.defaults)
-
     local setting = Settings.RegisterProxySetting(page.category, "LT_defaultPlaystyle_style", Settings.VarType.String,
         "Playstyle", DefaultPlaystyle.defaults.style,
         function() return Options().style end,
