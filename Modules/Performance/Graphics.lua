@@ -113,18 +113,12 @@ local function Restore()
     end)
 end
 
-local function AddButton(page, name, text, onClick, tooltip)
-    local initializer = CreateSettingsButtonInitializer(name, text, onClick, tooltip, true)
-    page.layout:AddInitializer(initializer)
-    ns.AddToPage(page, initializer)
-end
-
 function Graphics.Pages(page)
-    ns.AddHeader(page, "Graphics")
-    AddButton(page, "Optimize graphics", "Optimize my FPS", Optimize,
-        "Lowers the settings that cost the most frames and matter least in combat: shadows, ambient occlusion, depth and compute effects, view distance, environment detail and ground clutter. Textures stay high and particles stay at Ultra so spell effects remain readable. A window lists every change before it is made.")
-    AddButton(page, "Restore graphics", "Restore my settings", Restore,
-        "Puts back the values these settings had before the first Optimize, after showing what will change.")
+    local group = page:Group("Graphics")
+    group:Button({ label = "Optimize graphics", text = "Optimize my FPS", combatLocked = true, onClick = Optimize,
+        tooltip = "Lowers the settings that cost the most frames and matter least in combat: shadows, ambient occlusion, depth and compute effects, view distance, environment detail and ground clutter. Textures stay high and particles stay at Ultra so spell effects remain readable. A window lists every change before it is made." })
+    group:Button({ label = "Restore graphics", text = "Restore my settings", combatLocked = true, onClick = Restore,
+        tooltip = "Puts back the values these settings had before the first Optimize, after showing what will change." })
 end
 
 Graphics.key = "performance"

@@ -199,11 +199,8 @@ end
 ns.Profiler = Profiler
 
 function Profiler.Pages(page)
-    ns.AddHeader(page, "Addons")
-    local button = CreateSettingsButtonInitializer("Addon performance", "Show addon CPU", Profiler.Toggle,
-        "Opens a table of every loaded addon with the game's own measurements: time per frame now and since login, the slowest frame, the average on the last boss, frames over 50 ms, which show as hitches, and memory. Click a column to sort by it. /lt cpu opens it too, also in combat.", true)
-    page.layout:AddInitializer(button)
-    ns.AddToPage(page, button)
+    page:Group("Addons"):Button({ label = "Addon performance", text = "Show addon CPU", onClick = Profiler.Toggle,
+        tooltip = "Opens a table of every loaded addon with the game's own measurements: time per frame now and since login, the slowest frame, the average on the last boss, frames over 50 ms, which show as hitches, and memory. Click a column to sort by it. /lt cpu opens it too, also in combat." })
 end
 
 Profiler.key = "performance"
