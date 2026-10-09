@@ -149,6 +149,12 @@ local function CreateSizeBox(row, index, dimension)
     end)
 
     box:SetScript("OnEnterPressed", function(self)
+        if InCombatLockdown() then
+            self:ClearFocus()
+            RefreshWindowPanel()
+            return
+        end
+
         local window = ns.Windows.Get(index)
         local value = tonumber(self:GetText())
 

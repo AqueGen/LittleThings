@@ -66,7 +66,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 6. Settings pages
 
-- [ ] Fresh profile: Damage meter, Character panel and Performance are off, Group finder and Journal loot are on, each module's switch on its page with its description. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
+- [ ] Fresh profile: Damage meter, Group leader icons, Character panel and Performance are off, Group finder and Journal loot are on, each module's switch on its page with its description. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
 - [ ] Switch Journal loot on: its options appear on its page at once. Switch it off: the options go and only the switch and description stay, and the menu entry greys.
 - [ ] Switch Group finder on: its page shows Sort Mythic+ applicants, Applicant filter panel, Group creation helpers and Warcraft Logs link, all ticked, each with its options under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page shows only the switch and description, and the tools keep their own ticks for next time.
 - [ ] The behaviour page has readable numbers, snapping, snap distance, idle transparency, layer, and at the bottom a Blizzard section with Enable Damage Meter and Auto Reset that mirror Gameplay Enhancements both ways.
@@ -82,12 +82,14 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## Settings window
 
 - [ ] `/lt` opens the window; `/lt` again while open keeps it open on the same page. Esc and the X close it. Game > Options > AddOns > LittleThings shows a short page with Open LittleThings, which closes the game's options and opens the window. The damage meter gear menu's LittleThings settings opens the Damage meter page.
-- [ ] The menu shows Group content (Group finder, Group leader icons), Combat (Damage meter, Meter windows), Character and loot (Character panel, Journal loot), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description.
+- [ ] The menu shows Group content (Group finder, Group leader icons), Combat (Damage meter, Meter windows), Character and loot (Character panel, Journal loot), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
 - [ ] Drag by the title moves the window, the corner grip resizes it, it never goes below 800x480 and never changes size by itself. Position and size are the same after /reload.
 - [ ] Every page's controls do what the old Blizzard pages did: damage meter behaviour, layer, the two Blizzard switches, the Meter windows rows; both character panel bars; journal loot icons and loot spec buttons; group finder sections with their own switches; Memory, Graphics and Addons buttons. Values changed elsewhere (filter panel, /lt format) show on the page when it is opened again.
 - [ ] Changing Mythic+ sort by, Sort Mythic+ applicants or Damage meter offers a reload, as before.
 - [ ] Enter combat with the window open: module switches, the Blizzard meter switches, Graphics buttons, Collect garbage and the Meter windows shown / size / match controls go grey; everything else still works; after combat they come back. Open the window in combat with /lt: it opens.
 - [ ] No new BugSack errors from any of the above, including opening each page once.
+- [ ] Performance page, Show addon CPU: the addon CPU window opens in front of the settings window; clicking either brings it forward.
+- [ ] A reload prompt or the Graphics confirmation shows in front of the window; if the window is clicked while one is open the popup can end up behind it - known, the popup stays until answered.
 
 ## 7. Journal loot
 

@@ -135,6 +135,7 @@ local function CreateWindow()
     window:SetSize(TABLE_WIDTH + 44, 480)
     window:SetPoint("CENTER")
     window:SetFrameStrata("DIALOG")
+    window:SetToplevel(true)
     window:SetClampedToScreen(true)
     window:SetMovable(true)
     window:EnableMouse(true)
@@ -194,6 +195,9 @@ function Profiler.Toggle()
         CreateWindow()
     end
     window:SetShown(not window:IsShown())
+    if window:IsShown() then
+        window:Raise()
+    end
 end
 
 ns.Profiler = Profiler

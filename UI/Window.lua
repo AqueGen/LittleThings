@@ -204,6 +204,10 @@ local function Build()
     menu:SetBackdropColor(unpack(T.panel))
     menu:SetBackdropBorderColor(unpack(T.border))
 
+    local signature = menu:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    signature:SetPoint("BOTTOMLEFT", menu, "BOTTOMLEFT", PAD, PAD)
+    signature:SetText("|cFF0057B7Made|r |cFFFFD700in Ukraine|r")
+
     scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", menu, "TOPRIGHT", PAD, -PAD)
     scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, PAD + 12)

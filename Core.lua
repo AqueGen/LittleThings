@@ -332,9 +332,16 @@ local function RegisterSettingsSignpost()
     open:SetScript("OnClick", function()
         if SettingsPanel and SettingsPanel:IsShown() then
             SettingsPanel:Close(true)
+            if SettingsPanel:IsShown() then
+                return
+            end
         end
         ns.OpenSettings()
     end)
+
+    local signature = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    signature:SetPoint("TOPLEFT", open, "BOTTOMLEFT", 0, -16)
+    signature:SetText("|cFF0057B7Made|r |cFFFFD700in Ukraine|r")
 
     ns.category = Settings.RegisterCanvasLayoutCategory(panel, "LittleThings")
     Settings.RegisterAddOnCategory(ns.category)
