@@ -3,7 +3,6 @@ local addonName, ns = ...
 local Rules = ns.FilterRules
 local Data = ns.ApplicantData
 local Filter = ns.ApplicantFilter
-local Sort = ns.ApplicantSort
 
 local WIDTH = 214
 local PAD = 10
@@ -188,37 +187,11 @@ local function BuildUtility()
     FilterCheck(row, "needBattleRes", "Brings battle res", -42)
 end
 
-local function SortMenu(_, root)
-    local choices = Sort.Choices(Data.Listing())
-    if not choices then return end
-    root:CreateRadio("Off",
-        function() return not ns.IsOn("applicantOrder") end,
-        function() ns.SetSwitch("applicantOrder", false) end)
-    for _, key in ipairs(choices.order) do
-        root:CreateRadio(choices.short[key],
-            function(value) return ns.IsOn("applicantOrder") and Sort.GetBy(choices) == value end,
-            function(value)
-                Sort.SetBy(choices, value)
-                if not ns.IsOn("applicantOrder") then ns.SetSwitch("applicantOrder", true) end
-            end,
-            key)
-    end
-end
-
 local function BuildList()
-    local sortRow = Row(18 + 28, "sortable")
-    Heading(sortRow, "List")
-    local label = sortRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    label:SetPoint("TOPLEFT", PAD, -24)
-    label:SetText("Rank by")
-    panel.sortBy = CreateFrame("DropdownButton", nil, sortRow, "WowStyle1DropdownTemplate")
-    panel.sortBy:SetWidth(120)
-    panel.sortBy:SetPoint("TOPRIGHT", -PAD - 2, -18)
-    panel.sortBy:SetupMenu(SortMenu)
-
-    local row = Row(24 + 24 + 6)
-    SwitchCheck(row, "applicantSort", "Show keys and progress", 0)
-    Check(row, "Remove closed applications", -24,
+    local row = Row(18 + 24 + 24 + 6)
+    Heading(row, "List")
+    SwitchCheck(row, "applicantSort", "Show keys and progress", -18)
+    Check(row, "Remove closed applications", -42,
         function() return Filter.Options().removeFinished == true end,
         function(value)
             Filter.Options().removeFinished = value
@@ -228,7 +201,6 @@ end
 
 local function Visible(row, listing)
     if row.when == "fiveMan" then return listing == nil or listing.fiveMan end
-    if row.when == "sortable" then return Sort.Choices(listing) ~= nil end
     return true
 end
 
@@ -272,7 +244,6 @@ local function Sync()
         check:SetChecked(check.get())
     end
     Layout()
-    if panel.sortBy:IsVisible() then panel.sortBy:GenerateMenu() end
 
     panel.reset:SetEnabled(not Rules.IsDefault(s))
     if state.paused then

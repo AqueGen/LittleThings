@@ -9,7 +9,7 @@ local function Compare(scoreA, scoreB)
     return scoreA > scoreB
 end
 
-function Order.Rank(applicants, keys)
+function Order.Sort(applicants, keys)
     local position, sorted = {}, {}
     for index, applicantID in ipairs(applicants) do
         position[applicantID] = index
@@ -24,11 +24,19 @@ function Order.Rank(applicants, keys)
         return position[a] < position[b]
     end)
 
-    local ranks = {}
-    for rank, applicantID in ipairs(sorted) do
-        ranks[applicantID] = rank
+    local changed = false
+    for index, applicantID in ipairs(sorted) do
+        if applicants[index] ~= applicantID then
+            changed = true
+            break
+        end
     end
-    return ranks
+    if changed then
+        for index, applicantID in ipairs(sorted) do
+            applicants[index] = applicantID
+        end
+    end
+    return changed
 end
 
 if ns then ns.ApplicantOrder = Order end

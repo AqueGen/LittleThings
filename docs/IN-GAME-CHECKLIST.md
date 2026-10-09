@@ -68,7 +68,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 - [ ] Fresh profile: the LittleThings page has four switches, Damage meter, Character panel, Group finder and Journal loot, all off, each with its description on hover, and no module pages under it. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
 - [ ] Switch Journal loot on: its page appears under LittleThings at once. Switch it off: the page leaves the list at once. Pages keep the root page's order whichever is switched on first.
-- [ ] Switch Group finder on: its page shows Rank applicants, Applicant filter panel, Group creation helpers and Warcraft Logs link, all ticked, each with its options indented under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page goes, and the tools keep their own ticks for next time.
+- [ ] Switch Group finder on: its page shows Sort Mythic+ applicants, Applicant filter panel, Group creation helpers and Warcraft Logs link, all ticked, each with its options indented under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page goes, and the tools keep their own ticks for next time.
 - [ ] The behaviour page has readable numbers, snapping, snap distance, idle transparency, layer, and at the bottom a Blizzard section with Enable Damage Meter and Auto Reset that mirror Gameplay Enhancements both ways.
 - [ ] The addon list has one Damage meter entry, with Windows nested under it. The Windows page lists three rows. Ticking Shown on a hidden slot shows the window and offers a reload; after the reload the window is there and combat logs nothing. Window 1's size boxes route through Edit Mode; a size Edit Mode refuses prints a message.
 - [ ] Typing an out-of-range width comes back clamped. A locked window's boxes are greyed.
@@ -96,9 +96,9 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## 8. Applicant keys
 
 - [ ] Switch on Keys and raid progress on applicants, list a Mythic+ key: the key numbers appear without a reload.
-- [ ] Rank applicants on, Mythic+ rank by Rating: every application shows #1, #2, ... at the left edge of its first row, readable and clear of the name; the list stays in Blizzard's order. Bright applicants hold the top ranks, highest rating #1, dimmed ones rank after them. Switch to Item level: the ranks follow at once. In a raid listing, Progress and Item level do the same. A group application shows one rank, on its first member.
-- [ ] Only missing roles on, a healer slot open: healers hold the top ranks. Someone joins as healer: the healers' ranks drop and the next missing role takes the top, without touching anything.
-- [ ] Listed with ranks on for a whole raid evening, people joining and leaving, combat and boss encounters: BugSack has no "secret" errors from LFGList.lua 1699 or 1760, invite and decline work.
+- [ ] Sort Mythic+ applicants on, Mythic+ sort by Rating: bright applicants come first, highest rating on top, dimmed ones below them. Pick Item level on the settings page: a reload prompt appears and the order changes only after the reload. Untick the switch: same prompt, Blizzard's order after the reload. A raid listing keeps Blizzard's order.
+- [ ] Only missing roles on, a healer slot open: healers rise to the top. Someone joins as healer: healers drop down and the next missing role rises, without touching anything.
+- [ ] Mythic+ listing, sorted, with applicants arriving and people being invited and leaving: count the "secret" errors from LFGList.lua 1699 / 1760 in BugSack per key, and check invite and decline still work and the header (Auto Accept, Browse Groups, Remove Listing) still looks right.
 - [ ] Listed, with applicants waiting, someone joins or leaves the group, in and out of an instance: BugSack has no errors from LFGList.lua (no "secret" at 1760 or 1699), invite and decline work.
 - [ ] Switch off: the key numbers and the column label go away at the next list update.
 
@@ -116,7 +116,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Rows show two small numbers right of the rating, under a "Best / Here" label: best key anywhere on top in blue, this dungeon below in green, each dimmed when not timed, label colours matching, clear of the invite buttons; nothing on cancelled rows.
 - [ ] List a raid with Raider.IO installed: each row shows two small progress lines (kills/bosses, no letter) just left of the Invite button and clear of it, this raid only (older raids never show): its best difficulty on top, the listed difficulty below, coloured N green / H blue / M purple; empty for players Raider.IO does not know. Without Raider.IO: no error, no text.
 - [ ] An applicant cancels, times out or is declined: the row leaves the list at once. Remove closed applications off: the row stays with its X, as Blizzard shows it.
-- [ ] List section: Rank by shows the current choice (Rating / Item level / This dungeon for Mythic+, Progress / Item level for a raid); picking one re-ranks at once, Off clears the ranks and the settings page's Rank applicants switch is unticked. Show keys and progress and Remove closed applications match the settings page and act without a reload. The section has no Rank by in PvP or other listings.
+- [ ] List section: no sort menu. Show keys and progress and Remove closed applications match the settings page and act without a reload.
 - [ ] Reset clears everything. Invite and decline from a filtered list work, BugSack stays empty.
 - [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them. Values saved for the removed options (minimum rating, keys) have no effect.
 - [ ] Switch off: the panel disappears and the list is Blizzard's again at once.
