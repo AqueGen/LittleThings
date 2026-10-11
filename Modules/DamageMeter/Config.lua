@@ -90,40 +90,12 @@ local function BuildBehaviourOptions(page)
     AddBlizzardCVarCheck(blizzard, "damageMeterResetOnNewInstance", AUTO_RESET_DAMAGE_METER, AUTO_RESET_DAMAGE_METER_TOOLTIP)
 end
 
--- The gear dropdown on every meter window is tagged, which is Blizzard's own
--- extension point: Menu.ModifyMenu callbacks run through securecallfunction
--- at the boundary, so adding an entry is clean. What the entry does when
--- pressed is our code - opening the settings panel touches nothing of the
--- meter's.
-local function AddSettingsToWindowDropdown()
-    if not Menu or not Menu.ModifyMenu then
-        return
-    end
-
-    Menu.ModifyMenu("MENU_DAMAGE_METER_WINDOW_SETTINGS", function(_, rootDescription)
-        -- Not in combat. An entry of ours is a tainted value in the menu's
-        -- description, and Blizzard's layout reads it before measuring the
-        -- menu regions, whose rects are Secret in combat (Menu.lua:989-999):
-        -- 'attempt to perform numeric conversion on a secret number value'.
-        -- Leaving the menu untouched in combat keeps its build untainted.
-        if InCombatLockdown() then
-            return
-        end
-
-        rootDescription:CreateDivider()
-        rootDescription:CreateButton("LittleThings settings", function()
-            ns.Config.Open()
-        end)
-    end)
-end
-
 function Config.Open()
     ns.OpenSettings("damageMeter")
 end
 
 function Config.Enable()
     active = true
-    AddSettingsToWindowDropdown()
 end
 
 local windowPanel

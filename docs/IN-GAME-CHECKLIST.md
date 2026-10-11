@@ -7,7 +7,7 @@ Setup: `/reload`, hit a target dummy so the meter has data, keep BugSack open. *
 ## 1. It loads at all
 
 - [ ] No Lua error on login.
-- [ ] `/dmc` opens the settings window; the meter's own gear menu has a LittleThings settings entry out of combat; in combat the entry is absent and the menu opens without error.
+- [ ] `/dmc` opens the settings window; the meter's own gear menu has no LittleThings entry, and opening it in combat logs nothing in BugSack.
 - [ ] `/dmc probe` and `/dmc diag` print without error.
 
 ## 2. Numbers

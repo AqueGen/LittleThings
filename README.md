@@ -20,7 +20,7 @@ A companion for Blizzard's built-in Damage Meter. It computes nothing itself - e
 
 **Transparency and layer.** The meter dims when the mouse is away and comes back when it is over it, as a fraction of the Edit Mode transparency you already set. The frame layer is a dropdown, for when another addon covers the meter.
 
-**One place for the meter's settings.** The game's own Enable and Auto Reset switches are mirrored at the bottom of the page, marked as Blizzard's, and the meter's gear menu has an entry that opens the page (out of combat - in combat an entry of ours would taint the menu's own layout).
+**One place for the meter's settings.** The game's own Enable and Auto Reset switches are mirrored at the bottom of the page, marked as Blizzard's. The page opens with `/lt` or `/dmc`; the meter's gear menu is left exactly as Blizzard built it.
 
 **Key bindings** to show or hide the meter, hide every extra window, and reset the data.
 
