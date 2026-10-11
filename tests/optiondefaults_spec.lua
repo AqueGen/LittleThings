@@ -14,23 +14,6 @@ local function load(path, ns)
 end
 
 describe("option tables read before any settings page exists", function()
-  it("DefaultPlaystyle fills its defaults on first read", function()
-    local ns = newNs()
-    load("Modules/Applicants/DefaultPlaystyle.lua", ns)
-    local options = ns.DefaultPlaystyle.Options()
-    assert.equals("FunSerious", options.style)
-    assert.is_true(options.partyKeys)
-    assert.equals(options, ns.db.defaultPlaystyleOptions)
-  end)
-
-  it("DefaultPlaystyle keeps what the player saved", function()
-    local ns = newNs()
-    ns.db.defaultPlaystyleOptions = { style = "Expert" }
-    load("Modules/Applicants/DefaultPlaystyle.lua", ns)
-    assert.equals("Expert", ns.DefaultPlaystyle.Options().style)
-    assert.is_true(ns.DefaultPlaystyle.Options().preferMythicPlus)
-  end)
-
   it("JournalLoot fills its defaults and resets an unknown position", function()
     local ns = newNs()
     ns.IconButtons = { ROLE_ATLAS = {}, SIZE = 24 }

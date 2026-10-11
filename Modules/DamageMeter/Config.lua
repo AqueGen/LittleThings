@@ -149,22 +149,6 @@ local function CreateSizeBox(row, index, dimension)
     return box
 end
 
-local function ToggleShown(index)
-    if ns.Windows.IsIndexShown(index) then
-        ns.Windows.Hide(index)
-        return
-    end
-
-    if InCombatLockdown() then
-        ns.Print("a window cannot be shown in combat")
-        return
-    end
-
-    if ns.Windows.Show(index) then
-        ns.RequestReload("shown state")
-    end
-end
-
 -- Windows.Indices only lists a Blizzard window once it has been shown; the
 -- panel lists all three slots so a hidden one still has a row saying how to
 -- bring it back. RefreshRow already handles a nil window.
@@ -185,22 +169,8 @@ local function CreateRow(parent, index)
     row.Title = row:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     row.Title:SetPoint("TOPLEFT")
 
-    row.Shown = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-    row.Shown:SetPoint("TOPLEFT", row.Title, "BOTTOMLEFT", 0, -2)
-    row.Shown:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Show or hide this window")
-        GameTooltip:AddLine("Hiding is clean. Showing from here runs Blizzard's setup inside the addon's taint, so the window logs a warning per row in combat until the UI is reloaded - you will be offered a reload. The gear menu's Show new window needs no reload.", 1, 1, 1, true)
-        GameTooltip:Show()
-    end)
-    row.Shown:SetScript("OnLeave", GameTooltip_Hide)
-    row.Shown:SetScript("OnClick", function()
-        ToggleShown(index)
-        RefreshWindowPanel()
-    end)
-
     row.Size = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    row.Size:SetPoint("LEFT", row.Shown, "RIGHT", 6, 0)
+    row.Size:SetPoint("TOPLEFT", row.Title, "BOTTOMLEFT", 0, -8)
     row.Size:SetWidth(70)
     row.Size:SetJustifyH("LEFT")
 
@@ -224,7 +194,7 @@ local function CreateRow(parent, index)
     row.Note:SetPoint("LEFT", row.Locked, "RIGHT", 16, 0)
 
     row.Link = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    row.Link:SetPoint("TOPLEFT", row.Shown, "BOTTOMLEFT", 0, -4)
+    row.Link:SetPoint("TOPLEFT", row.Size, "BOTTOMLEFT", 0, -8)
 
     row.GapLabel = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     row.GapLabel:SetPoint("LEFT", row.Link, "RIGHT", 12, 0)
@@ -322,8 +292,6 @@ local function RefreshRow(row, index)
     local fighting = InCombatLockdown()
 
     row.Title:SetText(isPrimary and "Window 1 (primary)" or ("Window " .. index))
-    row.Shown:SetChecked(shown)
-    row.Shown:SetEnabled(not isPrimary and not fighting)
 
     if shown then
         row.Size:SetText(("%d x %d"):format(window:GetWidth(), window:GetHeight()))
@@ -356,6 +324,8 @@ local function RefreshRow(row, index)
 
     if isPrimary then
         row.Note:SetText("Size comes from Edit Mode.")
+    elseif not shown then
+        row.Note:SetText("Show new window in a meter's gear menu brings it back.")
     else
         row.Note:SetText("")
     end
@@ -421,7 +391,7 @@ local function BuildWindowsPage(page)
     windowPanel.ReloadNote:SetPoint("TOPLEFT", 20, -16)
     windowPanel.ReloadNote:SetWidth(560)
     windowPanel.ReloadNote:SetJustifyH("LEFT")
-    windowPanel.ReloadNote:SetText("Shown, the size boxes, and match height on stacked windows (match width on side-by-side ones) go through Blizzard's code and need a /reload afterwards - the addon offers one. Until then the meter can log errors in combat. Sizes stay as set after the reload. Dragging, snapping, the gap and the other match are always safe.")
+    windowPanel.ReloadNote:SetText("The size boxes, and match height on stacked windows (match width on side-by-side ones) go through Blizzard's code and need a /reload afterwards - the addon offers one. Until then the meter can log errors in combat. Sizes stay as set after the reload. Dragging, snapping, the gap and the other match are always safe.")
 
     -- Rows are pooled by window index.
     windowPanel.rows = {}
