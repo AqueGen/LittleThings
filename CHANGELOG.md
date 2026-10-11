@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/AqueGen/LittleThings/compare/v0.16.0...v0.16.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* remove the three paths that run Blizzard code inside LittleThings' taint ([#40](https://github.com/AqueGen/LittleThings/issues/40)) ([94ec7b4](https://github.com/AqueGen/LittleThings/commit/94ec7b446900a19748078803d1d346200c7facdd))
+
 ## [0.16.0](https://github.com/AqueGen/LittleThings/compare/v0.15.0...v0.16.0) (2026-10-09)
 
 
