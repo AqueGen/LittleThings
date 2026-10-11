@@ -7,7 +7,7 @@ Setup: `/reload`, hit a target dummy so the meter has data, keep BugSack open. *
 ## 1. It loads at all
 
 - [ ] No Lua error on login.
-- [ ] `/dmc` opens the settings window; the meter's own gear menu has a LittleThings settings entry out of combat; in combat the entry is absent and the menu opens without error.
+- [ ] `/dmc` opens the settings window; the meter's own gear menu has no LittleThings entry, and opening it in combat logs nothing in BugSack.
 - [ ] `/dmc probe` and `/dmc diag` print without error.
 
 ## 2. Numbers
@@ -68,9 +68,9 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 - [ ] Fresh profile: Damage meter, Group leader icons, Character panel and Performance are off, Group finder and Journal loot are on, each module's switch on its page with its description. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
 - [ ] Switch Journal loot on: its options appear on its page at once. Switch it off: the options go and only the switch and description stay, and the menu entry greys.
-- [ ] Switch Group finder on: its page shows Sort Mythic+ applicants, Applicant filter panel, Group creation helpers and Warcraft Logs link, all ticked, each with its options under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page shows only the switch and description, and the tools keep their own ticks for next time.
+- [ ] Switch Group finder on: its page shows Sort Mythic+ applicants, Applicant filter panel, Group keystones and Warcraft Logs link, all ticked, each with its options under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page shows only the switch and description, and the tools keep their own ticks for next time.
 - [ ] The behaviour page has readable numbers, snapping, snap distance, idle transparency, layer, and at the bottom a Blizzard section with Enable Damage Meter and Auto Reset that mirror Gameplay Enhancements both ways.
-- [ ] The menu has Damage meter and Meter windows entries. The Meter windows page lists three rows. Ticking Shown on a hidden slot shows the window and offers a reload; after the reload the window is there and combat logs nothing. Window 1's size boxes route through Edit Mode; a size Edit Mode refuses prints a message.
+- [ ] The menu has Damage meter and Meter windows entries. The Meter windows page lists three rows. A hidden slot says "hidden" and points at the gear menu's Show new window; there is no way to show a window from the page. Window 1's size boxes route through Edit Mode; a size Edit Mode refuses prints a message.
 - [ ] Typing an out-of-range width comes back clamped. A locked window's boxes are greyed.
 - [ ] The page shows "locked" next to a window locked from its gear menu and nothing once it is unlocked there; `/lt taint` after either stays clean.
 - [ ] **Lock window 2 from the panel, reload, fight, open window 2's gear menu in combat**: it opens, BugSack stays empty. (Without the reload the gear menu errors in combat - known, accepted.)
@@ -86,7 +86,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Drag by the title moves the window, the corner grip resizes it, it never goes below 800x480 and never changes size by itself. Position and size are the same after /reload.
 - [ ] Every page's controls do what the old Blizzard pages did: damage meter behaviour, layer, the two Blizzard switches, the Meter windows rows; both character panel bars; journal loot icons and loot spec buttons; group finder sections with their own switches; Memory, Graphics and Addons buttons. Values changed elsewhere (filter panel, /lt format) show on the page when it is opened again.
 - [ ] Changing Mythic+ sort by, Sort Mythic+ applicants or Damage meter offers a reload, as before.
-- [ ] Enter combat with the window open: module switches, the Blizzard meter switches, Graphics buttons, Collect garbage and the Meter windows shown / size / match controls go grey; everything else still works; after combat they come back. Open the window in combat with /lt: it opens.
+- [ ] Enter combat with the window open: module switches, the Blizzard meter switches, Graphics buttons, Collect garbage and the Meter windows size / match controls go grey; everything else still works; after combat they come back. Open the window in combat with /lt: it opens.
 - [ ] No new BugSack errors from any of the above, including opening each page once.
 - [ ] Performance page, Show addon CPU: the addon CPU window opens in front of the settings window; clicking either brings it forward.
 - [ ] A reload prompt or the Graphics confirmation shows in front of the window; if the window is clicked while one is open the popup can end up behind it - known, the popup stays until answered.
@@ -133,14 +133,11 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Reload keeps every setting; another character starts clean; a character that had class picks from the old bar keeps them. Values saved for the removed options (minimum rating, keys) have no effect.
 - [ ] Switch off: the panel disappears and the list is Blizzard's again at once.
 
-## 10. Default playstyle
+## 10. Group keystones
 
-- [ ] Switch on, Premade Groups > Dungeons > Create: the playstyle dropdown already says Competitive. List Group works, no "Interface action failed because of an addon".
-- [ ] If the game blocks the title or the listing: chat names the blocked call and says the group creation helpers were turned off, the switch is off, the keystone list is gone, and after /reload listing with a hand-picked playstyle works.
-- [ ] Choose a dungeon you hold no key for: the second dropdown says Mythic Keystone, not Mythic. Pick Mythic by hand: it stays Mythic.
-- [ ] Open Create in Dungeons with a keystone in your bags, in and out of an instance: the game's own title is there (playstyle included), a title you typed stays as typed, BugSack has no ADDON_ACTION_BLOCKED for LittleThings, List Group works.
-- [ ] In a party whose members run DBM or BigWigs, open Create in Dungeons: Group keystones lists everyone's key, yours first; clicking one picks that dungeon at Mythic Keystone and puts the cursor in the title with a grey 'type +N' hint on its right; typing, picking another dungeon or closing the screen clears the hint. For someone else's key the title is not left empty, so List Group stays available. A member leaving drops their key; no keys at all hides the list.
-- [ ] Pick Relaxed on the page: the next new listing opens with Relaxed. Editing an active listing keeps its own playstyle.
+- [ ] In a party whose members run DBM or BigWigs, open Premade Groups > Dungeons > Create: Group keystones lists everyone's key, yours first. Clicking a row does nothing. A member leaving drops their key; no keys at all hides the list; another category hides it.
+- [ ] Pick a dungeon, a difficulty and a playstyle by hand and press List Group: it lists, BugSack has no ADDON_ACTION_BLOCKED and no LFGList.lua error for LittleThings.
+- [ ] Switch off on the Group finder page: the list is gone at once; on again: it is back without a reload.
 
 ## 11. Performance
 

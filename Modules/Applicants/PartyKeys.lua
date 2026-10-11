@@ -11,8 +11,7 @@ local MAX_ROWS = 5
 
 local keys = {}
 local panel
-local buttons = {}
-local hint
+local rows = {}
 local enabled = false
 
 local function Library()
@@ -24,7 +23,7 @@ local function Creation()
 end
 
 local function On()
-    return ns.IsOn("defaultPlaystyle") and ns.DefaultPlaystyle.Options().partyKeys
+    return ns.IsOn("partyKeys")
 end
 
 local function UnitFullName(unit)
@@ -43,68 +42,33 @@ local function Members()
     return members
 end
 
-local function DungeonActivities()
-    local infos = {}
-    for _, id in ipairs(C_LFGList.GetAvailableActivities(GROUP_FINDER_CATEGORY_ID_DUNGEONS) or {}) do
-        local info = C_LFGList.GetActivityInfoTable(id)
-        if info then
-            info.id = id
-            infos[#infos + 1] = info
-        end
-    end
-    return infos
-end
-
-local function ShowHint(text)
-    if hint then hint:SetText(text or "") end
-end
-
-local function ChooseKey(button)
-    local creation = Creation()
-    local _, _, _, _, _, mapID = C_ChallengeMode.GetMapUIInfo(button.challengeMapID)
-    local activityID, groupID = Keys.MythicPlusActivity(DungeonActivities(), mapID)
-    if not activityID then
-        ns.Print("no Mythic+ listing found for that keystone's dungeon.")
-        return
-    end
-    ns.DefaultPlaystyle.Select(creation, GROUP_FINDER_CATEGORY_ID_DUNGEONS, groupID, activityID)
-    if creation.Name then pcall(creation.Name.SetFocus, creation.Name) end
-    ShowHint("type +" .. button.level)
-end
-
 local function Row(index)
-    local button = buttons[index]
-    if button then return button end
-    button = CreateFrame("Button", nil, panel)
-    button:SetSize(WIDTH - 2 * PAD, ROW_HEIGHT)
-    button:SetPoint("TOPLEFT", PAD, -PAD - 22 - (index - 1) * ROW_HEIGHT)
-    button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-    button.text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    button.text:SetPoint("LEFT", 2, 0)
-    button.text:SetPoint("RIGHT", -2, 0)
-    button.text:SetJustifyH("LEFT")
-    button:SetScript("OnClick", ChooseKey)
-    buttons[index] = button
-    return button
+    local text = rows[index]
+    if text then return text end
+    text = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    text:SetPoint("TOPLEFT", PAD + 2, -PAD - 22 - (index - 1) * ROW_HEIGHT)
+    text:SetPoint("RIGHT", -PAD - 2, 0)
+    text:SetHeight(ROW_HEIGHT)
+    text:SetJustifyH("LEFT")
+    rows[index] = text
+    return text
 end
 
 local function Refresh()
     if not panel then return end
     local creation = Creation()
-    local rows = On() and creation:IsVisible() and creation.selectedCategory == GROUP_FINDER_CATEGORY_ID_DUNGEONS
+    local list = On() and creation:IsVisible() and creation.selectedCategory == GROUP_FINDER_CATEGORY_ID_DUNGEONS
         and Keys.Rows(keys, UnitFullName("player"), Members()) or {}
-    local shown = math.min(#rows, MAX_ROWS)
+    local shown = math.min(#list, MAX_ROWS)
     for index = 1, shown do
-        local row = rows[index]
-        local button = Row(index)
+        local row = list[index]
         local dungeon = C_ChallengeMode.GetMapUIInfo(row.challengeMapID) or "?"
-        button.challengeMapID = row.challengeMapID
-        button.level = row.level
-        button.text:SetText(("|cffffd100+%d|r %s  |cff999999%s|r"):format(row.level, dungeon, Ambiguate(row.name, "short")))
-        button:Show()
+        local text = Row(index)
+        text:SetText(("|cffffd100+%d|r %s  |cff999999%s|r"):format(row.level, dungeon, Ambiguate(row.name, "short")))
+        text:Show()
     end
-    for index = shown + 1, #buttons do
-        buttons[index]:Hide()
+    for index = shown + 1, #rows do
+        rows[index]:Hide()
     end
     panel:SetHeight(PAD * 2 + 22 + shown * ROW_HEIGHT)
     if ns.ApplicantFilter and ns.ApplicantFilter.PlaceBeside then ns.ApplicantFilter.PlaceBeside(panel) end
@@ -141,31 +105,7 @@ local function Build()
         Refresh()
     end)
     creation:HookScript("OnHide", Refresh)
-    hooksecurefunc("LFGListEntryCreation_Select", function()
-        ShowHint()
-        Refresh()
-    end)
-
-    local name = creation.Name
-    if name then
-        hint = name:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        hint:SetPoint("RIGHT", -8, 0)
-        name:HookScript("OnTextChanged", function(_, userInput)
-            if userInput then ShowHint() end
-        end)
-        name:HookScript("OnHide", function() ShowHint() end)
-    end
-end
-
-function PartyKeys.Pages(page)
-    page:Group():Check({ label = "Show the group's keystones",
-        tooltip = "A list beside the group creation screen with the keystones your group shares (yours first), for players running DBM, BigWigs or another addon with LibKeystone. Click one to pick its dungeon at Mythic+ and put the cursor in the title, with a grey hint of the level to type, such as +16: the game does not let addons write the title.",
-        get = function() return ns.DefaultPlaystyle.Options().partyKeys end,
-        set = function(value)
-            ns.DefaultPlaystyle.Options().partyKeys = value
-            Request()
-            Refresh()
-        end })
+    hooksecurefunc("LFGListEntryCreation_Select", Refresh)
 end
 
 function PartyKeys.Enable()
@@ -185,9 +125,12 @@ function PartyKeys.Enable()
 end
 
 function PartyKeys.OnSwitch(on)
-    if on then PartyKeys.Enable() end
+    if on then
+        PartyKeys.Enable()
+        Request()
+    end
     Refresh()
 end
 
-PartyKeys.key = "defaultPlaystyle"
+PartyKeys.key = "partyKeys"
 ns.RegisterModule("PartyKeys", PartyKeys)
