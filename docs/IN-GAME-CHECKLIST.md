@@ -176,3 +176,23 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Fresh install or a profile that never had it: Group finder page shows Summary site links unticked; no Compare applicants button on a Mythic+ listing and no Summary page entry in player menus.
 - [ ] Tick it: the button appears on a Mythic+ listing at once, and right-clicking a player shows Summary page under LittleThings. No Set address button anywhere.
 - [ ] Press Compare applicants: the popup holds a full https://brag-sheet.aquegen.workers.dev/compare?... link; pasted into the browser it starts checking the first batch (with a saved WCL key), and Open link from clipboard on an open compare page loads it too.
+
+## 15. Raid marker panel
+
+Switch on Raid marker panel (Group content). It is off by default. Its page has Lock position, Scale, Vertical, Pull left/right seconds and Reset position.
+
+- [ ] No Lua error on login with the module on and off; switching it on and off live works.
+- [ ] Party leader: all 8 target markers set (left click) and clear (right click) on the target, Clear all removes markers from every unit, world markers place and clear one by one, the last Clear all button clears every world marker.
+- [ ] Raid as a plain member: panel hidden. Given assistant out of combat: it shows. Given assistant in combat: it shows after combat, and there is no `ADDON_ACTION_BLOCKED`.
+- [ ] **In combat and inside an active key: target and world markers still work; Ready, Pull and Role are greyed with the reason in their tooltip.**
+- [ ] Pull: left click starts 10 s, right click 5 s; a click during the countdown cancels; another client with DBM shows the pull bar and cancels it too.
+- [ ] After a countdown started by someone else during chat lockdown finishes on its own, the next Pull click starts a pull instead of cancelling.
+- [ ] Ready check with one decline: the button goes red. With one player silent until the end: red. All ready: green. It resets after 5 s.
+- [ ] "Ready 20/20" in a 20-player raid fits the button.
+- [ ] The RC button opens MRT Raid Check; with MRT disabled the button is absent.
+- [ ] Dragging: the panel can only be grabbed by its padding and gaps, because the secure buttons take the mouse. Note whether that is comfortable. Lock position stops the drag; the position survives /reload; Reset position brings it back.
+- [ ] Scale and Vertical change the panel at once out of combat and are greyed in combat.
+- [ ] Key bindings (under LittleThings): Next world marker at the cursor cycles 1..8 and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places marker 1.
+- [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**
+- [ ] **`/console taintLog 1`, a full key: no LittleThings entries in `Logs/taint.log`.**
+- [ ] MRT's own Marks Bar is switched off by the owner (`/rt mb` toggle) so the two panels do not overlap.
