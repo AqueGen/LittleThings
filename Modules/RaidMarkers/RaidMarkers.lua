@@ -18,6 +18,13 @@ local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, l
 local active = false
 local panel, row1, row2, events, ticker
 local targetButtons, worldButtons = {}, {}
+local groupButtons = {}
+local readyText, readyTint, readyToken
+local countdownRunning, countdownToken = false, 0
+
+local READY_COLORS = { waiting = { 1, 0.82, 0 }, notready = { 1, 0.2, 0.2 }, ready = { 0.2, 1, 0.2 } }
+local WHITE, GREY, RED = { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }
+local MRT_ICON = 609902
 
 local function InitializeDb()
     ns.db.raidMarkerPanel = ns.db.raidMarkerPanel or {}
@@ -56,6 +63,106 @@ local function AddGroupButton(row, name, width)
     local button = NewButton(row, nil, width)
     button.label = Label(button, name)
     return button
+end
+
+local function HasRank(query)
+    local value = query("player")
+    return not issecretvalue(value) and value == true
+end
+
+local function BlockReason(action)
+    return Rules.GroupActionBlock({
+        inGroup = IsInGroup(),
+        inRaid = IsInRaid(),
+        leader = HasRank(UnitIsGroupLeader),
+        assistant = HasRank(UnitIsGroupAssistant),
+        combat = InCombatLockdown(),
+        lockdown = C_ChatInfo.InChatMessagingLockdown(),
+        lfg = HasLFGRestrictions(),
+    }, action)
+end
+
+local function PaintGroupButtons()
+    for key, button in pairs(groupButtons) do
+        if button.action then
+            local reason = BlockReason(button.action)
+            local color = reason and GREY or (key == "ready" and readyTint) or WHITE
+            button.reason = reason
+            button:SetEnabled(not reason)
+            button.label:SetTextColor(color[1], color[2], color[3])
+            if key == "ready" then
+                button.label:SetText(readyText or "Ready")
+            end
+        end
+    end
+end
+
+local function ShowTip(button)
+    PaintGroupButtons()
+    GameTooltip:SetOwner(button, "ANCHOR_TOP")
+    GameTooltip:AddLine(button.title, 1, 1, 1)
+    if button.lines then
+        for _, line in ipairs(button.lines()) do
+            GameTooltip:AddLine(line, 0.8, 0.8, 0.8)
+        end
+    end
+    if button.reason then
+        GameTooltip:AddLine(button.reason, RED[1], RED[2], RED[3], true)
+    end
+    GameTooltip:Show()
+end
+
+local function GroupButton(key, text, width, action, title, lines, onClick)
+    local button = AddGroupButton(row1, text, width)
+    button.action, button.title, button.lines = action, title, lines
+    button:SetScript("OnEnter", ShowTip)
+    button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    button:SetScript("OnClick", function(self, mouse)
+        if action and BlockReason(action) then
+            return
+        end
+        onClick(self, mouse)
+    end)
+    groupButtons[key] = button
+    return button
+end
+
+local function ReadyStatuses()
+    local statuses = {}
+    local units = {}
+    local count = GetNumGroupMembers()
+    if IsInRaid() then
+        for i = 1, count do
+            units[#units + 1] = "raid" .. i
+        end
+    else
+        units[1] = "player"
+        for i = 1, count - 1 do
+            units[#units + 1] = "party" .. i
+        end
+    end
+    for _, unit in ipairs(units) do
+        local status = GetReadyCheckStatus(unit)
+        statuses[#statuses + 1] = (issecretvalue(status) or status == nil) and "unknown" or status
+    end
+    return statuses
+end
+
+local function UpdateReady(finished)
+    readyToken = nil
+    local state, ready, total = Rules.ReadyTally(ReadyStatuses(), finished)
+    readyText, readyTint = Rules.ReadyLabel(ready, total), READY_COLORS[state]
+    PaintGroupButtons()
+    if finished then
+        local token = {}
+        readyToken = token
+        C_Timer.After(5, function()
+            if readyToken == token then
+                readyToken, readyText, readyTint = nil, nil, nil
+                PaintGroupButtons()
+            end
+        end)
+    end
 end
 
 local function LayoutRow(row, vertical)
@@ -127,11 +234,6 @@ local function StopTicker()
         ticker:Cancel()
         ticker = nil
     end
-end
-
-local function HasRank(query)
-    local value = query("player")
-    return not issecretvalue(value) and value == true
 end
 
 local function RequestVisibility()
@@ -219,6 +321,37 @@ local function Build()
     end
     Label(SecureButton(row1, CLEAR_WIDTH, { type = "raidtarget", action = "clear-all" }), "Clear all")
 
+    GroupButton("ready", "Ready", CLEAR_WIDTH, "ready", "Ready check", nil, function()
+        C_PartyInfo.DoReadyCheck()
+    end)
+    local pull = GroupButton("pull", "Pull", 40, "pull", "Pull countdown", function()
+        local db = ns.db.raidMarkerPanel
+        return {
+            "Left click: start " .. Rules.PullSeconds(db, "LeftButton") .. " s",
+            "Right click: start " .. Rules.PullSeconds(db, "RightButton") .. " s",
+            "Click while counting: cancel",
+        }
+    end, function(_, mouse)
+        if countdownRunning then
+            C_PartyInfo.DoCountdown(0)
+        else
+            C_PartyInfo.DoCountdown(Rules.PullSeconds(ns.db.raidMarkerPanel, mouse))
+        end
+    end)
+    pull:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    GroupButton("role", "Role", 40, "role", "Role check", nil, function()
+        InitiateRolePoll()
+    end)
+    if C_AddOns.IsAddOnLoaded("MRT") and ExRT and ExRT.A and ExRT.A.RaidCheck and ExRT.A.RaidCheck.ReadyCheckWindow then
+        local rc = GroupButton("rc", "", SIZE, nil, "MRT Raid Check", nil, function()
+            pcall(ExRT.A.RaidCheck.ReadyCheckWindow, ExRT.A.RaidCheck, nil, nil, true)
+        end)
+        local icon = rc:CreateTexture(nil, "ARTWORK")
+        icon:SetAllPoints()
+        icon:SetTexture(MRT_ICON)
+    end
+    PaintGroupButtons()
+
     for i, color in ipairs(WORLD_COLORS) do
         local button = SecureButton(row2, SIZE, { type = "worldmarker", marker = i, action1 = "set", action2 = "clear" })
         local swatch = button:CreateTexture(nil, "ARTWORK")
@@ -233,16 +366,45 @@ local function Build()
     Place()
 end
 
+local function Refresh()
+    RequestVisibility()
+    PaintGroupButtons()
+end
+
+local function StartCountdown(_, timeRemaining)
+    countdownRunning = true
+    countdownToken = countdownToken + 1
+    local token = countdownToken
+    if not issecretvalue(timeRemaining) and type(timeRemaining) == "number" then
+        C_Timer.After(timeRemaining, function()
+            if countdownToken == token then
+                countdownRunning = false
+            end
+        end)
+    end
+end
+
 local handlers = {
-    GROUP_ROSTER_UPDATE = RequestVisibility,
-    PARTY_LEADER_CHANGED = RequestVisibility,
-    PLAYER_ENTERING_WORLD = RequestVisibility,
+    GROUP_ROSTER_UPDATE = Refresh,
+    PARTY_LEADER_CHANGED = Refresh,
+    PLAYER_ENTERING_WORLD = Refresh,
     PLAYER_REGEN_ENABLED = function()
         Build()
-        RequestVisibility()
+        Refresh()
+    end,
+    PLAYER_REGEN_DISABLED = function()
+        C_Timer.After(0, PaintGroupButtons)
     end,
     RAID_TARGET_UPDATE = RefreshTarget,
     PLAYER_TARGET_CHANGED = RefreshTarget,
+    READY_CHECK = function() UpdateReady(false) end,
+    READY_CHECK_CONFIRM = function() UpdateReady(false) end,
+    READY_CHECK_FINISHED = function() UpdateReady(true) end,
+    START_PLAYER_COUNTDOWN = StartCountdown,
+    CANCEL_PLAYER_COUNTDOWN = function()
+        countdownToken = countdownToken + 1
+        countdownRunning = false
+    end,
 }
 
 function RaidMarkers.Enable()

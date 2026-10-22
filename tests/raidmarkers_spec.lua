@@ -10,6 +10,10 @@ local function new_object(frames, name, template)
   function f:Show() self.shown = true self.showCalls = self.showCalls + 1 end
   function f:Hide() self.shown = false end
   function f:IsShown() return self.shown end
+  function f:SetEnabled(v) self.enabled = v end
+  function f:IsEnabled() return self.enabled ~= false end
+  function f:SetText(t) self.text = t end
+  function f:SetTextColor(r, g, b) self.color = { r, g, b } end
   function f:CreateTexture() return new_object(frames) end
   function f:CreateFontString() return new_object(frames) end
   frames[#frames + 1] = f
@@ -39,7 +43,24 @@ local function load(state, db)
   _G.GetRaidTargetIndex = function() return state.targetIndex end
   _G.IsRaidMarkerActive = function() return false end
   _G.SetRaidTargetIconTexture = noop
-  _G.C_Timer = { NewTicker = function() return { Cancel = noop } end }
+  local timers = {}
+  _G.C_Timer = {
+    NewTicker = function() return { Cancel = noop } end,
+    After = function(delay, fn)
+      if delay == 0 then fn() else timers[#timers + 1] = fn end
+    end,
+  }
+  _G.C_PartyInfo = {
+    DoReadyCheck = function() state.calls[#state.calls + 1] = { "ready" } end,
+    DoCountdown = function(n) state.calls[#state.calls + 1] = { "pull", n } end,
+  }
+  _G.InitiateRolePoll = function() state.calls[#state.calls + 1] = { "role" } end
+  _G.C_ChatInfo = { InChatMessagingLockdown = function() return state.lockdown end }
+  _G.HasLFGRestrictions = function() return state.lfg end
+  _G.GetReadyCheckStatus = function(unit) return state.status and state.status[unit] end
+  _G.GetNumGroupMembers = function() return state.members or 1 end
+  _G.C_AddOns = { IsAddOnLoaded = function() return state.mrt end }
+  _G.ExRT = state.exrt
   assert(loadfile("Modules/RaidMarkers/MarkerRules.lua"))("LittleThings", ns)
   assert(loadfile("Modules/RaidMarkers/RaidMarkers.lua"))("LittleThings", ns)
 
@@ -63,14 +84,26 @@ local function load(state, db)
     end
   end
 
-  return { module = module, ns = ns, fire = fire, secure = secure, panel = panel }
+  local function button(title)
+    for _, f in ipairs(frames) do
+      if f.label and f.title == title then return f end
+    end
+  end
+
+  local function advance()
+    local due = timers
+    timers = {}
+    for _, fn in ipairs(due) do fn() end
+  end
+
+  return { module = module, ns = ns, fire = fire, secure = secure, panel = panel, button = button, advance = advance }
 end
 
 describe("RaidMarkers", function()
   local state, addon
 
   before_each(function()
-    state = { combat = false, group = false, raid = false, leader = false, assistant = false }
+    state = { combat = false, group = false, raid = false, leader = false, assistant = false, calls = {} }
     addon = load(state)
     addon.module.Enable()
   end)
@@ -157,5 +190,113 @@ describe("RaidMarkers", function()
     addon.fire("GROUP_ROSTER_UPDATE")
     addon.module.OnSwitch(false)
     assert.is_false(addon.panel():IsShown())
+  end)
+
+  describe("group buttons", function()
+    local function leading()
+      state.group, state.leader = true, true
+      addon.fire("GROUP_ROSTER_UPDATE")
+    end
+
+    it("pull left starts 10 and right starts 5", function()
+      leading()
+      local pull = addon.button("Pull countdown")
+      pull.scripts.OnClick(pull, "LeftButton")
+      pull.scripts.OnClick(pull, "RightButton")
+      assert.same({ { "pull", 10 }, { "pull", 5 } }, state.calls)
+    end)
+
+    it("pull cancels a running countdown", function()
+      leading()
+      local pull = addon.button("Pull countdown")
+      addon.fire("START_PLAYER_COUNTDOWN", "Someone", 10, 10)
+      pull.scripts.OnClick(pull, "LeftButton")
+      addon.fire("CANCEL_PLAYER_COUNTDOWN")
+      pull.scripts.OnClick(pull, "LeftButton")
+      assert.same({ { "pull", 0 }, { "pull", 10 } }, state.calls)
+    end)
+
+    it("secret countdown payload does not error", function()
+      leading()
+      local pull = addon.button("Pull countdown")
+      assert.has_no.errors(function() addon.fire("START_PLAYER_COUNTDOWN", SECRET, SECRET, SECRET) end)
+      pull.scripts.OnClick(pull, "LeftButton")
+      assert.same({ { "pull", 0 } }, state.calls)
+    end)
+
+    it("buttons disable in chat lockdown and clicking records no call", function()
+      state.lockdown = true
+      leading()
+      local ready, pull, role = addon.button("Ready check"), addon.button("Pull countdown"), addon.button("Role check")
+      assert.is_false(ready:IsEnabled())
+      assert.is_false(pull:IsEnabled())
+      assert.is_false(role:IsEnabled())
+      ready.scripts.OnClick(ready, "LeftButton")
+      pull.scripts.OnClick(pull, "LeftButton")
+      role.scripts.OnClick(role, "LeftButton")
+      assert.same({}, state.calls)
+    end)
+
+    it("clicks the ready check and role poll when allowed", function()
+      leading()
+      local ready, role = addon.button("Ready check"), addon.button("Role check")
+      ready.scripts.OnClick(ready, "LeftButton")
+      role.scripts.OnClick(role, "LeftButton")
+      assert.same({ { "ready" }, { "role" } }, state.calls)
+    end)
+
+    it("disables on combat start after the timer tick", function()
+      leading()
+      state.combat = true
+      addon.fire("PLAYER_REGEN_DISABLED")
+      assert.is_false(addon.button("Ready check"):IsEnabled())
+    end)
+
+    it("ready shows count then green", function()
+      leading()
+      state.members = 2
+      state.status = { player = "waiting", party1 = "ready" }
+      addon.fire("READY_CHECK")
+      local ready = addon.button("Ready check")
+      assert.equals("Ready 1/2", ready.label.text)
+      assert.same({ 1, 0.82, 0 }, ready.label.color)
+      state.status = { player = "ready", party1 = "ready" }
+      addon.fire("READY_CHECK_CONFIRM")
+      addon.fire("READY_CHECK_FINISHED")
+      assert.equals("Ready 2/2", ready.label.text)
+      assert.same({ 0.2, 1, 0.2 }, ready.label.color)
+      addon.advance()
+      assert.equals("Ready", ready.label.text)
+      assert.same({ 1, 1, 1 }, ready.label.color)
+    end)
+
+    it("passes a secret ready status to the tally as unknown", function()
+      leading()
+      state.members = 2
+      state.status = { player = "ready", party1 = SECRET }
+      addon.fire("READY_CHECK")
+      assert.equals("Ready 1/1", addon.button("Ready check").label.text)
+    end)
+
+    it("counts raid units without adding the player twice", function()
+      state.raid = true
+      leading()
+      state.members = 2
+      state.status = { raid1 = "ready", raid2 = "notready", player = "ready" }
+      addon.fire("READY_CHECK")
+      assert.equals("Ready 1/2", addon.button("Ready check").label.text)
+    end)
+
+    it("hides RC without MRT and calls Raid Check with it", function()
+      assert.is_nil(addon.button("MRT Raid Check"))
+      local args
+      local raidCheck = { ReadyCheckWindow = function(...) args = { ... } end }
+      state.mrt, state.exrt = true, { A = { RaidCheck = raidCheck } }
+      local mrt = load(state)
+      mrt.module.Enable()
+      local rc = mrt.button("MRT Raid Check")
+      rc.scripts.OnClick(rc, "LeftButton")
+      assert.same({ raidCheck, nil, nil, true }, args)
+    end)
   end)
 end)
