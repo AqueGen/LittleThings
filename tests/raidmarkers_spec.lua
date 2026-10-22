@@ -2,8 +2,23 @@ local SECRET = setmetatable({}, { __tostring = function() return "secret" end })
 
 local function noop() end
 
-local function new_object(frames, name, template)
-  local f = { name = name, template = template, attrs = {}, scripts = {}, events = {}, shown = true, showCalls = 0 }
+local FRAME_PROTECTED = {
+  "Show", "Hide", "SetShown", "Raise", "Lower", "SetScale", "SetFrameStrata", "SetFrameLevel", "SetFixedFrameStrata",
+  "SetFixedFrameLevel", "SetUsingParentLevel", "SetClampedToScreen", "SetClampRectInsets", "SetHitRectInsets", "SetToplevel",
+  "StartMoving", "StartSizing", "StopMovingOrSizing", "ClearAttribute", "ClearAttributes", "EnableKeyboard",
+  "EnableGamePadButton", "EnableGamePadStick", "SetHyperlinksEnabled", "SetID", "SetIgnoreParentScale", "ResizeToBoundsRect",
+  "AddRoleset", "RemoveRoleset", "SetRolesets",
+  "ClearAllPoints", "ClearPoint", "SetAllPoints", "SetPoint", "SetSize", "SetWidth", "SetHeight", "AdjustPointsOffset",
+  "SetPointsOffset", "ClearPointsOffset",
+  "EnableMouse", "EnableMouseMotion", "EnableMouseWheel", "SetParent", "SetMouseClickEnabled", "SetMouseMotionEnabled",
+  "SetPassThroughButtons", "SetPropagateMouseClicks", "SetPropagateMouseMotion", "SetCollapsesLayout",
+  "SetRoundLayoutToNearestPixel",
+  "Enable", "Disable", "SetEnabled", "RegisterForClicks", "RegisterForMouse",
+}
+local REGION_PROTECTED = { "SetScale", "SetIgnoreParentScale" }
+
+local function new_object(frames, name, template, region)
+  local f = { name = name, template = template, attrs = {}, scripts = {}, events = {}, shown = true, showCalls = 0, calls = {} }
   function f:SetAttribute(k, v) self.attrs[k] = v end
   function f:SetScript(script, fn) self.scripts[script] = fn end
   function f:RegisterEvent(event) self.events[event] = true end
@@ -18,17 +33,29 @@ local function new_object(frames, name, template)
   function f:IsEnabled() return self.enabled ~= false end
   function f:SetText(t) self.text = t end
   function f:SetTextColor(r, g, b) self.color = { r, g, b } end
-  function f:CreateTexture() return new_object(frames) end
-  function f:CreateFontString() return new_object(frames) end
+  function f:CreateTexture() return new_object(frames, nil, nil, true) end
+  function f:CreateFontString() return new_object(frames, nil, nil, true) end
   function f:RegisterForClicks(...) self.clicks = { ... } end
   function f:WrapScript(frame, script, preBody) frame.wraps = rawget(frame, "wraps") or {} frame.wraps[script] = preBody end
+  local protected = region and REGION_PROTECTED or FRAME_PROTECTED
+  if not region and template and template:find("Secure") then
+    protected = { "SetAttribute", unpack(FRAME_PROTECTED) }
+  end
+  for _, method in ipairs(protected) do
+    local impl = rawget(f, method) or noop
+    f[method] = function(self, ...)
+      self.calls[method] = (self.calls[method] or 0) + 1
+      if frames.state.combat then frames.blocked[#frames.blocked + 1] = method end
+      return impl(self, ...)
+    end
+  end
   frames[#frames + 1] = f
-  return setmetatable(f, { __index = function() return noop end })
+  return setmetatable(f, { __index = function(_, k) if k:match("^%u") then return noop end end })
 end
 
 local function load(state, db)
   local module
-  local frames = {}
+  local frames = { state = state, blocked = {} }
   local ns = {
     db = db or {},
     RegisterModule = function(_, m) module = m end,
@@ -67,6 +94,7 @@ local function load(state, db)
   _G.GetReadyCheckStatus = function(unit) return state.status and state.status[unit] end
   _G.GetNumGroupMembers = function() return state.members or 1 end
   _G.C_AddOns = { IsAddOnLoaded = function() return state.mrt end }
+  _G.GameTooltip = setmetatable({}, { __index = function() return noop end })
   _G.ExRT = state.exrt
   _G.GMRT = state.gmrt
   assert(loadfile("Modules/RaidMarkers/MarkerRules.lua"))("LittleThings", ns)
@@ -108,7 +136,16 @@ local function load(state, db)
     for _, fn in ipairs(due) do fn() end
   end
 
-  return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance }
+  local function groupButtons()
+    local found = {}
+    for _, f in ipairs(frames) do
+      if rawget(f, "title") then found[#found + 1] = f end
+    end
+    return found
+  end
+
+  return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance,
+    groupButtons = groupButtons, blocked = frames.blocked }
 end
 
 describe("RaidMarkers", function()
@@ -175,12 +212,87 @@ describe("RaidMarkers", function()
     state.combat = true
     local placed = rawget(panel, "setPoints")
     panel.scripts.OnDragStop(panel)
-    local db = addon.ns.db.raidMarkerPanel
-    assert.same({ "TOPLEFT", "TOPLEFT", 10, 21 }, { db.point, db.relativePoint, db.x, db.y })
     assert.equals(placed, rawget(panel, "setPoints"))
     state.combat = false
     addon.fire("PLAYER_REGEN_ENABLED")
+    local db = addon.ns.db.raidMarkerPanel
+    assert.same({ "TOPLEFT", "TOPLEFT", 10, 21 }, { db.point, db.relativePoint, db.x, db.y })
     assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 10, 21 }, panel.lastPoint)
+  end)
+
+  it("finishes a drag when combat starts", function()
+    local panel = addon.panel()
+    local db = addon.ns.db.raidMarkerPanel
+    panel.scripts.OnDragStart(panel)
+    addon.fire("PLAYER_REGEN_DISABLED")
+    assert.equals(1, panel.calls.StopMovingOrSizing)
+    assert.same({ "TOPLEFT", "TOPLEFT", 10, 21 }, { db.point, db.relativePoint, db.x, db.y })
+
+    db.x, db.y = 0, 0
+    panel.scripts.OnDragStart(panel)
+    state.combat = true
+    addon.fire("PLAYER_REGEN_DISABLED")
+    panel.scripts.OnDragStop(panel)
+    assert.same({}, addon.blocked)
+    assert.equals(1, panel.calls.StopMovingOrSizing)
+    assert.same({ 0, 0 }, { db.x, db.y })
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.equals(2, panel.calls.StopMovingOrSizing)
+    assert.same({ 10, 21 }, { db.x, db.y })
+    assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 10, 21 }, panel.lastPoint)
+  end)
+
+  it("calls no protected function in combat", function()
+    state.group, state.leader = true, true
+    addon.fire("GROUP_ROSTER_UPDATE")
+    local specs, buttons = {}, {}
+    local group = {
+      Check = function(_, spec) specs[#specs + 1] = spec end,
+      Slider = function(_, spec) specs[#specs + 1] = spec end,
+      Button = function(_, spec) buttons[#buttons + 1] = spec end,
+    }
+    addon.module.Pages({ Group = function() return group end })
+    local panel = addon.panel()
+
+    state.combat = true
+    addon.fire("READY_CHECK")
+    addon.fire("READY_CHECK_CONFIRM")
+    addon.fire("READY_CHECK_FINISHED")
+    addon.advance()
+    addon.fire("START_PLAYER_COUNTDOWN", SECRET, SECRET, SECRET)
+    addon.fire("CANCEL_PLAYER_COUNTDOWN")
+    addon.fire("START_PLAYER_COUNTDOWN", "Someone", 10, 10)
+    addon.fire("CANCEL_PLAYER_COUNTDOWN")
+    state.targetIndex = 4
+    addon.fire("RAID_TARGET_UPDATE")
+    addon.fire("PLAYER_TARGET_CHANGED")
+    state.leader, state.assistant = false, true
+    addon.fire("GROUP_ROSTER_UPDATE")
+    addon.fire("PARTY_LEADER_CHANGED")
+    addon.fire("PLAYER_ENTERING_WORLD", false, false)
+    addon.fire("ADDON_RESTRICTION_STATE_CHANGED", 0, 1)
+    addon.fire("PLAYER_REGEN_DISABLED")
+    addon.fire("PLAYER_REGEN_ENABLED")
+    for _, button in ipairs(addon.groupButtons()) do
+      button.scripts.OnEnter(button)
+      button.scripts.OnClick(button, "LeftButton")
+      button.scripts.OnClick(button, "RightButton")
+    end
+    panel.scripts.OnDragStart(panel)
+    panel.scripts.OnDragStop(panel)
+    panel.scripts.OnShow(panel)
+    addon.module.OnSwitch(false)
+    addon.module.OnSwitch(true)
+    for _, spec in ipairs(specs) do
+      spec.set(spec.default)
+    end
+    for _, spec in ipairs(buttons) do
+      spec.onClick()
+    end
+
+    assert.same({}, addon.blocked)
+    assert.same({}, state.calls)
   end)
 
   it("fills defaults before any page exists", function()
@@ -328,22 +440,28 @@ describe("RaidMarkers", function()
       assert.same({ { "pull", 0 } }, state.calls)
     end)
 
-    it("buttons disable in chat lockdown and clicking records no call", function()
+    it("buttons grey out in chat lockdown and clicking records no call", function()
       state.lockdown = true
       leading()
       local ready, pull, role = addon.button("Ready check"), addon.button("Pull countdown"), addon.button("Role check")
-      assert.is_false(ready:IsEnabled())
-      assert.is_false(pull:IsEnabled())
-      assert.is_false(role:IsEnabled())
+      for _, button in ipairs({ ready, pull, role }) do
+        assert.same({ 0.5, 0.5, 0.5 }, button.label.color)
+        assert.is_string(button.reason)
+      end
       ready.scripts.OnClick(ready, "LeftButton")
       pull.scripts.OnClick(pull, "LeftButton")
       role.scripts.OnClick(role, "LeftButton")
       assert.same({}, state.calls)
     end)
 
-    it("keeps tooltips on disabled group buttons", function()
+    it("never disables group buttons", function()
+      state.lockdown = true
+      leading()
       for _, title in ipairs({ "Ready check", "Pull countdown", "Role check" }) do
-        assert.is_true(addon.button(title).motionWhileDisabled)
+        local button = addon.button(title)
+        assert.is_nil(button.calls.SetEnabled)
+        assert.is_nil(button.calls.Enable)
+        assert.is_nil(button.calls.Disable)
       end
     end)
 
@@ -351,10 +469,11 @@ describe("RaidMarkers", function()
       state.lockdown = true
       leading()
       local ready = addon.button("Ready check")
-      assert.is_false(ready:IsEnabled())
+      assert.same({ 0.5, 0.5, 0.5 }, ready.label.color)
       state.lockdown = false
       addon.fire("ADDON_RESTRICTION_STATE_CHANGED", 0, 0)
-      assert.is_true(ready:IsEnabled())
+      assert.same({ 1, 1, 1 }, ready.label.color)
+      assert.is_nil(rawget(ready, "reason"))
     end)
 
     it("starts a pull after a secret countdown once the restriction lifts", function()
@@ -386,11 +505,13 @@ describe("RaidMarkers", function()
       assert.same({ { "ready" }, { "role" } }, state.calls)
     end)
 
-    it("disables on combat start after the timer tick", function()
+    it("greys out on combat start after the timer tick", function()
       leading()
       state.combat = true
       addon.fire("PLAYER_REGEN_DISABLED")
-      assert.is_false(addon.button("Ready check"):IsEnabled())
+      local ready = addon.button("Ready check")
+      assert.same({ 0.5, 0.5, 0.5 }, ready.label.color)
+      assert.is_string(ready.reason)
     end)
 
     it("ready shows count then green", function()

@@ -183,9 +183,9 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 
 - [ ] No Lua error on login with the module on and off; switching it on and off live works.
 - [ ] Party leader: all 8 target markers set (left click) and clear (right click) on the target, Clear all removes markers from every unit, world markers place and clear one by one, the last Clear all button clears every world marker.
-- [ ] Party member without lead: panel shown, Ready, Pull and Role greyed with the reason on hover.
+- [ ] Party member without lead: panel shown, the Ready, Pull and Role labels turn grey and their tooltips say why; the buttons are not disabled, a click does nothing.
 - [ ] Raid as a plain member: panel hidden. Given assistant out of combat: it shows. Given assistant in combat: it shows after combat, and there is no `ADDON_ACTION_BLOCKED`.
-- [ ] **In combat and inside an active key: target and world markers still work; Ready, Pull and Role are greyed with the reason in their tooltip.**
+- [ ] **In combat and inside an active key: target and world markers still work; the Ready, Pull and Role labels turn grey and their tooltips say why (the buttons are not disabled).**
 - [ ] Pull: left click starts 10 s, right click 5 s; a click during the countdown cancels; another client with DBM shows the pull bar and cancels it too.
 - [ ] After a countdown started by someone else during chat lockdown finishes on its own, the next Pull click starts a pull instead of cancelling.
 - [ ] After a key ends out of combat, Ready and Pull become usable without a reload.
@@ -195,6 +195,7 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] "Ready 20/20" in a 20-player raid fits the button.
 - [ ] The RC button opens MRT Raid Check; with MRT disabled the button is absent.
 - [ ] Dragging: the panel can only be grabbed by its padding and gaps, because the secure buttons take the mouse. Note whether that is comfortable. Lock position stops the drag; the position survives /reload; Reset position brings it back.
+- [ ] **Start dragging the panel, pull a mob, release: no `ADDON_ACTION_BLOCKED`, the panel stays where it was dropped.**
 - [ ] Scale and Vertical change the panel at once out of combat and are greyed in combat.
 - [ ] Key bindings (under LittleThings): Next world marker at the cursor cycles 1..8 and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places marker 1.
 - [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**

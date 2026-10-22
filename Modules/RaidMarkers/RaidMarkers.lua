@@ -96,7 +96,6 @@ local function PaintGroupButtons()
             local reason = BlockReason(button.action)
             local color = reason and GREY or (key == "ready" and readyTint) or WHITE
             button.reason = reason
-            button:SetEnabled(not reason)
             button.label:SetTextColor(color[1], color[2], color[3])
             if key == "ready" then
                 button.label:SetText(readyText or "Ready")
@@ -123,7 +122,6 @@ end
 local function GroupButton(key, text, width, action, title, lines, onClick)
     local button = AddGroupButton(row1, text, width)
     button.action, button.title, button.lines = action, title, lines
-    button:SetMotionScriptsWhileDisabled(true)
     button:SetScript("OnEnter", ShowTip)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
     button:SetScript("OnClick", function(self, mouse)
@@ -228,6 +226,16 @@ local function Place()
     panel:SetScale(db.scale)
 end
 
+local function FinishDrag()
+    panel.moving = false
+    panel:StopMovingOrSizing()
+    local db = ns.db.raidMarkerPanel
+    local point, _, relativePoint, x, y = panel:GetPoint()
+    db.point, db.relativePoint = point, relativePoint
+    db.x, db.y = math.floor(x + 0.5), math.floor(y + 0.5)
+    Place()
+end
+
 local function RefreshTarget()
     local index = GetRaidTargetIndex("target")
     local secret = issecretvalue(index)
@@ -299,17 +307,8 @@ local function Build()
         end
     end)
     panel:SetScript("OnDragStop", function(self)
-        if not self.moving then
-            return
-        end
-        self.moving = false
-        self:StopMovingOrSizing()
-        local db = ns.db.raidMarkerPanel
-        local point, _, relativePoint, x, y = self:GetPoint()
-        db.point, db.relativePoint = point, relativePoint
-        db.x, db.y = math.floor(x + 0.5), math.floor(y + 0.5)
-        if not InCombatLockdown() then
-            Place()
+        if self.moving and not InCombatLockdown() then
+            FinishDrag()
         end
     end)
     panel:SetScript("OnShow", function()
@@ -440,7 +439,11 @@ local handlers = {
     PARTY_LEADER_CHANGED = Refresh,
     PLAYER_ENTERING_WORLD = Refresh,
     PLAYER_REGEN_ENABLED = function()
-        if panel then
+        if panel and not InCombatLockdown() then
+            if panel.moving then
+                FinishDrag()
+            end
+            Layout()
             Place()
         end
         Build()
@@ -448,6 +451,9 @@ local handlers = {
         Refresh()
     end,
     PLAYER_REGEN_DISABLED = function()
+        if panel and panel.moving and not InCombatLockdown() then
+            FinishDrag()
+        end
         C_Timer.After(0, PaintGroupButtons)
     end,
     RAID_TARGET_UPDATE = RefreshTarget,
@@ -496,7 +502,7 @@ local function Option(key, spec, apply)
     spec.get = function() return ns.db.raidMarkerPanel[key] end
     spec.set = function(value)
         ns.db.raidMarkerPanel[key] = value
-        if apply and panel then
+        if apply and panel and not InCombatLockdown() then
             apply()
         end
     end
@@ -522,7 +528,7 @@ function RaidMarkers.Pages(page)
         onClick = function()
             local db = ns.db.raidMarkerPanel
             db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
-            if panel then
+            if panel and not InCombatLockdown() then
                 Place()
             end
         end })
