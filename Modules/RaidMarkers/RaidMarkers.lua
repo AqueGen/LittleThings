@@ -19,8 +19,8 @@ local active = false
 local panel, row1, row2, events, ticker
 local targetButtons, worldButtons = {}, {}
 local groupButtons = {}
-local readyText, readyTint, readyToken
-local countdownRunning, countdownToken = false, 0
+local readyText, readyTint, readyToken, lastStatuses
+local countdownRunning, countdownSecret, countdownToken = false, false, 0
 local bindNext, bindClear
 
 local NEXT_BODY = [[
@@ -123,6 +123,7 @@ end
 local function GroupButton(key, text, width, action, title, lines, onClick)
     local button = AddGroupButton(row1, text, width)
     button.action, button.title, button.lines = action, title, lines
+    button:SetMotionScriptsWhileDisabled(true)
     button:SetScript("OnEnter", ShowTip)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
     button:SetScript("OnClick", function(self, mouse)
@@ -158,7 +159,16 @@ end
 
 local function UpdateReady(finished)
     readyToken = nil
-    local state, ready, total = Rules.ReadyTally(ReadyStatuses(), finished)
+    local statuses = ReadyStatuses()
+    local state, ready, total = Rules.ReadyTally(statuses, finished)
+    if not finished then
+        lastStatuses = statuses
+    else
+        if total == 0 and lastStatuses then
+            state, ready, total = Rules.ReadyTally(lastStatuses, true)
+        end
+        lastStatuses = nil
+    end
     readyText, readyTint = Rules.ReadyLabel(ready, total), READY_COLORS[state]
     PaintGroupButtons()
     if finished then
@@ -220,11 +230,9 @@ end
 
 local function RefreshTarget()
     local index = GetRaidTargetIndex("target")
-    if issecretvalue(index) then
-        return
-    end
+    local secret = issecretvalue(index)
     for i, button in ipairs(targetButtons) do
-        button.selected:SetShown(index == i)
+        button.selected:SetShown(not secret and index == i)
     end
 end
 
@@ -267,8 +275,6 @@ local function NewRow()
     return row
 end
 
--- Secure buttons take their attributes only out of combat, so the panel is
--- built on the first chance outside it.
 local function Build()
     if panel or not active or InCombatLockdown() then
         return
@@ -302,7 +308,9 @@ local function Build()
         local point, _, relativePoint, x, y = self:GetPoint()
         db.point, db.relativePoint = point, relativePoint
         db.x, db.y = math.floor(x + 0.5), math.floor(y + 0.5)
-        Place()
+        if not InCombatLockdown() then
+            Place()
+        end
     end)
     panel:SetScript("OnShow", function()
         RefreshTarget()
@@ -350,9 +358,9 @@ local function Build()
     GroupButton("role", "Role", 40, "role", "Role check", nil, function()
         InitiateRolePoll()
     end)
-    if C_AddOns.IsAddOnLoaded("MRT") and ExRT and ExRT.A and ExRT.A.RaidCheck and ExRT.A.RaidCheck.ReadyCheckWindow then
+    if C_AddOns.IsAddOnLoaded("MRT") and GMRT and GMRT.A and GMRT.A.RaidCheck and GMRT.A.RaidCheck.ReadyCheckWindow then
         local rc = GroupButton("rc", "", SIZE, nil, "MRT Raid Check", nil, function()
-            pcall(ExRT.A.RaidCheck.ReadyCheckWindow, ExRT.A.RaidCheck, nil, nil, true)
+            pcall(GMRT.A.RaidCheck.ReadyCheckWindow, GMRT.A.RaidCheck, nil, nil, true)
         end)
         local icon = rc:CreateTexture(nil, "ARTWORK")
         icon:SetAllPoints()
@@ -390,15 +398,14 @@ local function SyncBindings()
     end
     if not bindNext then
         bindNext = BindingButton("LittleThingsWorldMarkerNext", { ["lt-next"] = 1 })
-        bindClear = BindingButton("LittleThingsWorldMarkerClear", { macrotext = "/cwm all" })
+        bindClear = BindingButton("LittleThingsWorldMarkerClear", { action = "clear" })
         local header = CreateFrame("Frame", nil, nil, "SecureHandlerBaseTemplate")
         header:WrapScript(bindNext, "OnClick", NEXT_BODY)
         SecureHandlerSetFrameRef(bindClear, "next", bindNext)
         header:WrapScript(bindClear, "OnClick", CLEAR_BODY)
     end
-    local kind = active and "macro" or nil
-    bindNext:SetAttribute("type", kind)
-    bindClear:SetAttribute("type", kind)
+    bindNext:SetAttribute("type", active and "macro" or nil)
+    bindClear:SetAttribute("type", active and "worldmarker" or nil)
 end
 
 local function Refresh()
@@ -410,7 +417,8 @@ local function StartCountdown(_, timeRemaining)
     countdownRunning = true
     countdownToken = countdownToken + 1
     local token = countdownToken
-    if not issecretvalue(timeRemaining) and type(timeRemaining) == "number" then
+    countdownSecret = issecretvalue(timeRemaining)
+    if not countdownSecret and type(timeRemaining) == "number" then
         C_Timer.After(timeRemaining, function()
             if countdownToken == token then
                 countdownRunning = false
@@ -419,11 +427,22 @@ local function StartCountdown(_, timeRemaining)
     end
 end
 
+local function RestrictionChanged()
+    if countdownSecret and not C_ChatInfo.InChatMessagingLockdown() then
+        countdownToken = countdownToken + 1
+        countdownRunning, countdownSecret = false, false
+    end
+    PaintGroupButtons()
+end
+
 local handlers = {
     GROUP_ROSTER_UPDATE = Refresh,
     PARTY_LEADER_CHANGED = Refresh,
     PLAYER_ENTERING_WORLD = Refresh,
     PLAYER_REGEN_ENABLED = function()
+        if panel then
+            Place()
+        end
         Build()
         SyncBindings()
         Refresh()
@@ -439,7 +458,10 @@ local handlers = {
     START_PLAYER_COUNTDOWN = StartCountdown,
     CANCEL_PLAYER_COUNTDOWN = function()
         countdownToken = countdownToken + 1
-        countdownRunning = false
+        countdownRunning, countdownSecret = false, false
+    end,
+    ADDON_RESTRICTION_STATE_CHANGED = function()
+        C_Timer.After(0, RestrictionChanged)
     end,
 }
 

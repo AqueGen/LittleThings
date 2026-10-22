@@ -11,6 +11,10 @@ local function new_object(frames, name, template)
   function f:Hide() self.shown = false end
   function f:IsShown() return self.shown end
   function f:SetEnabled(v) self.enabled = v end
+  function f:SetShown(v) self.shown = v and true or false end
+  function f:SetMotionScriptsWhileDisabled(v) self.motionWhileDisabled = v end
+  function f:SetPoint(...) self.setPoints = (rawget(self, "setPoints") or 0) + 1 self.lastPoint = { ... } end
+  function f:GetPoint() return "TOPLEFT", nil, "TOPLEFT", 10.4, 20.6 end
   function f:IsEnabled() return self.enabled ~= false end
   function f:SetText(t) self.text = t end
   function f:SetTextColor(r, g, b) self.color = { r, g, b } end
@@ -64,6 +68,7 @@ local function load(state, db)
   _G.GetNumGroupMembers = function() return state.members or 1 end
   _G.C_AddOns = { IsAddOnLoaded = function() return state.mrt end }
   _G.ExRT = state.exrt
+  _G.GMRT = state.gmrt
   assert(loadfile("Modules/RaidMarkers/MarkerRules.lua"))("LittleThings", ns)
   assert(loadfile("Modules/RaidMarkers/RaidMarkers.lua"))("LittleThings", ns)
 
@@ -76,7 +81,7 @@ local function load(state, db)
   local function secure(match)
     local found = {}
     for _, f in ipairs(frames) do
-      if f.template == "SecureActionButtonTemplate" and match(f.attrs) then found[#found + 1] = f end
+      if f.template == "SecureActionButtonTemplate" and match(f.attrs, f) then found[#found + 1] = f end
     end
     return found
   end
@@ -136,8 +141,46 @@ describe("RaidMarkers", function()
       end)
       assert.equals(1, #found)
     end
-    local clear = addon.secure(function(a) return a.type == "worldmarker" and a.action == "clear" and a.marker == nil end)
+    local clear = addon.secure(function(a, f) return rawget(f, "name") == nil and a.type == "worldmarker" and a.action == "clear" and a.marker == nil end)
     assert.equals(1, #clear)
+  end)
+
+  local function target(i)
+    return addon.secure(function(a) return a.type == "raidtarget" and a.marker == i end)[1]
+  end
+
+  it("moves the target highlight to the new target", function()
+    state.targetIndex = 2
+    addon.fire("PLAYER_TARGET_CHANGED")
+    assert.is_true(target(2).selected.shown)
+    state.targetIndex = 5
+    addon.fire("PLAYER_TARGET_CHANGED")
+    assert.is_false(target(2).selected.shown)
+    assert.is_true(target(5).selected.shown)
+  end)
+
+  it("hides every target highlight when the target index is secret", function()
+    state.targetIndex = 3
+    addon.fire("PLAYER_TARGET_CHANGED")
+    state.targetIndex = SECRET
+    addon.fire("PLAYER_TARGET_CHANGED")
+    for i = 1, 8 do
+      assert.is_false(target(i).selected.shown)
+    end
+  end)
+
+  it("saves a drag that ends in combat and places the panel after combat", function()
+    local panel = addon.panel()
+    panel.scripts.OnDragStart(panel)
+    state.combat = true
+    local placed = rawget(panel, "setPoints")
+    panel.scripts.OnDragStop(panel)
+    local db = addon.ns.db.raidMarkerPanel
+    assert.same({ "TOPLEFT", "TOPLEFT", 10, 21 }, { db.point, db.relativePoint, db.x, db.y })
+    assert.equals(placed, rawget(panel, "setPoints"))
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 10, 21 }, panel.lastPoint)
   end)
 
   it("fills defaults before any page exists", function()
@@ -204,13 +247,15 @@ describe("RaidMarkers", function()
       return a.named("LittleThingsWorldMarkerNext"), a.named("LittleThingsWorldMarkerClear")
     end
 
-    it("creates both binding buttons with macro type", function()
+    it("creates the next button as a macro and the clear button as a world marker clear-all", function()
       local nextButton, clear = bindings(addon)
       assert.equals("SecureActionButtonTemplate", nextButton.template)
       assert.equals("SecureActionButtonTemplate", clear.template)
       assert.equals("macro", nextButton.attrs.type)
-      assert.equals("macro", clear.attrs.type)
-      assert.equals("/cwm all", clear.attrs.macrotext)
+      assert.equals("worldmarker", clear.attrs.type)
+      assert.equals("clear", clear.attrs.action)
+      assert.is_nil(clear.attrs.marker)
+      assert.is_nil(clear.attrs.macrotext)
     end)
 
     it("next button starts at marker 1", function()
@@ -237,7 +282,7 @@ describe("RaidMarkers", function()
       assert.is_nil(clear.attrs.type)
       addon.module.OnSwitch(true)
       assert.equals("macro", nextButton.attrs.type)
-      assert.equals("macro", clear.attrs.type)
+      assert.equals("worldmarker", clear.attrs.type)
     end)
 
     it("defers switching off in combat until combat ends", function()
@@ -296,6 +341,43 @@ describe("RaidMarkers", function()
       assert.same({}, state.calls)
     end)
 
+    it("keeps tooltips on disabled group buttons", function()
+      for _, title in ipairs({ "Ready check", "Pull countdown", "Role check" }) do
+        assert.is_true(addon.button(title).motionWhileDisabled)
+      end
+    end)
+
+    it("repaints when the chat restriction lifts", function()
+      state.lockdown = true
+      leading()
+      local ready = addon.button("Ready check")
+      assert.is_false(ready:IsEnabled())
+      state.lockdown = false
+      addon.fire("ADDON_RESTRICTION_STATE_CHANGED", 0, 0)
+      assert.is_true(ready:IsEnabled())
+    end)
+
+    it("starts a pull after a secret countdown once the restriction lifts", function()
+      leading()
+      local pull = addon.button("Pull countdown")
+      state.lockdown = true
+      addon.fire("START_PLAYER_COUNTDOWN", SECRET, SECRET, SECRET)
+      addon.fire("ADDON_RESTRICTION_STATE_CHANGED", 0, 1)
+      state.lockdown = false
+      addon.fire("ADDON_RESTRICTION_STATE_CHANGED", 0, 0)
+      pull.scripts.OnClick(pull, "LeftButton")
+      assert.same({ { "pull", 10 } }, state.calls)
+    end)
+
+    it("keeps a readable countdown running when the restriction lifts", function()
+      leading()
+      local pull = addon.button("Pull countdown")
+      addon.fire("START_PLAYER_COUNTDOWN", "Someone", 10, 10)
+      addon.fire("ADDON_RESTRICTION_STATE_CHANGED", 0, 0)
+      pull.scripts.OnClick(pull, "LeftButton")
+      assert.same({ { "pull", 0 } }, state.calls)
+    end)
+
     it("clicks the ready check and role poll when allowed", function()
       leading()
       local ready, role = addon.button("Ready check"), addon.button("Role check")
@@ -329,6 +411,18 @@ describe("RaidMarkers", function()
       assert.same({ 1, 1, 1 }, ready.label.color)
     end)
 
+    it("keeps the last statuses when the finished tally reads none", function()
+      leading()
+      state.members = 2
+      state.status = { player = "ready", party1 = "waiting" }
+      addon.fire("READY_CHECK")
+      state.status = nil
+      addon.fire("READY_CHECK_FINISHED")
+      local ready = addon.button("Ready check")
+      assert.equals("Ready 1/2", ready.label.text)
+      assert.same({ 1, 0.2, 0.2 }, ready.label.color)
+    end)
+
     it("passes a secret ready status to the tally as unknown", function()
       leading()
       state.members = 2
@@ -351,6 +445,10 @@ describe("RaidMarkers", function()
       local args
       local raidCheck = { ReadyCheckWindow = function(...) args = { ... } end }
       state.mrt, state.exrt = true, { A = { RaidCheck = raidCheck } }
+      local stray = load(state)
+      stray.module.Enable()
+      assert.is_nil(stray.button("MRT Raid Check"))
+      state.exrt, state.gmrt = nil, { A = { RaidCheck = raidCheck } }
       local mrt = load(state)
       mrt.module.Enable()
       local rc = mrt.button("MRT Raid Check")
