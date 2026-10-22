@@ -53,3 +53,4 @@ Modules/Applicants/ComparePick.lua
 Modules/Applicants/Compare.lua
 Modules/SignUpRoles.lua
 Modules/RaidMarkers/MarkerRules.lua
+Modules/RaidMarkers/RaidMarkers.lua
