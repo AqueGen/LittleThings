@@ -66,7 +66,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 6. Settings pages
 
-- [ ] Fresh profile: Damage meter, Group leader icons, Character panel and Performance are off, Group finder and Journal loot are on, each module's switch on its page with its description. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
+- [ ] Fresh profile: Damage meter, Group leader icons, Raid marker panel, Character panel and Performance are off, Group finder and Journal loot are on, each module's switch on its page with its description. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
 - [ ] Switch Journal loot on: its options appear on its page at once. Switch it off: the options go and only the switch and description stay, and the menu entry greys.
 - [ ] Switch Group finder on: its page shows Sort Mythic+ applicants, Applicant filter panel, Group keystones and Warcraft Logs link, all ticked, each with its options under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page shows only the switch and description, and the tools keep their own ticks for next time.
 - [ ] The behaviour page has readable numbers, snapping, snap distance, idle transparency, layer, and at the bottom a Blizzard section with Enable Damage Meter and Auto Reset that mirror Gameplay Enhancements both ways.
@@ -82,7 +82,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## Settings window
 
 - [ ] `/lt` opens the window; `/lt` again while open keeps it open on the same page. Esc and the X close it. Game > Options > AddOns > LittleThings shows a short page with Open LittleThings, which closes the game's options and opens the window. The damage meter gear menu's LittleThings settings opens the Damage meter page.
-- [ ] The menu shows Group content (Group finder, Group leader icons), Combat (Damage meter, Meter windows), Character and loot (Character panel, Journal loot), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
+- [ ] The menu shows Group content (Group finder, Group leader icons, Raid marker panel), Combat (Damage meter, Meter windows), Character and loot (Character panel, Journal loot), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
 - [ ] Drag by the title moves the window, the corner grip resizes it, it never goes below 800x480 and never changes size by itself. Position and size are the same after /reload.
 - [ ] Every page's controls do what the old Blizzard pages did: damage meter behaviour, layer, the two Blizzard switches, the Meter windows rows; both character panel bars; journal loot icons and loot spec buttons; group finder sections with their own switches; Memory, Graphics and Addons buttons. Values changed elsewhere (filter panel, /lt format) show on the page when it is opened again.
 - [ ] Changing Mythic+ sort by, Sort Mythic+ applicants or Damage meter offers a reload, as before.
@@ -183,10 +183,14 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 
 - [ ] No Lua error on login with the module on and off; switching it on and off live works.
 - [ ] Party leader: all 8 target markers set (left click) and clear (right click) on the target, Clear all removes markers from every unit, world markers place and clear one by one, the last Clear all button clears every world marker.
+- [ ] Party member without lead: panel shown, Ready, Pull and Role greyed with the reason on hover.
 - [ ] Raid as a plain member: panel hidden. Given assistant out of combat: it shows. Given assistant in combat: it shows after combat, and there is no `ADDON_ACTION_BLOCKED`.
 - [ ] **In combat and inside an active key: target and world markers still work; Ready, Pull and Role are greyed with the reason in their tooltip.**
 - [ ] Pull: left click starts 10 s, right click 5 s; a click during the countdown cancels; another client with DBM shows the pull bar and cancels it too.
 - [ ] After a countdown started by someone else during chat lockdown finishes on its own, the next Pull click starts a pull instead of cancelling.
+- [ ] After a key ends out of combat, Ready and Pull become usable without a reload.
+- [ ] The target highlight follows the target: a marked target lights its marker, a new target moves or clears it.
+- [ ] Placed world markers are lit, the rest are dimmed.
 - [ ] Ready check with one decline: the button goes red. With one player silent until the end: red. All ready: green. It resets after 5 s.
 - [ ] "Ready 20/20" in a 20-player raid fits the button.
 - [ ] The RC button opens MRT Raid Check; with MRT disabled the button is absent.
