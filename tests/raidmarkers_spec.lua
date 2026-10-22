@@ -16,11 +16,11 @@ local function new_object(frames, name, template)
   return setmetatable(f, { __index = function() return noop end })
 end
 
-local function load(state)
+local function load(state, db)
   local module
   local frames = {}
   local ns = {
-    db = {},
+    db = db or {},
     RegisterModule = function(_, m) module = m end,
     ApplyDefaults = function(target, defaults)
       for k, v in pairs(defaults) do
@@ -101,7 +101,7 @@ describe("RaidMarkers", function()
   end)
 
   it("fills defaults before any page exists", function()
-    local db = addon.ns.db.raidMarkers
+    local db = addon.ns.db.raidMarkerPanel
     assert.equals(10, db.pullLeft)
     assert.equals(5, db.pullRight)
     assert.equals(1, db.scale)
@@ -136,6 +136,20 @@ describe("RaidMarkers", function()
     state.combat = false
     addon.fire("PLAYER_REGEN_ENABLED")
     assert.is_true(panel:IsShown())
+  end)
+
+  it("keeps the module switch when enabled with the switch saved on", function()
+    local on = load(state, { raidMarkers = true })
+    assert.has_no.errors(function() on.module.Enable() end)
+    assert.equals(10, on.ns.db.raidMarkerPanel.pullLeft)
+    assert.is_true(on.ns.db.raidMarkers)
+  end)
+
+  it("keeps the module switch off when the page is built", function()
+    local off = load(state, { raidMarkers = false })
+    local group = setmetatable({}, { __index = function() return noop end })
+    off.module.Pages({ Group = function() return group end })
+    assert.is_false(off.ns.db.raidMarkers)
   end)
 
   it("hides when switched off", function()

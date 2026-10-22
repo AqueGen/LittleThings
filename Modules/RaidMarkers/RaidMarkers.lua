@@ -20,8 +20,8 @@ local panel, row1, row2, events, ticker
 local targetButtons, worldButtons = {}, {}
 
 local function InitializeDb()
-    ns.db.raidMarkers = ns.db.raidMarkers or {}
-    ns.ApplyDefaults(ns.db.raidMarkers, DEFAULTS)
+    ns.db.raidMarkerPanel = ns.db.raidMarkerPanel or {}
+    ns.ApplyDefaults(ns.db.raidMarkerPanel, DEFAULTS)
 end
 
 local function NewButton(row, template, width)
@@ -81,7 +81,7 @@ local function LayoutRow(row, vertical)
 end
 
 local function Layout()
-    local vertical = ns.db.raidMarkers.vertical
+    local vertical = ns.db.raidMarkerPanel.vertical
     local w1, h1 = LayoutRow(row1, vertical)
     local w2, h2 = LayoutRow(row2, vertical)
     row1:ClearAllPoints()
@@ -97,7 +97,7 @@ local function Layout()
 end
 
 local function Place()
-    local db = ns.db.raidMarkers
+    local db = ns.db.raidMarkerPanel
     panel:ClearAllPoints()
     panel:SetPoint(db.point, UIParent, db.relativePoint, db.x, db.y)
     panel:SetScale(db.scale)
@@ -177,7 +177,7 @@ local function Build()
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", function(self)
-        if not ns.db.raidMarkers.locked and not InCombatLockdown() then
+        if not ns.db.raidMarkerPanel.locked and not InCombatLockdown() then
             self.moving = true
             self:StartMoving()
         end
@@ -188,7 +188,7 @@ local function Build()
         end
         self.moving = false
         self:StopMovingOrSizing()
-        local db = ns.db.raidMarkers
+        local db = ns.db.raidMarkerPanel
         local point, _, relativePoint, x, y = self:GetPoint()
         db.point, db.relativePoint = point, relativePoint
         db.x, db.y = math.floor(x + 0.5), math.floor(y + 0.5)
@@ -271,9 +271,9 @@ end
 
 local function Option(key, spec, apply)
     spec.default = DEFAULTS[key]
-    spec.get = function() return ns.db.raidMarkers[key] end
+    spec.get = function() return ns.db.raidMarkerPanel[key] end
     spec.set = function(value)
-        ns.db.raidMarkers[key] = value
+        ns.db.raidMarkerPanel[key] = value
         if apply and panel then
             apply()
         end
@@ -298,7 +298,7 @@ function RaidMarkers.Pages(page)
     group:Button({ label = "Reset position", combatLocked = true,
         tooltip = "Moves the panel back above the centre of the screen.",
         onClick = function()
-            local db = ns.db.raidMarkers
+            local db = ns.db.raidMarkerPanel
             db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
             if panel then
                 Place()
