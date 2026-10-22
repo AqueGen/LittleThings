@@ -18,7 +18,8 @@ end
 
 function Rules.PullSeconds(db, button)
     local left = button == "LeftButton"
-    local value = left and db.pullLeft or db.pullRight
+    local value
+    if left then value = db.pullLeft else value = db.pullRight end
     if type(value) ~= "number" then return left and 10 or 5 end
     return math.min(60, math.max(3, math.floor(value)))
 end
