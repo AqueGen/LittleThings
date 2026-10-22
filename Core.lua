@@ -511,6 +511,8 @@ end
 BINDING_NAME_DAMAGEMETERCOMPANION_TOGGLE = "Show or hide the damage meter"
 BINDING_NAME_DAMAGEMETERCOMPANION_HIDEALL = "Hide all extra windows"
 BINDING_NAME_DAMAGEMETERCOMPANION_RESET = "Reset damage meter data"
+_G["BINDING_NAME_CLICK LittleThingsWorldMarkerNext:LeftButton"] = "Next world marker at the cursor"
+_G["BINDING_NAME_CLICK LittleThingsWorldMarkerClear:LeftButton"] = "Clear all world markers"
 
 -- The primary window cannot be hidden (CanHideSessionWindow is false for it),
 -- so the only way to put the whole meter away is the CVar the settings

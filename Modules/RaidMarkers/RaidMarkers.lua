@@ -21,6 +21,14 @@ local targetButtons, worldButtons = {}, {}
 local groupButtons = {}
 local readyText, readyTint, readyToken
 local countdownRunning, countdownToken = false, 0
+local bindNext, bindClear
+
+local NEXT_BODY = [[
+local n = self:GetAttribute("lt-next") or 1
+self:SetAttribute("macrotext", "/wm [@cursor]" .. n)
+self:SetAttribute("lt-next", n % 8 + 1)
+]]
+local CLEAR_BODY = [[self:GetFrameRef("next"):SetAttribute("lt-next", 1)]]
 
 local READY_COLORS = { waiting = { 1, 0.82, 0 }, notready = { 1, 0.2, 0.2 }, ready = { 0.2, 1, 0.2 } }
 local WHITE, GREY, RED = { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }
@@ -366,6 +374,33 @@ local function Build()
     Place()
 end
 
+local function BindingButton(name, attributes)
+    local button = CreateFrame("Button", name, nil, "SecureActionButtonTemplate")
+    button:RegisterForClicks("AnyDown")
+    button:SetAttribute("useOnKeyDown", true)
+    for key, value in pairs(attributes) do
+        button:SetAttribute(key, value)
+    end
+    return button
+end
+
+local function SyncBindings()
+    if InCombatLockdown() or not (bindNext or active) then
+        return
+    end
+    if not bindNext then
+        bindNext = BindingButton("LittleThingsWorldMarkerNext", { ["lt-next"] = 1 })
+        bindClear = BindingButton("LittleThingsWorldMarkerClear", { macrotext = "/cwm all" })
+        local header = CreateFrame("Frame", nil, nil, "SecureHandlerBaseTemplate")
+        header:WrapScript(bindNext, "OnClick", NEXT_BODY)
+        SecureHandlerSetFrameRef(bindClear, "next", bindNext)
+        header:WrapScript(bindClear, "OnClick", CLEAR_BODY)
+    end
+    local kind = active and "macro" or nil
+    bindNext:SetAttribute("type", kind)
+    bindClear:SetAttribute("type", kind)
+end
+
 local function Refresh()
     RequestVisibility()
     PaintGroupButtons()
@@ -390,6 +425,7 @@ local handlers = {
     PLAYER_ENTERING_WORLD = Refresh,
     PLAYER_REGEN_ENABLED = function()
         Build()
+        SyncBindings()
         Refresh()
     end,
     PLAYER_REGEN_DISABLED = function()
@@ -418,6 +454,7 @@ function RaidMarkers.Enable()
         events:SetScript("OnEvent", function(_, event, ...) handlers[event](...) end)
     end
     Build()
+    SyncBindings()
     RequestVisibility()
 end
 
@@ -428,6 +465,7 @@ function RaidMarkers.OnSwitch(enabled)
     end
     active = false
     StopTicker()
+    SyncBindings()
     RequestVisibility()
 end
 

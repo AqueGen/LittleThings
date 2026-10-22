@@ -16,6 +16,8 @@ local function new_object(frames, name, template)
   function f:SetTextColor(r, g, b) self.color = { r, g, b } end
   function f:CreateTexture() return new_object(frames) end
   function f:CreateFontString() return new_object(frames) end
+  function f:RegisterForClicks(...) self.clicks = { ... } end
+  function f:WrapScript(frame, script, preBody) frame.wraps = rawget(frame, "wraps") or {} frame.wraps[script] = preBody end
   frames[#frames + 1] = f
   return setmetatable(f, { __index = function() return noop end })
 end
@@ -43,6 +45,7 @@ local function load(state, db)
   _G.GetRaidTargetIndex = function() return state.targetIndex end
   _G.IsRaidMarkerActive = function() return false end
   _G.SetRaidTargetIconTexture = noop
+  _G.SecureHandlerSetFrameRef = function(frame, label, ref) frame.attrs["frameref-" .. label] = ref end
   local timers = {}
   _G.C_Timer = {
     NewTicker = function() return { Cancel = noop } end,
@@ -78,10 +81,14 @@ local function load(state, db)
     return found
   end
 
-  local function panel()
+  local function named(name)
     for _, f in ipairs(frames) do
-      if f.name == "LittleThingsRaidMarkers" then return f end
+      if f.name == name then return f end
     end
+  end
+
+  local function panel()
+    return named("LittleThingsRaidMarkers")
   end
 
   local function button(title)
@@ -96,7 +103,7 @@ local function load(state, db)
     for _, fn in ipairs(due) do fn() end
   end
 
-  return { module = module, ns = ns, fire = fire, secure = secure, panel = panel, button = button, advance = advance }
+  return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance }
 end
 
 describe("RaidMarkers", function()
@@ -190,6 +197,58 @@ describe("RaidMarkers", function()
     addon.fire("GROUP_ROSTER_UPDATE")
     addon.module.OnSwitch(false)
     assert.is_false(addon.panel():IsShown())
+  end)
+
+  describe("binding buttons", function()
+    local function bindings(a)
+      return a.named("LittleThingsWorldMarkerNext"), a.named("LittleThingsWorldMarkerClear")
+    end
+
+    it("creates both binding buttons with macro type", function()
+      local nextButton, clear = bindings(addon)
+      assert.equals("SecureActionButtonTemplate", nextButton.template)
+      assert.equals("SecureActionButtonTemplate", clear.template)
+      assert.equals("macro", nextButton.attrs.type)
+      assert.equals("macro", clear.attrs.type)
+      assert.equals("/cwm all", clear.attrs.macrotext)
+    end)
+
+    it("next button starts at marker 1", function()
+      local nextButton, clear = bindings(addon)
+      assert.equals(1, nextButton.attrs["lt-next"])
+      assert.is_nil(nextButton.attrs.macrotext)
+      assert.matches("lt%-next", nextButton.wraps.OnClick)
+      assert.matches("lt%-next", clear.wraps.OnClick)
+      assert.equals(nextButton, clear.attrs["frameref-next"])
+    end)
+
+    it("acts on key down only, so the wrapped cycle advances once per press", function()
+      local nextButton, clear = bindings(addon)
+      for _, button in ipairs({ assert(nextButton), assert(clear) }) do
+        assert.same({ "AnyDown" }, button.clicks)
+        assert.is_true(button.attrs.useOnKeyDown)
+      end
+    end)
+
+    it("binding buttons go dead when switched off", function()
+      local nextButton, clear = bindings(addon)
+      addon.module.OnSwitch(false)
+      assert.is_nil(nextButton.attrs.type)
+      assert.is_nil(clear.attrs.type)
+      addon.module.OnSwitch(true)
+      assert.equals("macro", nextButton.attrs.type)
+      assert.equals("macro", clear.attrs.type)
+    end)
+
+    it("defers switching off in combat until combat ends", function()
+      local nextButton = bindings(addon)
+      state.combat = true
+      addon.module.OnSwitch(false)
+      assert.equals("macro", nextButton.attrs.type)
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.is_nil(nextButton.attrs.type)
+    end)
   end)
 
   describe("group buttons", function()
