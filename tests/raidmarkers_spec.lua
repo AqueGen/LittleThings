@@ -5,7 +5,7 @@ local function opaque()
   return setmetatable({}, { __lt = touched, __le = touched, __eq = touched, __add = touched, __sub = touched, __mul = touched,
     __div = touched, __unm = touched, __concat = touched, __tostring = touched, __len = touched })
 end
-local MANA, MANA_MAX = opaque(), opaque()
+local MANA, MANA_MAX, MANA_PCT, MANA_SHORT = opaque(), opaque(), opaque(), opaque()
 
 local function noop() end
 
@@ -60,8 +60,9 @@ local ALLOWED = {
   Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "AddMaskTexture",
     "SetBlendMode", "Hide", "SetShown" },
   MaskTexture = { "SetTexture", "SetAllPoints" },
-  FontString = { "SetPoint", "ClearAllPoints", "SetText", "SetTextColor", "GetStringWidth", "SetAlpha", "SetShown" },
+  FontString = { "SetPoint", "ClearAllPoints", "SetText", "SetFormattedText", "SetTextColor", "GetStringWidth", "SetAlpha", "SetShown" },
   StatusBar = { "SetScript", "SetPoint", "ClearAllPoints", "SetSize", "SetShown", "SetAlpha", "EnableMouse", "SetMouseClickEnabled", "CreateTexture",
+    "CreateFontString",
     "SetStatusBarTexture", "SetStatusBarColor", "SetMinMaxValues", "SetValue" },
 }
 
@@ -136,7 +137,7 @@ function IMPL:GetBottom() return self.bottom or 0 end
 function IMPL:GetWidth() return self.width or 0 end
 function IMPL:GetHeight() return self.height or 0 end
 function IMPL:GetEffectiveScale() return (self.scale or 1) * _G.UIParent:GetEffectiveScale() end
-function IMPL:SetText(t) self.text = t end
+function IMPL:SetText(t) self.text, self.formatted = t, nil end
 function IMPL:SetTextColor(r, g, b) self.color = { r, g, b } end
 function IMPL:RegisterForClicks(...) self.clicks = { ... } end
 function IMPL:SetBackdrop(backdrop) self.backdrop = backdrop end
@@ -152,6 +153,7 @@ function IMPL:SetStatusBarTexture(texture) self.barTexture = texture end
 function IMPL:SetStatusBarColor(...) self.barColor = { ... } end
 function IMPL:SetMinMaxValues(low, high) self.minMax = { low, high } end
 function IMPL:SetValue(value) self.value = value end
+function IMPL:SetFormattedText(...) self.text, self.formatted = nil, { ... } end
 function IMPL:GetRight() return self.right or 0 end
 function IMPL:GetTop() return self.top or 0 end
 function IMPL:GetStringWidth()
@@ -207,7 +209,12 @@ local function load(state, db)
   _G.IsInRaid = function() return state.raid end
   _G.UnitIsGroupLeader = function() return state.leader end
   _G.UnitIsGroupAssistant = function() return state.assistant end
-  _G.issecretvalue = function(v) return rawequal(v, SECRET) or rawequal(v, MANA) or rawequal(v, MANA_MAX) end
+  _G.issecretvalue = function(v)
+    for _, secret in ipairs({ SECRET, MANA, MANA_MAX, MANA_PCT, MANA_SHORT }) do
+      if rawequal(v, secret) then return true end
+    end
+    return false
+  end
   _G.GetRaidTargetIndex = function() return state.targetIndex end
   _G.IsRaidMarkerActive = function(i) return state.placed and state.placed[i] or false end
   _G.SetRaidTargetIconTexture = noop
@@ -244,7 +251,7 @@ local function load(state, db)
   _G.HasLFGRestrictions = function() return state.lfg end
   _G.GetReadyCheckStatus = function(unit) return state.status and state.status[unit] end
   _G.GetNumGroupMembers = function() return state.members or 1 end
-  _G.Enum = { PowerType = { Mana = 0 } }
+  _G.Enum = { PowerType = { Mana = 0 }, LuaCurveType = { Linear = 0, Step = 1 } }
   local function party(field, unit, default)
     local values = state[field]
     if values and values[unit] ~= nil then return values[unit] end
@@ -262,6 +269,25 @@ local function load(state, db)
   _G.UnitPowerMax = function(unit, kind)
     assert(kind == 0, "mana only")
     return party("powerMax", unit, 0)
+  end
+  state.curves = {}
+  _G.C_CurveUtil = {
+    CreateCurve = function()
+      local curve = { points = {} }
+      function curve:SetType(kind) self.kind = kind end
+      function curve:AddPoint(x, y) self.points[#self.points + 1] = { x, y } end
+      state.curves[#state.curves + 1] = curve
+      return curve
+    end,
+  }
+  _G.UnitPowerPercent = function(unit, kind, unmodified, curve)
+    assert(kind == 0 and unmodified == false, "mana, modified")
+    assert(curve == state.curves[1], "the module's curve")
+    return party("percent", unit, 0)
+  end
+  _G.AbbreviateNumbers = function(value)
+    if rawequal(value, MANA) then return MANA_SHORT end
+    return "short " .. value
   end
   state.tip = {}
   _G.GameTooltip = setmetatable({}, { __index = function(_, method)
@@ -338,6 +364,11 @@ local function load(state, db)
     manaBar = function()
       for _, f in ipairs(frames) do
         if f.kind == "StatusBar" then return f end
+      end
+    end,
+    manaText = function()
+      for _, f in ipairs(frames) do
+        if f.kind == "FontString" and f.parent and f.parent.kind == "StatusBar" then return f end
       end
     end,
     downText = function()
@@ -934,6 +965,8 @@ describe("RaidMarkers", function()
     state.roles, state.present = { party1 = "HEALER" }, { player = true, party1 = true, party2 = true }
     state.power, state.powerMax = { party1 = MANA, party2 = MANA }, { party1 = MANA_MAX, party2 = MANA_MAX }
     state.dead, state.names = { party2 = true }, { party2 = SECRET }
+    byLabel["Mana text"].set("both")
+    state.percent = { party1 = MANA_PCT, party2 = MANA_PCT }
 
     local events = {
       { "PLAYER_ROLES_ASSIGNED", before = function() state.roles = { party2 = "HEALER", party1 = SECRET } end },
@@ -1001,6 +1034,9 @@ describe("RaidMarkers", function()
     addon.tick()
     local bar = addon.manaBar()
     assert.is_true(rawequal(MANA, bar.value))
+    local formatted = addon.manaText().formatted
+    assert.equals("%s  %d%%", formatted[1])
+    assert.is_true(rawequal(MANA_SHORT, formatted[2]) and rawequal(MANA_PCT, formatted[3]))
     assert.equals("1 down", addon.downText().text)
     bar.scripts.OnEnter(bar)
     bar.scripts.OnLeave(bar)
@@ -1468,10 +1504,11 @@ describe("RaidMarkers", function()
   end)
 
   describe("tank helpers", function()
-    local function helpers(a, mana, down)
+    local function helpers(a, mana, down, text)
       local _, byLabel = pages(a)
       byLabel["Healer mana"].set(mana)
       byLabel["Dead or offline count"].set(down)
+      if text then byLabel["Mana text"].set(text) end
     end
 
     local function inParty(a)
@@ -1582,7 +1619,7 @@ describe("RaidMarkers", function()
       local a = load(state)
       a.module.Enable()
       local block = a.button("Ready check").parent
-      helpers(a, true, false)
+      helpers(a, true, false, "none")
       assert.is_true(a.manaBar().shown)
       assert.is_false(a.downText().shown)
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 0, -2 }, a.manaBar().lastPoint)
@@ -1601,7 +1638,7 @@ describe("RaidMarkers", function()
       local a = load(state, { raidMarkerPanel = { vertical = true } })
       a.module.Enable()
       local block = a.button("Ready check").parent
-      helpers(a, true, true)
+      helpers(a, true, true, "none")
       local bar, text = a.manaBar(), a.downText()
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 0, -2 }, bar.lastPoint)
       assert.same({ 64, 4 }, { bar.width, bar.height })
@@ -1610,6 +1647,87 @@ describe("RaidMarkers", function()
       helpers(a, false, true)
       assert.same({ "TOP", block, "BOTTOM", 0, -2 }, text.lastPoint)
       assert.same({ 64 + 8, 278 + 2 + 82 + 16 + 8 }, { a.panel().width, a.panel().height })
+    end)
+
+    it("offers a Mana text dropdown under Healer mana, Percent by default, greyed while the bar is off", function()
+      local specs, byLabel = pages(addon)
+      local spec = byLabel["Mana text"]
+      local index
+      for i, entry in ipairs(specs) do
+        if entry == spec then index = i end
+      end
+      assert.equals(byLabel["Healer mana"], specs[index - 1])
+      assert.equals("percent", spec.default)
+      assert.equals("percent", spec.get())
+      assert.is_true(spec.combatLocked)
+      assert.same({ { text = "None", value = "none" }, { text = "Percent", value = "percent" },
+        { text = "Value", value = "value" }, { text = "Both", value = "both" } }, spec.options)
+      assert.is_false(spec.enabled())
+      byLabel["Healer mana"].set(true)
+      assert.is_true(spec.enabled())
+    end)
+
+    it("shows the percent through a 0..100 curve, passing the secret straight through", function()
+      helpers(addon, true, false)
+      state.percent = { party2 = MANA_PCT }
+      inParty(addon)
+      addon.tick()
+      local text = addon.manaText()
+      assert.equals("%d%%", text.formatted[1])
+      assert.is_true(rawequal(MANA_PCT, text.formatted[2]))
+      assert.equals(1, #state.curves)
+      assert.equals(0, state.curves[1].kind)
+      assert.same({ { 0, 0 }, { 1, 100 } }, state.curves[1].points)
+      assert.is_true(text.shown)
+    end)
+
+    it("shows the abbreviated value, passing the secret straight through", function()
+      helpers(addon, true, false, "value")
+      state.power = { party2 = MANA }
+      inParty(addon)
+      addon.tick()
+      local text = addon.manaText()
+      assert.is_true(rawequal(MANA_SHORT, text.text))
+      assert.is_nil(text.formatted)
+    end)
+
+    it("shows both, value first", function()
+      helpers(addon, true, false, "both")
+      state.power, state.percent = { party2 = MANA }, { party2 = MANA_PCT }
+      inParty(addon)
+      addon.tick()
+      local formatted = addon.manaText().formatted
+      assert.equals("%s  %d%%", formatted[1])
+      assert.is_true(rawequal(MANA_SHORT, formatted[2]))
+      assert.is_true(rawequal(MANA_PCT, formatted[3]))
+    end)
+
+    it("shows no text and a thin bar for None", function()
+      helpers(addon, true, false, "none")
+      state.power, state.percent = { party2 = MANA }, { party2 = MANA_PCT }
+      inParty(addon)
+      addon.tick()
+      local text = addon.manaText()
+      assert.equals("", text.text)
+      assert.is_false(text.shown)
+      assert.same({ 130, 4 }, { addon.manaBar().width, addon.manaBar().height })
+    end)
+
+    it("makes the bar 12 px tall with the text centred on it", function()
+      local block = addon.button("Ready check").parent
+      helpers(addon, true, false, "percent")
+      local bar, text = addon.manaBar(), addon.manaText()
+      assert.same({ "CENTER" }, text.lastPoint)
+      assert.same({ 130, 12 }, { bar.width, bar.height })
+      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 0, -2 }, bar.lastPoint)
+      assert.same({ 284 + 2 + 130 + 8, 54 + 2 + 12 + 8 }, { addon.panel().width, addon.panel().height })
+      local _, specs = pages(addon)
+      specs["Vertical"].set(true)
+      assert.same({ 64, 12 }, { bar.width, bar.height })
+      assert.same({ 64 + 8, 278 + 2 + 82 + 14 + 8 }, { addon.panel().width, addon.panel().height })
+      helpers(addon, false, false, "both")
+      assert.is_false(bar.shown)
+      assert.same({ 64 + 8, 278 + 2 + 82 + 8 }, { addon.panel().width, addon.panel().height })
     end)
 
     it("applies a toggle made in combat after combat", function()

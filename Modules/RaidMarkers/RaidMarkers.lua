@@ -9,7 +9,7 @@ local CLEAR_WIDTH = 60
 local MODE_WIDTH = CLEAR_WIDTH - GAP - SIZE
 local CELL_MIN, CELL_PAD = 64, 8
 local DOT = 16
-local BAR_HEIGHT, DOWN_HEIGHT = 4, 14
+local BAR_HEIGHT, TEXT_BAR_HEIGHT, DOWN_HEIGHT = 4, 12, 14
 local PARTY = { "player", "party1", "party2", "party3", "party4" }
 local CIRCLE_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local CLEAR_ICON = "common-icon-redx"
@@ -31,7 +31,7 @@ local ORDINALS ={ "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
 
 local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
     showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false,
-    healerMana = false, groupDown = false }
+    healerMana = false, manaText = "percent", groupDown = false }
 
 local active = false
 local panel, row1, row2, block, events, ticker, mover, container
@@ -39,7 +39,7 @@ local dragging, previewing = false, false
 local pending = {}
 local targetButtons, worldButtons = {}, {}
 local groupButtons = {}
-local clearTarget, clearWorld, modeButton, manaBar, downText
+local clearTarget, clearWorld, modeButton, manaBar, manaText, manaCurve, downText
 local readyText, readyTint, readyToken, lastStatuses
 local countdownRunning, countdownSecret, countdownToken = false, false, 0
 local bindNext, bindClear
@@ -252,9 +252,13 @@ local function LayoutRow(row)
     return offset - GAP
 end
 
+local function BarHeight()
+    return ns.db.raidMarkerPanel.manaText == "none" and BAR_HEIGHT or TEXT_BAR_HEIGHT
+end
+
 local function PlaceBar(width)
     manaBar:SetPoint("TOPLEFT", block, "BOTTOMLEFT", 0, -GAP)
-    manaBar:SetSize(width, BAR_HEIGHT)
+    manaBar:SetSize(width, BarHeight())
 end
 
 local function LayoutHorizontal()
@@ -271,7 +275,7 @@ local function LayoutHorizontal()
     local db = ns.db.raidMarkerPanel
     if db.healerMana then
         PlaceBar(bw)
-        bh = bh + GAP + BAR_HEIGHT
+        bh = bh + GAP + BarHeight()
     end
     if db.groupDown then
         downText:SetPoint("LEFT", block, "RIGHT", GAP, 0)
@@ -304,7 +308,7 @@ local function LayoutVertical()
     local below, extra = block, 0
     if db.healerMana then
         PlaceBar(width)
-        below, extra = manaBar, GAP + BAR_HEIGHT
+        below, extra = manaBar, GAP + BarHeight()
     end
     if db.groupDown then
         downText:SetPoint("TOP", below, "BOTTOM", 0, -GAP)
@@ -323,6 +327,7 @@ local function Layout()
     manaBar:ClearAllPoints()
     downText:ClearAllPoints()
     manaBar:SetShown(ns.db.raidMarkerPanel.healerMana)
+    manaText:SetShown(ns.db.raidMarkerPanel.manaText ~= "none")
     downText:SetShown(ns.db.raidMarkerPanel.groupDown)
     if ns.db.raidMarkerPanel.vertical then
         LayoutVertical()
@@ -444,8 +449,19 @@ function RefreshHelpers()
     end
     manaBar.unit = healer
     if healer then
+        local power = UnitPower(healer, Enum.PowerType.Mana)
         manaBar:SetMinMaxValues(0, UnitPowerMax(healer, Enum.PowerType.Mana))
-        manaBar:SetValue(UnitPower(healer, Enum.PowerType.Mana))
+        manaBar:SetValue(power)
+        local mode = db.manaText
+        if mode == "value" then
+            manaText:SetText(AbbreviateNumbers(power))
+        elseif mode == "percent" then
+            manaText:SetFormattedText("%d%%", UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve))
+        elseif mode == "both" then
+            manaText:SetFormattedText("%s  %d%%", AbbreviateNumbers(power), UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve))
+        else
+            manaText:SetText("")
+        end
     end
     manaBar:SetAlpha(healer and 1 or 0)
     local down = 0
@@ -545,6 +561,45 @@ end
 local function ApplyStrata()
     panel:SetFrameStrata(previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
     mover:SetFrameStrata(previewing and "TOOLTIP" or "DIALOG")
+end
+
+local function BuildHelpers()
+    manaBar = CreateFrame("StatusBar", nil, panel)
+    manaBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
+    manaBar:SetStatusBarColor(MANA[1], MANA[2], MANA[3])
+    local manaBack = manaBar:CreateTexture(nil, "BACKGROUND")
+    manaBack:SetAllPoints()
+    manaBack:SetColorTexture(0, 0, 0, 0.6)
+    manaBar:SetAlpha(0)
+    manaText = manaBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    manaText:SetPoint("CENTER")
+    manaCurve = C_CurveUtil.CreateCurve()
+    manaCurve:SetType(Enum.LuaCurveType.Linear)
+    manaCurve:AddPoint(0, 0)
+    manaCurve:AddPoint(1, 100)
+    manaBar.title = "Healer mana"
+    manaBar.lines = function()
+        local name = manaBar.unit and UnitName(manaBar.unit)
+        if issecretvalue(name) then
+            return {}
+        end
+        return { name }
+    end
+    manaBar:EnableMouse(true)
+    manaBar:SetMouseClickEnabled(false)
+    manaBar:SetScript("OnEnter", function(self)
+        if self.unit then
+            ShowTip(self)
+        end
+    end)
+    manaBar:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    downText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    downText:SetTextColor(RED[1], RED[2], RED[3])
+    downText:SetText(Rules.DownLabel(5))
+    downText.cell = math.ceil(downText:GetStringWidth())
+    downText:SetText("")
+    downText:SetAlpha(0)
 end
 
 local function Build()
@@ -648,36 +703,7 @@ local function Build()
     end)
     PaintGroupButtons()
 
-    manaBar = CreateFrame("StatusBar", nil, panel)
-    manaBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
-    manaBar:SetStatusBarColor(MANA[1], MANA[2], MANA[3])
-    local manaBack = manaBar:CreateTexture(nil, "BACKGROUND")
-    manaBack:SetAllPoints()
-    manaBack:SetColorTexture(0, 0, 0, 0.6)
-    manaBar:SetAlpha(0)
-    manaBar.title = "Healer mana"
-    manaBar.lines = function()
-        local name = manaBar.unit and UnitName(manaBar.unit)
-        if issecretvalue(name) then
-            return {}
-        end
-        return { name }
-    end
-    manaBar:EnableMouse(true)
-    manaBar:SetMouseClickEnabled(false)
-    manaBar:SetScript("OnEnter", function(self)
-        if self.unit then
-            ShowTip(self)
-        end
-    end)
-    manaBar:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-    downText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    downText:SetTextColor(RED[1], RED[2], RED[3])
-    downText:SetText(Rules.DownLabel(5))
-    downText.cell = math.ceil(downText:GetStringWidth())
-    downText:SetText("")
-    downText:SetAlpha(0)
+    BuildHelpers()
 
     for i, color in ipairs(WORLD_COLORS) do
         local button = SecureButton(row2, SIZE, MarkerTitle(_G["WORLD_MARKER" .. i] or ("World marker " .. i)),
@@ -888,6 +914,11 @@ function RaidMarkers.Pages(page)
     local helpers = page:Group("Tank helpers")
     helpers:Check(Option("healerMana", { label = "Healer mana", combatLocked = true,
         tooltip = "A bar under the group buttons with your party healer's mana. Party only." }, Layout))
+    helpers:Dropdown(Option("manaText", { label = "Mana text", combatLocked = true,
+        options = { { text = "None", value = "none" }, { text = "Percent", value = "percent" },
+            { text = "Value", value = "value" }, { text = "Both", value = "both" } },
+        enabled = function() return ns.db.raidMarkerPanel.healerMana end,
+        tooltip = "What the healer mana bar shows on top of it. None keeps the bar thin." }, Layout))
     helpers:Check(Option("groupDown", { label = "Dead or offline count", combatLocked = true,
         tooltip = "A red count next to the group buttons when party members are dead or offline. Party only." }, Layout))
 
