@@ -45,7 +45,7 @@ local ALLOWED = {
   Frame = { "SetScript", "RegisterEvent", "Show", "Hide", "IsShown", "SetPoint", "ClearAllPoints", "SetSize", "SetScale",
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
     "CreateTexture", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetWidth", "GetHeight",
-    "GetEffectiveScale", "WrapScript" },
+    "GetEffectiveScale", "WrapScript", "SetAllPoints" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateFontString", "SetHighlightTexture",
     "RegisterForClicks", "SetAttribute", "SetAlpha" },
   Texture = { "SetAllPoints", "SetPoint", "SetColorTexture", "SetTexture", "SetBlendMode", "Hide", "SetShown" },
@@ -129,6 +129,13 @@ local function load(state, db)
   _G.IsRaidMarkerActive = function() return false end
   _G.SetRaidTargetIconTexture = noop
   _G.SecureHandlerSetFrameRef = function(frame, label, ref) frame.attrs["frameref-" .. label] = ref end
+  state.drivers = {}
+  local function driver(...)
+    if state.combat then frames.blocked[#frames.blocked + 1] = (...) end
+    state.drivers[#state.drivers + 1] = { ... }
+  end
+  _G.RegisterStateDriver = function(...) driver("register", ...) end
+  _G.UnregisterStateDriver = function(...) driver("unregister", ...) end
   local timers, tickers = {}, {}
   _G.C_Timer = {
     NewTicker = function(_, fn)
@@ -282,7 +289,7 @@ describe("RaidMarkers", function()
   end)
 
   local function pages(a)
-    local specs = {}
+    local specs, titles = {}, {}
     local group = {
       Check = function(_, spec) specs[#specs + 1] = spec end,
       Slider = function(_, spec) specs[#specs + 1] = spec end,
@@ -290,11 +297,113 @@ describe("RaidMarkers", function()
     }
     local frame = { scripts = {} }
     function frame:HookScript(script, fn) self.scripts[script] = fn end
-    a.module.Pages({ Group = function() return group end, frame = frame })
+    a.module.Pages({ Group = function(_, title) titles[#titles + 1] = title return group end, frame = frame })
     local byLabel = {}
     for _, spec in ipairs(specs) do byLabel[spec.label] = spec end
-    return specs, byLabel, frame
+    return specs, byLabel, frame, titles
   end
+
+  local VISIBILITY = {
+    { "showSolo", "Show when solo", "Shows the panel outside a group too. Markers and group buttons do nothing there." },
+    { "partyLeaderOnly", "In a party, only as leader", "In a party the panel shows only while you lead the group." },
+    { "raidWithoutRank", "In a raid, also without lead or assist", "In a raid the panel shows to everyone; markers and group buttons work only with lead or assist." },
+    { "hideInCombat", "Hide in combat", "Hides the panel while you are in combat. The game hides it, so this is safe in combat." },
+  }
+
+  it("puts the visibility options in their own group first, all off by default", function()
+    local specs, byLabel, _, titles = pages(addon)
+    assert.same({ "Visibility", "Raid marker panel" }, titles)
+    for i, option in ipairs(VISIBILITY) do
+      local spec = byLabel[option[2]]
+      assert.equals(specs[i], spec)
+      assert.equals(option[3], spec.tooltip)
+      assert.is_false(spec.default)
+      assert.is_false(addon.ns.db.raidMarkerPanel[option[1]])
+      assert.is_false(spec.get())
+    end
+    assert.is_true(byLabel["Hide in combat"].combatLocked)
+  end)
+
+  it("applies the visibility options live", function()
+    local _, specs = pages(addon)
+    local panel = addon.panel()
+    specs["Show when solo"].set(true)
+    assert.is_true(panel:IsShown())
+    specs["Show when solo"].set(false)
+    assert.is_false(panel:IsShown())
+
+    state.group = true
+    addon.fire("GROUP_ROSTER_UPDATE")
+    assert.is_true(panel:IsShown())
+    specs["In a party, only as leader"].set(true)
+    assert.is_false(panel:IsShown())
+    state.leader = true
+    addon.fire("PARTY_LEADER_CHANGED")
+    assert.is_true(panel:IsShown())
+
+    state.raid, state.leader = true, false
+    addon.fire("GROUP_ROSTER_UPDATE")
+    assert.is_false(panel:IsShown())
+    state.combat = true
+    specs["In a raid, also without lead or assist"].set(true)
+    assert.is_false(panel:IsShown())
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.is_true(panel:IsShown())
+  end)
+
+  it("puts the panel in a container filling UIParent and keeps the mover outside it", function()
+    local panel, mover = addon.panel(), addon.mover()
+    local container = panel.parent
+    assert.equals("Frame", container.kind)
+    assert.equals(_G.UIParent, container.parent)
+    assert.is_nil(container.template)
+    assert.equals(1, container.calls.SetAllPoints)
+    assert.equals(_G.UIParent, mover.parent)
+    assert.equals(_G.UIParent, panel.lastPoint[2])
+  end)
+
+  it("hides in combat through a state driver on the container", function()
+    local _, specs = pages(addon)
+    local container = addon.panel().parent
+    local shows = container.showCalls
+    specs["Hide in combat"].set(true)
+    assert.same({ "register", container, "visibility", "[combat] hide; show" }, state.drivers[#state.drivers])
+    specs["Hide in combat"].set(false)
+    assert.same({ "unregister", container, "visibility" }, state.drivers[#state.drivers])
+    assert.equals(shows + 1, container.showCalls)
+    assert.is_true(container:IsShown())
+  end)
+
+  it("applies hide in combat toggled in combat after combat", function()
+    local _, specs = pages(addon)
+    local container = addon.panel().parent
+    local count = #state.drivers
+    state.combat = true
+    specs["Hide in combat"].set(true)
+    assert.equals(count, #state.drivers)
+    assert.same({}, addon.blocked)
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.same({ "register", container, "visibility", "[combat] hide; show" }, state.drivers[#state.drivers])
+  end)
+
+  it("registers the saved hide in combat option when the panel is built", function()
+    local on = load(state, { raidMarkerPanel = { hideInCombat = true } })
+    on.module.Enable()
+    assert.same({ "register", on.panel().parent, "visibility", "[combat] hide; show" }, state.drivers[#state.drivers])
+  end)
+
+  it("creates the container only out of combat", function()
+    state.combat = true
+    local late = load(state)
+    late.module.Enable()
+    assert.same({}, late.children(_G.UIParent))
+    assert.same({}, state.drivers)
+    state.combat = false
+    late.fire("PLAYER_REGEN_ENABLED")
+    assert.equals(_G.UIParent, late.panel().parent.parent)
+  end)
 
   it("shows the panel solo while its settings page is open", function()
     local _, _, page = pages(addon)

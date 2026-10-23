@@ -13,10 +13,11 @@ local WORLD_COLORS = {
     { 222, 218, 50 }, { 208, 84, 0 }, { 116, 155, 179 }, { 243, 241, 235 },
 }
 
-local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5 }
+local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
+    showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false }
 
 local active = false
-local panel, row1, row2, events, ticker, mover
+local panel, row1, row2, events, ticker, mover, container
 local dragging, previewing = false, false
 local pending = {}
 local targetButtons, worldButtons = {}, {}
@@ -295,6 +296,9 @@ local function RequestVisibility()
         leader = HasRank(UnitIsGroupLeader),
         assistant = HasRank(UnitIsGroupAssistant),
         preview = previewing,
+        showSolo = ns.db.raidMarkerPanel.showSolo,
+        partyLeaderOnly = ns.db.raidMarkerPanel.partyLeaderOnly,
+        raidWithoutRank = ns.db.raidMarkerPanel.raidWithoutRank,
     })
     if shown then
         panel:Show()
@@ -309,12 +313,25 @@ local function NewRow()
     return row
 end
 
+local function ApplyCombatHide()
+    if ns.db.raidMarkerPanel.hideInCombat then
+        RegisterStateDriver(container, "visibility", "[combat] hide; show")
+    else
+        UnregisterStateDriver(container, "visibility")
+        container:Show()
+    end
+end
+
 local function Build()
     if panel or not active or InCombatLockdown() then
         return
     end
 
-    panel = CreateFrame("Frame", "LittleThingsRaidMarkers", UIParent)
+    container = CreateFrame("Frame", nil, UIParent)
+    container:SetAllPoints(UIParent)
+    ApplyCombatHide()
+
+    panel = CreateFrame("Frame", "LittleThingsRaidMarkers", container)
     panel:Hide()
     panel:SetFrameStrata("MEDIUM")
     panel:SetClampedToScreen(true)
@@ -484,6 +501,9 @@ local handlers = {
             if pending[Place] then
                 Place()
             end
+            if pending[ApplyCombatHide] then
+                ApplyCombatHide()
+            end
             pending = {}
         end
         Build()
@@ -557,6 +577,16 @@ function RaidMarkers.Pages(page)
         page.frame:HookScript("OnShow", function() Preview(true) end)
         page.frame:HookScript("OnHide", function() Preview(false) end)
     end
+
+    local visibility = page:Group("Visibility")
+    visibility:Check(Option("showSolo", { label = "Show when solo",
+        tooltip = "Shows the panel outside a group too. Markers and group buttons do nothing there." }, RequestVisibility))
+    visibility:Check(Option("partyLeaderOnly", { label = "In a party, only as leader",
+        tooltip = "In a party the panel shows only while you lead the group." }, RequestVisibility))
+    visibility:Check(Option("raidWithoutRank", { label = "In a raid, also without lead or assist",
+        tooltip = "In a raid the panel shows to everyone; markers and group buttons work only with lead or assist." }, RequestVisibility))
+    visibility:Check(Option("hideInCombat", { label = "Hide in combat", combatLocked = true,
+        tooltip = "Hides the panel while you are in combat. The game hides it, so this is safe in combat." }, ApplyCombatHide))
 
     local group = page:Group("Raid marker panel")
     group:Check(Option("locked", { label = "Lock position", combatLocked = true,

@@ -4,8 +4,9 @@ local Rules = {}
 
 function Rules.Visible(s)
     if s.preview then return true end
-    if not s.inGroup then return false end
-    return not s.inRaid or s.leader == true or s.assistant == true
+    if not s.inGroup then return s.showSolo == true end
+    if s.inRaid then return s.raidWithoutRank == true or s.leader == true or s.assistant == true end
+    return not s.partyLeaderOnly or s.leader == true
 end
 
 function Rules.GroupActionBlock(s, action)
