@@ -68,6 +68,22 @@ local ALLOWED = {
 
 local MOVER = "LittleThingsRaidMarkersMover"
 
+local FILES = {}
+for line in io.lines("LittleThings.toc") do
+  local path = line:match("^(Modules/RaidMarkers/%S+%.lua)")
+  if path then FILES[#FILES + 1] = path end
+end
+
+describe("RaidMarkers files", function()
+  it("each file in the TOC compiles under Lua 5.1, so none passes the 60-upvalue limit", function()
+    assert.equals("Modules/RaidMarkers/RaidMarkers.lua", FILES[#FILES])
+    for _, path in ipairs(FILES) do
+      local chunk, err = loadfile(path)
+      assert(chunk, path .. ": " .. tostring(err))
+    end
+  end)
+end)
+
 local function handle(f, bindings)
   local h = {}
   function h:GetAttribute(k) return f.attrs[k] end
@@ -293,8 +309,9 @@ local function load(state, db)
   _G.GameTooltip = setmetatable({}, { __index = function(_, method)
     return function(_, ...) state.tip[#state.tip + 1] = { method, ... } end
   end })
-  assert(loadfile("Modules/RaidMarkers/MarkerRules.lua"))("LittleThings", ns)
-  assert(loadfile("Modules/RaidMarkers/RaidMarkers.lua"))("LittleThings", ns)
+  for _, path in ipairs(FILES) do
+    assert(loadfile(path))("LittleThings", ns)
+  end
 
   local function fire(event, ...)
     for _, f in ipairs(frames) do
