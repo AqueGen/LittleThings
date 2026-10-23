@@ -183,6 +183,7 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 
 - [ ] No Lua error on login with the module on and off; switching it on and off live works.
 - [ ] Solo: open the Raid marker panel page - the panel appears; drag it, close the window - it hides and keeps the new spot after /reload.
+- [ ] Solo, settings page open at the default position: the panel shows above the settings window.
 - [ ] Solo with the window closed: Show when solo on - the panel shows; off - it hides.
 - [ ] Party member without lead: In a party, only as leader on - the panel hides; off - it shows. As party leader it shows either way.
 - [ ] Raid member without lead or assist: In a raid, also without lead or assist on - the panel shows; off - it hides.
@@ -202,7 +203,8 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] The RC button opens MRT Raid Check; with MRT disabled the button is absent.
 - [ ] RC in combat and inside an active key: greyed with the reason, no error.
 - [ ] Dragging: the panel can only be grabbed by its padding and gaps, because the secure buttons take the mouse. Note whether that is comfortable. Lock position stops the drag; the position survives /reload; Reset position brings it back.
-- [ ] **Start dragging the panel, pull a mob, release: no `ADDON_ACTION_BLOCKED`; the outline stops at the release point; the panel jumps there when combat ends; it survives /reload; click-targeting and right-drag camera work during the pull.**
+- [ ] **Start dragging the panel, pull a mob, release (Hide in combat off): no `ADDON_ACTION_BLOCKED`; the outline stops at the release point; the panel jumps there when combat ends; it survives /reload; click-targeting and right-drag camera work during the pull.**
+- [ ] Hide in combat on: start dragging, pull a mob - the outline disappears at the pull, the panel keeps the spot where the outline was, no `ADDON_ACTION_BLOCKED`.
 - [ ] `/dump LittleThingsRaidMarkers:IsProtected()` in a group - note the result.
 - [ ] Scale and Vertical change the panel at once out of combat and are greyed in combat.
 - [ ] Key bindings (under LittleThings): Next world marker at the cursor cycles 1..8 and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places marker 1.

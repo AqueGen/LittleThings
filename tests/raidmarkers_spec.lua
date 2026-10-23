@@ -69,6 +69,8 @@ function IMPL:SetPoint(...)
 end
 function IMPL:SetSize(w, h) self.width, self.height = w, h end
 function IMPL:SetScale(s) self.scale = s end
+function IMPL:SetFrameStrata(strata) self.strata = strata end
+function IMPL:SetAllPoints(relativeTo) self.allPoints = relativeTo end
 function IMPL:GetLeft() return self.left or 0 end
 function IMPL:GetBottom() return self.bottom or 0 end
 function IMPL:GetWidth() return self.width or 0 end
@@ -359,6 +361,7 @@ describe("RaidMarkers", function()
     assert.equals(_G.UIParent, container.parent)
     assert.is_nil(container.template)
     assert.equals(1, container.calls.SetAllPoints)
+    assert.equals(_G.UIParent, container.allPoints)
     assert.equals(_G.UIParent, mover.parent)
     assert.equals(_G.UIParent, panel.lastPoint[2])
   end)
@@ -413,6 +416,29 @@ describe("RaidMarkers", function()
     assert.is_true(panel:IsShown())
     page.scripts.OnHide(page)
     assert.is_false(panel:IsShown())
+  end)
+
+  it("raises the panel and the mover above the settings window while previewing", function()
+    local _, _, page = pages(addon)
+    local panel, mover = addon.panel(), addon.mover()
+    assert.same({ "MEDIUM", "DIALOG" }, { panel.strata, mover.strata })
+    page.scripts.OnShow(page)
+    assert.same({ "FULLSCREEN_DIALOG", "TOOLTIP" }, { panel.strata, mover.strata })
+    page.scripts.OnHide(page)
+    assert.same({ "MEDIUM", "DIALOG" }, { panel.strata, mover.strata })
+  end)
+
+  it("restores the strata after combat when the preview ends in combat", function()
+    local _, _, page = pages(addon)
+    local panel, mover = addon.panel(), addon.mover()
+    page.scripts.OnShow(page)
+    state.combat = true
+    page.scripts.OnHide(page)
+    assert.same({}, addon.blocked)
+    assert.same({ "FULLSCREEN_DIALOG", "TOOLTIP" }, { panel.strata, mover.strata })
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.same({ "MEDIUM", "DIALOG" }, { panel.strata, mover.strata })
   end)
 
   it("applies a preview change made in combat after combat", function()

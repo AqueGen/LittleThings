@@ -322,6 +322,11 @@ local function ApplyCombatHide()
     end
 end
 
+local function ApplyStrata()
+    panel:SetFrameStrata(previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
+    mover:SetFrameStrata(previewing and "TOOLTIP" or "DIALOG")
+end
+
 local function Build()
     if panel or not active or InCombatLockdown() then
         return
@@ -333,7 +338,6 @@ local function Build()
 
     panel = CreateFrame("Frame", "LittleThingsRaidMarkers", container)
     panel:Hide()
-    panel:SetFrameStrata("MEDIUM")
     panel:SetClampedToScreen(true)
     panel:SetDontSavePosition(true)
     local bg = panel:CreateTexture(nil, "BACKGROUND")
@@ -344,7 +348,7 @@ local function Build()
     mover:Hide()
     mover:SetMovable(true)
     mover:SetClampedToScreen(true)
-    mover:SetFrameStrata("DIALOG")
+    ApplyStrata()
     local outline = mover:CreateTexture(nil, "OVERLAY")
     outline:SetAllPoints()
     outline:SetColorTexture(1, 0.82, 0, 0.3)
@@ -501,6 +505,9 @@ local handlers = {
             if pending[Place] then
                 Place()
             end
+            if pending[ApplyStrata] then
+                ApplyStrata()
+            end
             if pending[ApplyCombatHide] then
                 ApplyCombatHide()
             end
@@ -568,6 +575,9 @@ end
 
 local function Preview(shown)
     previewing = shown
+    if panel then
+        ApplyOutOfCombat(ApplyStrata)
+    end
     RequestVisibility()
 end
 
