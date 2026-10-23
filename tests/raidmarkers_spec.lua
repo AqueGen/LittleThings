@@ -45,11 +45,12 @@ local ALLOWED = {
   Frame = { "SetScript", "RegisterEvent", "Show", "Hide", "IsShown", "SetPoint", "ClearAllPoints", "SetSize", "SetScale",
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
     "CreateTexture", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetWidth", "GetHeight",
-    "GetEffectiveScale", "WrapScript", "SetAllPoints" },
+    "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateFontString", "SetHighlightTexture",
-    "RegisterForClicks", "SetAttribute", "SetAlpha" },
-  Texture = { "SetAllPoints", "SetPoint", "SetColorTexture", "SetTexture", "SetBlendMode", "Hide", "SetShown" },
-  FontString = { "SetPoint", "SetText", "SetTextColor" },
+    "RegisterForClicks", "SetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
+  Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetAtlas", "SetMask", "SetBlendMode",
+    "Hide", "SetShown" },
+  FontString = { "SetPoint", "SetText", "SetTextColor", "GetStringWidth" },
 }
 
 local MOVER = "LittleThingsRaidMarkersMover"
@@ -79,6 +80,14 @@ function IMPL:GetEffectiveScale() return (self.scale or 1) * _G.UIParent:GetEffe
 function IMPL:SetText(t) self.text = t end
 function IMPL:SetTextColor(r, g, b) self.color = { r, g, b } end
 function IMPL:RegisterForClicks(...) self.clicks = { ... } end
+function IMPL:SetBackdrop(backdrop) self.backdrop = backdrop end
+function IMPL:SetBackdropColor(...) self.bg = { ... } end
+function IMPL:SetBackdropBorderColor(...) self.border = { ... } end
+function IMPL:SetColorTexture(...) self.colorTexture = { ... } end
+function IMPL:SetTexture(texture) self.texture = texture end
+function IMPL:SetAtlas(atlas) self.atlas = atlas end
+function IMPL:SetMask(mask) self.mask = mask end
+function IMPL:GetStringWidth() return self.frames.state.textWidth or 0 end
 function IMPL:WrapScript(frame, script, preBody) frame.wraps = rawget(frame, "wraps") or {} frame.wraps[script] = preBody end
 
 local new_object
@@ -112,6 +121,7 @@ local function load(state, db)
   local frames = { state = state, blocked = {} }
   local ns = {
     db = db or {},
+    Widgets = { FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 } },
     RegisterModule = function(_, m) module = m end,
     ApplyDefaults = function(target, defaults)
       for k, v in pairs(defaults) do
@@ -128,7 +138,7 @@ local function load(state, db)
   _G.UnitIsGroupAssistant = function() return state.assistant end
   _G.issecretvalue = function(v) return v == SECRET end
   _G.GetRaidTargetIndex = function() return state.targetIndex end
-  _G.IsRaidMarkerActive = function() return false end
+  _G.IsRaidMarkerActive = function(i) return state.placed and state.placed[i] or false end
   _G.SetRaidTargetIconTexture = noop
   _G.SecureHandlerSetFrameRef = function(frame, label, ref) frame.attrs["frameref-" .. label] = ref end
   state.drivers = {}
@@ -174,7 +184,7 @@ local function load(state, db)
   local function secure(match)
     local found = {}
     for _, f in ipairs(frames) do
-      if f.template == "SecureActionButtonTemplate" and match(f.attrs, f) then found[#found + 1] = f end
+      if f.template and f.template:find("SecureActionButtonTemplate", 1, true) and match(f.attrs, f) then found[#found + 1] = f end
     end
     return found
   end
@@ -222,7 +232,7 @@ local function load(state, db)
   local function groupButtons()
     local found = {}
     for _, f in ipairs(frames) do
-      if rawget(f, "title") then found[#found + 1] = f end
+      if rawget(f, "action") then found[#found + 1] = f end
     end
     return found
   end
@@ -273,11 +283,11 @@ describe("RaidMarkers", function()
   it("moves the target highlight to the new target", function()
     state.targetIndex = 2
     addon.fire("PLAYER_TARGET_CHANGED")
-    assert.is_true(target(2).selected.shown)
+    assert.same({ 1, 0.82, 0, 1 }, target(2).border)
     state.targetIndex = 5
     addon.fire("PLAYER_TARGET_CHANGED")
-    assert.is_false(target(2).selected.shown)
-    assert.is_true(target(5).selected.shown)
+    assert.same({ 0.4, 0.4, 0.4, 1 }, target(2).border)
+    assert.same({ 1, 0.82, 0, 1 }, target(5).border)
   end)
 
   it("hides every target highlight when the target index is secret", function()
@@ -286,7 +296,7 @@ describe("RaidMarkers", function()
     state.targetIndex = SECRET
     addon.fire("PLAYER_TARGET_CHANGED")
     for i = 1, 8 do
-      assert.is_false(target(i).selected.shown)
+      assert.same({ 0.4, 0.4, 0.4, 1 }, target(i).border)
     end
   end)
 
@@ -463,6 +473,166 @@ describe("RaidMarkers", function()
     addon.ns.db.raidMarkerPanel.scale = 2
     panel.scripts.OnDragStart(panel)
   end
+
+  local GOLD, BORDER = { 1, 0.82, 0, 1 }, { 0.4, 0.4, 0.4, 1 }
+  local WORLD = {
+    { 4, 149, 255 }, { 15, 155, 12 }, { 168, 14, 192 }, { 167, 20, 13 },
+    { 222, 218, 50 }, { 208, 84, 0 }, { 116, 155, 179 }, { 243, 241, 235 },
+  }
+
+  local function world(i)
+    return addon.secure(function(a) return a.type == "worldmarker" and a.marker == i end)[1]
+  end
+
+  local function dot(button)
+    for _, child in ipairs(addon.children(button)) do
+      if rawget(child, "mask") then return child end
+    end
+  end
+
+  local function panelButtons(a)
+    local found = {}
+    for _, holder in ipairs(a.children(a.panel())) do
+      for _, child in ipairs(a.children(holder)) do
+        if child.kind == "Button" then found[#found + 1] = child end
+      end
+    end
+    return found
+  end
+
+  it("draws world markers as round full-colour 16 px dots", function()
+    for i, color in ipairs(WORLD) do
+      local d = assert(dot(world(i)))
+      assert.equals("Interface\\CharacterFrame\\TempPortraitAlphaMask", d.mask)
+      assert.same({ 16, 16 }, { d.width, d.height })
+      assert.same({ color[1] / 255, color[2] / 255, color[3] / 255, 1 }, d.colorTexture)
+    end
+  end)
+
+  it("rings placed world markers in gold and never dims them", function()
+    state.placed = { [2] = true, [5] = SECRET }
+    local panel = addon.panel()
+    panel.scripts.OnShow(panel)
+    assert.same(GOLD, world(2).border)
+    assert.same(BORDER, world(1).border)
+    state.placed = { [1] = true }
+    addon.tick()
+    assert.same(GOLD, world(1).border)
+    assert.same(BORDER, world(2).border)
+  end)
+
+  it("gives the panel and every button a thin border", function()
+    local panel = addon.panel()
+    local flat = addon.ns.Widgets.FLAT
+    assert.equals("BackdropTemplate", panel.template)
+    assert.equals(flat, panel.backdrop)
+    assert.same({ 0, 0, 0, 0.6 }, panel.bg)
+    assert.same({ 0.3, 0.3, 0.3, 1 }, panel.border)
+    local buttons = panelButtons(addon)
+    assert.equals(21, #buttons)
+    for _, button in ipairs(buttons) do
+      assert.equals(flat, button.backdrop)
+      assert.same({ 0, 0, 0, 0.5 }, button.bg)
+      assert.same(BORDER, button.border)
+      assert.truthy(button.template == "BackdropTemplate" or button.template == "SecureActionButtonTemplate,BackdropTemplate")
+    end
+    assert.equals(18, #addon.secure(function(_, f) return f.template == "SecureActionButtonTemplate,BackdropTemplate" end))
+  end)
+
+  it("shows the world clear as an icon and names every marker in its tooltip", function()
+    local clearWorld = addon.secure(function(a, f) return rawget(f, "name") == nil and a.type == "worldmarker" and a.action == "clear" end)[1]
+    local clearTarget = addon.secure(function(a) return a.type == "raidtarget" and a.action == "clear-all" end)[1]
+    local icon
+    for _, child in ipairs(addon.children(clearWorld)) do
+      if rawget(child, "atlas") then icon = child end
+      assert.is_nil(rawget(child, "text"))
+    end
+    assert.equals("common-icon-redx", icon.atlas)
+    assert.equals("Clear all world markers", clearWorld.title)
+    assert.equals("Clear all", clearTarget.label.text)
+    assert.equals("Clear all target markers", clearTarget.title)
+    assert.equals("Target marker 2: left click set, right click clear", target(2).title)
+    assert.equals("World marker 3: left click set, right click clear", world(3).title)
+    clearWorld.scripts.OnEnter(clearWorld)
+    target(1).scripts.OnEnter(target(1))
+  end)
+
+  it("uses the game's marker names when they exist", function()
+    _G.RAID_TARGET_1, _G.WORLD_MARKER1 = "Star", "Blue Square"
+    local named = load(state)
+    named.module.Enable()
+    _G.RAID_TARGET_1, _G.WORLD_MARKER1 = nil, nil
+    local star = named.secure(function(a) return a.type == "raidtarget" and a.marker == 1 end)[1]
+    local blue = named.secure(function(a) return a.type == "worldmarker" and a.marker == 1 end)[1]
+    assert.equals("Star: left click set, right click clear", star.title)
+    assert.equals("Blue Square: left click set, right click clear", blue.title)
+  end)
+
+  local function cells(a)
+    return a.button("Ready check"), a.button("Pull countdown"), a.button("Role check"), a.button("MRT Raid Check")
+  end
+
+  local function offsets(button)
+    return { button.lastPoint[4], button.lastPoint[5] }
+  end
+
+  it("lays the group buttons out as a 2x2 block right of both rows", function()
+    local panel = addon.panel()
+    local ready, pull, role, rc = cells(addon)
+    assert.is_nil(rc)
+    local block = ready.parent
+    local row1 = target(1).parent
+    local row2 = world(1).parent
+    assert.same({ "TOPLEFT", row1, "TOPRIGHT", 2, 0 }, block.lastPoint)
+    assert.same({ "TOPLEFT", row1, "BOTTOMLEFT", 0, -2 }, row2.lastPoint)
+    assert.same({ 284, 26 }, { row1.width, row1.height })
+    assert.same({ 284, 26 }, { row2.width, row2.height })
+    for _, button in ipairs({ ready, pull, role }) do
+      assert.same({ 64, 26 }, { button.width, button.height })
+      assert.equals(block, button.lastPoint[2])
+    end
+    assert.same({ 0, 0 }, offsets(ready))
+    assert.same({ 66, 0 }, offsets(pull))
+    assert.same({ 0, -28 }, offsets(role))
+    assert.same({ 130, 54 }, { block.width, block.height })
+    assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { panel.width, panel.height })
+  end)
+
+  it("puts the 2x2 block under the columns in the vertical layout", function()
+    local _, specs = pages(addon)
+    specs["Vertical"].set(true)
+    local panel = addon.panel()
+    local ready, pull, role = cells(addon)
+    local block = ready.parent
+    local row1 = target(1).parent
+    assert.same({ "TOPLEFT", row1, "BOTTOMLEFT", 0, -2 }, block.lastPoint)
+    assert.same({ 60, 250 }, { row1.width, row1.height })
+    assert.same({ 0, 0 }, offsets(ready))
+    assert.same({ 66, 0 }, offsets(pull))
+    assert.same({ 0, -28 }, offsets(role))
+    assert.same({ math.max(60 + 2 + 60, 130) + 8, 250 + 2 + 54 + 8 }, { panel.width, panel.height })
+  end)
+
+  it("fills the fourth cell with RC when MRT is loaded", function()
+    state.mrt, state.gmrt = true, { A = { RaidCheck = { ReadyCheckWindow = noop } } }
+    local mrt = load(state)
+    mrt.module.Enable()
+    local ready, _, _, rc = cells(mrt)
+    assert.equals(ready.parent, rc.lastPoint[2])
+    assert.same({ 66, -28 }, offsets(rc))
+    assert.same({ 64, 26 }, { rc.width, rc.height })
+    assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { mrt.panel().width, mrt.panel().height })
+  end)
+
+  it("widens the block cells when the ready label needs more than 64 px", function()
+    state.textWidth = 70.2
+    local wide = load(state)
+    wide.module.Enable()
+    local ready, pull = cells(wide)
+    assert.same({ 79, 26 }, { ready.width, ready.height })
+    assert.same({ 81, 0 }, offsets(pull))
+    assert.equals("Ready", ready.label.text)
+  end)
 
   it("drags only the mover and places the panel where the outline was released", function()
     local panel, mover = addon.panel(), addon.mover()

@@ -6,7 +6,13 @@ local RaidMarkers = {}
 
 local SIZE, GAP, PAD = 26, 2, 4
 local CLEAR_WIDTH = 60
-local DIMMED = 0.35
+local CELL_MIN, CELL_PAD = 64, 8
+local DOT = 16
+local CIRCLE_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+local CLEAR_ICON = "common-icon-redx"
+local CELLS = { "ready", "pull", "role", "rc" }
+local FLAT = ns.Widgets.FLAT
+local GOLD, BORDER = { 1, 0.82, 0, 1 }, { 0.4, 0.4, 0.4, 1 }
 local TARGET_ICONS = "Interface\\TargetingFrame\\UI-RaidTargetingIcons"
 local WORLD_COLORS = {
     { 4, 149, 255 }, { 15, 155, 12 }, { 168, 14, 192 }, { 167, 20, 13 },
@@ -17,7 +23,7 @@ local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, l
     showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false }
 
 local active = false
-local panel, row1, row2, events, ticker, mover, container
+local panel, row1, row2, block, events, ticker, mover, container
 local dragging, previewing = false, false
 local pending = {}
 local targetButtons, worldButtons = {}, {}
@@ -42,13 +48,18 @@ local function InitializeDb()
     ns.ApplyDefaults(ns.db.raidMarkerPanel, DEFAULTS)
 end
 
+local function Ring(button, on)
+    local color = on and GOLD or BORDER
+    button:SetBackdropBorderColor(color[1], color[2], color[3], color[4])
+end
+
 local function NewButton(row, template, width)
-    local button = CreateFrame("Button", nil, row, template)
+    local button = CreateFrame("Button", nil, row, template and template .. ",BackdropTemplate" or "BackdropTemplate")
     button:SetSize(width, SIZE)
     button.width = width
-    local bg = button:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.5)
+    button:SetBackdrop(FLAT)
+    button:SetBackdropColor(0, 0, 0, 0.5)
+    Ring(button, false)
     button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
     row.buttons[#row.buttons + 1] = button
     return button
@@ -61,13 +72,8 @@ local function Label(button, text)
     return label
 end
 
-local function SecureButton(row, width, attributes)
-    local button = NewButton(row, "SecureActionButtonTemplate", width)
-    button:RegisterForClicks("AnyUp", "AnyDown")
-    for key, value in pairs(attributes) do
-        button:SetAttribute(key, value)
-    end
-    return button
+local function MarkerTitle(name)
+    return name .. ": left click set, right click clear"
 end
 
 local function AddGroupButton(row, name, width)
@@ -122,8 +128,20 @@ local function ShowTip(button)
     GameTooltip:Show()
 end
 
-local function GroupButton(key, text, width, action, title, lines, onClick)
-    local button = AddGroupButton(row1, text, width)
+local function SecureButton(row, width, title, attributes)
+    local button = NewButton(row, "SecureActionButtonTemplate", width)
+    button:RegisterForClicks("AnyUp", "AnyDown")
+    for key, value in pairs(attributes) do
+        button:SetAttribute(key, value)
+    end
+    button.title = title
+    button:SetScript("OnEnter", ShowTip)
+    button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    return button
+end
+
+local function GroupButton(key, text, action, title, lines, onClick)
+    local button = AddGroupButton(block, text, CELL_MIN)
     button.action, button.title, button.lines = action, title, lines
     button:SetScript("OnEnter", ShowTip)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -206,19 +224,38 @@ local function LayoutRow(row, vertical)
     return offset - GAP, across
 end
 
+local function LayoutBlock()
+    local cell = block.cell
+    for i, key in ipairs(CELLS) do
+        local button = groupButtons[key]
+        if button then
+            button:SetSize(cell, SIZE)
+            button:ClearAllPoints()
+            button:SetPoint("TOPLEFT", block, "TOPLEFT", (i - 1) % 2 * (cell + GAP), -math.floor((i - 1) / 2) * (SIZE + GAP))
+        end
+    end
+    local width, height = 2 * cell + GAP, 2 * SIZE + GAP
+    block:SetSize(width, height)
+    return width, height
+end
+
 local function Layout()
     local vertical = ns.db.raidMarkerPanel.vertical
     local w1, h1 = LayoutRow(row1, vertical)
     local w2, h2 = LayoutRow(row2, vertical)
+    local bw, bh = LayoutBlock()
     row1:ClearAllPoints()
     row1:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, -PAD)
     row2:ClearAllPoints()
+    block:ClearAllPoints()
     if vertical then
         row2:SetPoint("TOPLEFT", row1, "TOPRIGHT", GAP, 0)
-        panel:SetSize(w1 + GAP + w2 + 2 * PAD, math.max(h1, h2) + 2 * PAD)
+        block:SetPoint("TOPLEFT", row1, "BOTTOMLEFT", 0, -GAP)
+        panel:SetSize(math.max(w1 + GAP + w2, bw) + 2 * PAD, math.max(h1, h2) + GAP + bh + 2 * PAD)
     else
         row2:SetPoint("TOPLEFT", row1, "BOTTOMLEFT", 0, -GAP)
-        panel:SetSize(math.max(w1, w2) + 2 * PAD, h1 + GAP + h2 + 2 * PAD)
+        block:SetPoint("TOPLEFT", row1, "TOPRIGHT", GAP, 0)
+        panel:SetSize(math.max(w1, w2) + GAP + bw + 2 * PAD, math.max(h1 + GAP + h2, bh) + 2 * PAD)
     end
 end
 
@@ -266,7 +303,7 @@ local function RefreshTarget()
     local index = GetRaidTargetIndex("target")
     local secret = issecretvalue(index)
     for i, button in ipairs(targetButtons) do
-        button.selected:SetShown(not secret and index == i)
+        Ring(button, not secret and index == i)
     end
 end
 
@@ -274,7 +311,7 @@ local function RefreshWorld()
     for i, button in ipairs(worldButtons) do
         local placed = IsRaidMarkerActive(i)
         if not issecretvalue(placed) then
-            button:SetAlpha(placed and 1 or DIMMED)
+            Ring(button, placed)
         end
     end
 end
@@ -336,13 +373,13 @@ local function Build()
     container:SetAllPoints(UIParent)
     ApplyCombatHide()
 
-    panel = CreateFrame("Frame", "LittleThingsRaidMarkers", container)
+    panel = CreateFrame("Frame", "LittleThingsRaidMarkers", container, "BackdropTemplate")
     panel:Hide()
     panel:SetClampedToScreen(true)
     panel:SetDontSavePosition(true)
-    local bg = panel:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.4)
+    panel:SetBackdrop(FLAT)
+    panel:SetBackdropColor(0, 0, 0, 0.6)
+    panel:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
 
     mover = CreateFrame("Frame", "LittleThingsRaidMarkersMover", UIParent)
     mover:Hide()
@@ -378,27 +415,27 @@ local function Build()
         end
     end)
 
-    row1, row2 = NewRow(), NewRow()
+    row1, row2, block = NewRow(), NewRow(), NewRow()
 
     for i = 1, 8 do
-        local button = SecureButton(row1, SIZE, { type = "raidtarget", marker = i, action1 = "set", action2 = "clear", unit = "target" })
+        local button = SecureButton(row1, SIZE, MarkerTitle(_G["RAID_TARGET_" .. i] or ("Target marker " .. i)),
+            { type = "raidtarget", marker = i, action1 = "set", action2 = "clear", unit = "target" })
         local icon = button:CreateTexture(nil, "ARTWORK")
-        icon:SetAllPoints()
+        icon:SetPoint("TOPLEFT", 2, -2)
+        icon:SetPoint("BOTTOMRIGHT", -2, 2)
         icon:SetTexture(TARGET_ICONS)
         SetRaidTargetIconTexture(icon, i)
-        button.selected = button:CreateTexture(nil, "OVERLAY")
-        button.selected:SetAllPoints()
-        button.selected:SetTexture("Interface\\Buttons\\CheckButtonHilight")
-        button.selected:SetBlendMode("ADD")
-        button.selected:Hide()
         targetButtons[i] = button
     end
-    Label(SecureButton(row1, CLEAR_WIDTH, { type = "raidtarget", action = "clear-all" }), "Clear all")
+    local clearTarget = SecureButton(row1, CLEAR_WIDTH, "Clear all target markers", { type = "raidtarget", action = "clear-all" })
+    clearTarget.label = Label(clearTarget, "Clear all")
 
-    GroupButton("ready", "Ready", CLEAR_WIDTH, "ready", "Ready check", nil, function()
+    local ready = GroupButton("ready", "Ready", "ready", "Ready check", nil, function()
         C_PartyInfo.DoReadyCheck()
     end)
-    local pull = GroupButton("pull", "Pull", 40, "pull", "Pull countdown", function()
+    ready.label:SetText("Ready 20/20")
+    block.cell = math.max(CELL_MIN, math.ceil(ready.label:GetStringWidth()) + CELL_PAD)
+    local pull = GroupButton("pull", "Pull", "pull", "Pull countdown", function()
         local db = ns.db.raidMarkerPanel
         return {
             "Left click: start " .. Rules.PullSeconds(db, "LeftButton") .. " s",
@@ -413,28 +450,35 @@ local function Build()
         end
     end)
     pull:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    GroupButton("role", "Role", 40, "role", "Role check", nil, function()
+    GroupButton("role", "Role", "role", "Role check", nil, function()
         InitiateRolePoll()
     end)
     if C_AddOns.IsAddOnLoaded("MRT") and GMRT and GMRT.A and GMRT.A.RaidCheck and GMRT.A.RaidCheck.ReadyCheckWindow then
-        local rc = GroupButton("rc", "", SIZE, "rc", "MRT Raid Check", nil, function()
+        local rc = GroupButton("rc", "", "rc", "MRT Raid Check", nil, function()
             pcall(GMRT.A.RaidCheck.ReadyCheckWindow, GMRT.A.RaidCheck, nil, nil, true)
         end)
         local icon = rc:CreateTexture(nil, "ARTWORK")
-        icon:SetAllPoints()
+        icon:SetSize(SIZE - 6, SIZE - 6)
+        icon:SetPoint("CENTER")
         icon:SetTexture(MRT_ICON)
     end
     PaintGroupButtons()
 
     for i, color in ipairs(WORLD_COLORS) do
-        local button = SecureButton(row2, SIZE, { type = "worldmarker", marker = i, action1 = "set", action2 = "clear" })
-        local swatch = button:CreateTexture(nil, "ARTWORK")
-        swatch:SetPoint("TOPLEFT", 3, -3)
-        swatch:SetPoint("BOTTOMRIGHT", -3, 3)
-        swatch:SetColorTexture(color[1] / 255, color[2] / 255, color[3] / 255)
+        local button = SecureButton(row2, SIZE, MarkerTitle(_G["WORLD_MARKER" .. i] or ("World marker " .. i)),
+            { type = "worldmarker", marker = i, action1 = "set", action2 = "clear" })
+        local dot = button:CreateTexture(nil, "ARTWORK")
+        dot:SetSize(DOT, DOT)
+        dot:SetPoint("CENTER")
+        dot:SetColorTexture(color[1] / 255, color[2] / 255, color[3] / 255, 1)
+        dot:SetMask(CIRCLE_MASK)
         worldButtons[i] = button
     end
-    Label(SecureButton(row2, CLEAR_WIDTH, { type = "worldmarker", action = "clear" }), "Clear all")
+    local clearWorld = SecureButton(row2, CLEAR_WIDTH, "Clear all world markers", { type = "worldmarker", action = "clear" })
+    local clearIcon = clearWorld:CreateTexture(nil, "ARTWORK")
+    clearIcon:SetSize(DOT, DOT)
+    clearIcon:SetPoint("CENTER")
+    clearIcon:SetAtlas(CLEAR_ICON)
 
     Layout()
     Place()

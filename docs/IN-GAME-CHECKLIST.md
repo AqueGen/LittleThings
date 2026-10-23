@@ -197,7 +197,8 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] After a countdown started by someone else during chat lockdown finishes on its own, the next Pull click starts a pull instead of cancelling.
 - [ ] After a key ends out of combat, Ready and Pull become usable without a reload.
 - [ ] The target highlight follows the target: a marked target lights its marker, a new target moves or clears it.
-- [ ] Placed world markers are lit, the rest are dimmed.
+- [ ] A placed world marker shows a gold ring; the dots stay bright.
+- [ ] The panel and every button have a thin border; the group buttons form a 2x2 block right of both rows.
 - [ ] Ready check with one decline: the button goes red. With one player silent until the end: red. All ready: green. It resets after 5 s.
 - [ ] "Ready 20/20" in a 20-player raid fits the button.
 - [ ] The RC button opens MRT Raid Check; with MRT disabled the button is absent.
