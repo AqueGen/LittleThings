@@ -47,7 +47,7 @@ local ALLOWED = {
     "CreateTexture", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetWidth", "GetHeight",
     "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateFontString", "SetHighlightTexture",
-    "RegisterForClicks", "SetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
+    "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
   Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "SetMask", "SetBlendMode",
     "Hide", "SetShown" },
   FontString = { "SetPoint", "SetText", "SetTextColor", "GetStringWidth" },
@@ -55,8 +55,30 @@ local ALLOWED = {
 
 local MOVER = "LittleThingsRaidMarkersMover"
 
+local function handle(f, bindings)
+  local h = {}
+  function h:GetAttribute(k) return f.attrs[k] end
+  function h:SetAttribute(k, v)
+    f.attrs[k] = v
+    if f.scripts.OnAttributeChanged then f.scripts.OnAttributeChanged(f, k, v) end
+  end
+  function h:GetFrameRef(label) return handle(assert(f.attrs["frameref-" .. label]), bindings) end
+  function h:SetBindingClick(priority, key, name, button) bindings[key] = { priority, name, button } end
+  function h:ClearBindings() for key in pairs(bindings) do bindings[key] = nil end end
+  function h:GetName() return f.name end
+  return h
+end
+
+local function snippet(f, bindings, button, down)
+  local body = assert(f.wraps and f.wraps.OnClick, "no OnClick wrap")
+  local fn = assert(loadstring("local self, button, down = ...\n" .. body))
+  setfenv(fn, {})
+  return fn(handle(f, bindings), button, down)
+end
+
 local IMPL = {}
 function IMPL:SetAttribute(k, v) self.attrs[k] = v end
+function IMPL:GetAttribute(k) return self.attrs[k] end
 function IMPL:SetScript(script, fn) self.scripts[script] = fn end
 function IMPL:RegisterEvent(event) self.events[event] = true end
 function IMPL:Show() self.shown = true self.showCalls = self.showCalls + 1 end
@@ -142,6 +164,11 @@ local function load(state, db)
   _G.IsRaidMarkerActive = function(i) return state.placed and state.placed[i] or false end
   _G.SetRaidTargetIconTexture = noop
   _G.SecureHandlerSetFrameRef = function(frame, label, ref) frame.attrs["frameref-" .. label] = ref end
+  state.clearedBindings = {}
+  _G.ClearOverrideBindings = function(owner)
+    if state.combat then frames.blocked[#frames.blocked + 1] = "ClearOverrideBindings" end
+    state.clearedBindings[#state.clearedBindings + 1] = owner
+  end
   state.drivers = {}
   local function driver(...)
     if state.combat then frames.blocked[#frames.blocked + 1] = (...) end
@@ -304,6 +331,7 @@ describe("RaidMarkers", function()
       Check = function(_, spec) specs[#specs + 1] = spec end,
       Slider = function(_, spec) specs[#specs + 1] = spec end,
       Button = function(_, spec) specs[#specs + 1] = spec end,
+      Dropdown = function(_, spec) specs[#specs + 1] = spec end,
     }
     local frame = { scripts = {} }
     function frame:HookScript(script, fn) self.scripts[script] = fn end
@@ -322,7 +350,7 @@ describe("RaidMarkers", function()
 
   it("puts the visibility options in their own group first, all off by default", function()
     local specs, byLabel, _, titles = pages(addon)
-    assert.same({ "Visibility", "Raid marker panel" }, titles)
+    assert.same({ "Visibility", "Raid marker panel", "Placement order" }, titles)
     for i, option in ipairs(VISIBILITY) do
       local spec = byLabel[option[2]]
       assert.equals(specs[i], spec)
@@ -528,14 +556,14 @@ describe("RaidMarkers", function()
     assert.same({ 0, 0, 0, 0.6 }, panel.bg)
     assert.same({ 0.3, 0.3, 0.3, 1 }, panel.border)
     local buttons = panelButtons(addon)
-    assert.equals(21, #buttons)
+    assert.equals(22, #buttons)
     for _, button in ipairs(buttons) do
       assert.equals(flat, button.backdrop)
       assert.same({ 0, 0, 0, 0.5 }, button.bg)
       assert.same(BORDER, button.border)
       assert.truthy(button.template == "BackdropTemplate" or button.template == "SecureActionButtonTemplate,BackdropTemplate")
     end
-    assert.equals(18, #addon.secure(function(_, f) return f.template == "SecureActionButtonTemplate,BackdropTemplate" end))
+    assert.equals(19, #addon.secure(function(_, f) return f.template == "SecureActionButtonTemplate,BackdropTemplate" end))
   end)
 
   it("shows the world clear as an icon and names every marker in its tooltip", function()
@@ -583,8 +611,8 @@ describe("RaidMarkers", function()
     local row2 = world(1).parent
     assert.same({ "TOPLEFT", row1, "TOPRIGHT", 2, 0 }, block.lastPoint)
     assert.same({ "TOPLEFT", row1, "BOTTOMLEFT", 0, -2 }, row2.lastPoint)
-    assert.same({ 284, 26 }, { row1.width, row1.height })
-    assert.same({ 284, 26 }, { row2.width, row2.height })
+    assert.same({ 312, 26 }, { row1.width, row1.height })
+    assert.same({ 312, 26 }, { row2.width, row2.height })
     for _, button in ipairs({ ready, pull, role }) do
       assert.equals(block, button.lastPoint[2])
     end
@@ -595,23 +623,78 @@ describe("RaidMarkers", function()
     assert.same({ 66, 0 }, offsets(pull))
     assert.same({ 0, -28 }, offsets(role))
     assert.same({ 130, 54 }, { block.width, block.height })
-    assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { panel.width, panel.height })
+    assert.same({ 312 + 2 + 130 + 8, 54 + 8 }, { panel.width, panel.height })
   end)
 
-  it("puts the block under the columns in the vertical layout, Role spanning the bottom", function()
+  local function clears(a)
+    return a.secure(function(attrs) return attrs.type == "raidtarget" and attrs.action == "clear-all" end)[1],
+      a.secure(function(attrs, f) return rawget(f, "name") == nil and attrs.type == "worldmarker" and attrs.action == "clear" end)[1]
+  end
+
+  local function placed(button, parent, x, y, width)
+    assert.same({ "TOPLEFT", parent, "TOPLEFT", x, y }, button.lastPoint)
+    assert.same({ width, 26 }, { button.width, button.height })
+  end
+
+  it("puts the mode button between the world dots and the world clear, both rows the same width", function()
+    local clearTarget, clearWorld = clears(addon)
+    local mode = addon.named("LittleThingsWorldMarkerMode")
+    local row1, row2 = target(1).parent, world(1).parent
+    assert.equals(row2, mode.parent)
+    for i = 1, 8 do
+      placed(target(i), row1, (i - 1) * 28, 0, 26)
+      placed(world(i), row2, (i - 1) * 28, 0, 26)
+    end
+    placed(clearTarget, row1, 224, 0, 88)
+    placed(mode, row2, 224, 0, 26)
+    placed(clearWorld, row2, 252, 0, 60)
+  end)
+
+  local ORDER = { 8, 4, 1, 7, 2, 3, 6, 5 }
+
+  local function column(a, width, inset)
+    local clearTarget, clearWorld = clears(a)
+    local mode = a.named("LittleThingsWorldMarkerMode")
+    local function find(kind, i)
+      return a.secure(function(attrs) return attrs.type == kind and attrs.marker == i end)[1]
+    end
+    local row1, row2 = find("raidtarget", 1).parent, find("worldmarker", 1).parent
+    for t = 1, 8 do
+      placed(find("raidtarget", t), row1, inset, -(t - 1) * 28, 26)
+      placed(find("worldmarker", ORDER[9 - t]), row2, inset + 28, -(t - 1) * 28, 26)
+    end
+    placed(clearTarget, row1, 0, -224, inset + 26)
+    placed(clearWorld, row2, inset + 28, -224, width - inset - 28)
+    placed(mode, row2, 0, -252, width)
+    assert.same({ width, 278 }, { row1.width, row1.height })
+    assert.same({ width, 278 }, { row2.width, row2.height })
+    assert.same({ "TOPLEFT", row1, "TOPLEFT", 0, 0 }, row2.lastPoint)
+    local ready, pull, role = cells(a)
+    local block = ready.parent
+    placed(ready, block, 0, 0, width)
+    placed(pull, block, 0, -28, width)
+    placed(role, block, 0, -56, width)
+    assert.same({ width, 82 }, { block.width, block.height })
+    assert.same({ "TOPLEFT", row1, "BOTTOMLEFT", 0, -2 }, block.lastPoint)
+    local panel = a.panel()
+    assert.same({ width + 8, 278 + 2 + 82 + 8 }, { panel.width, panel.height })
+  end
+
+  it("pairs each target marker with the world marker of the same symbol in one centred column", function()
     local _, specs = pages(addon)
     specs["Vertical"].set(true)
-    local panel = addon.panel()
-    local ready, pull, role = cells(addon)
-    local block = ready.parent
-    local row1 = target(1).parent
-    assert.same({ "TOPLEFT", row1, "BOTTOMLEFT", 0, -2 }, block.lastPoint)
-    assert.same({ 60, 250 }, { row1.width, row1.height })
-    assert.same({ 0, 0 }, offsets(ready))
-    assert.same({ 66, 0 }, offsets(pull))
-    assert.same({ 0, -28 }, offsets(role))
-    assert.same({ 130, 26 }, { role.width, role.height })
-    assert.same({ math.max(60 + 2 + 60, 130) + 8, 250 + 2 + 54 + 8 }, { panel.width, panel.height })
+    column(addon, 64, 5)
+    specs["Vertical"].set(false)
+    local clearTarget = clears(addon)
+    placed(clearTarget, target(1).parent, 224, 0, 88)
+    assert.same({ 312, 26 }, { target(1).parent.width, target(1).parent.height })
+  end)
+
+  it("widens the column to the measured ready cell", function()
+    state.textWidth = 70.2
+    local wide = load(state, { raidMarkerPanel = { vertical = true } })
+    wide.module.Enable()
+    column(wide, 79, 12)
   end)
 
   it("widens the block cells when the ready label needs more than 64 px", function()
@@ -623,6 +706,7 @@ describe("RaidMarkers", function()
     assert.same({ 81, 0 }, offsets(pull))
     assert.same({ 160, 26 }, { role.width, role.height })
     assert.equals("Ready", ready.label.text)
+    assert.same({ 312 + 2 + 160 + 8, 54 + 8 }, { wide.panel().width, wide.panel().height })
   end)
 
   it("drags only the mover and places the panel where the outline was released", function()
@@ -757,6 +841,21 @@ describe("RaidMarkers", function()
       button.scripts.OnClick(button, "RightButton")
       button.scripts.OnLeave(button)
     end
+    local mode = addon.named("LittleThingsWorldMarkerMode")
+    local nextButton, clear = addon.named("LittleThingsWorldMarkerNext"), addon.named("LittleThingsWorldMarkerClear")
+    local bound = {}
+    mode.scripts.OnEnter(mode)
+    mode.scripts.OnLeave(mode)
+    snippet(mode, bound, "LeftButton", true)
+    assert.is_truthy(bound.BUTTON1)
+    snippet(nextButton, bound, "LeftButton", true)
+    snippet(nextButton, bound, "LeftButton", false)
+    snippet(clear, bound, "LeftButton", true)
+    mode.scripts.OnAttributeChanged(mode, "lt-active", true)
+    nextButton.scripts.OnAttributeChanged(nextButton, "lt-index", 2)
+    snippet(mode, bound, "RightButton", true)
+    assert.same({}, bound)
+    snippet(mode, bound, "LeftButton", true)
     panel.scripts.OnDragStart(panel)
     panel.scripts.OnDragStop(panel)
     panel.scripts.OnShow(panel)
@@ -772,6 +871,7 @@ describe("RaidMarkers", function()
 
     assert.same({}, addon.blocked)
     assert.same({}, state.calls)
+    assert.same({}, state.clearedBindings)
   end)
 
   it("fills defaults before any page exists", function()
@@ -849,13 +949,22 @@ describe("RaidMarkers", function()
       assert.is_nil(clear.attrs.macrotext)
     end)
 
-    it("next button starts at marker 1", function()
+    it("next button starts at the first slot of the default order 1..8", function()
       local nextButton, clear = bindings(addon)
-      assert.equals(1, nextButton.attrs["lt-next"])
+      assert.same({ 1, 2, 3, 4, 5, 6, 7, 8 }, addon.ns.db.raidMarkerPanel.order)
+      assert.equals(8, nextButton.attrs["lt-count"])
+      for i = 1, 8 do assert.equals(i, nextButton.attrs["lt-order" .. i]) end
+      assert.equals(1, nextButton.attrs["lt-index"])
       assert.is_nil(nextButton.attrs.macrotext)
-      assert.matches("lt%-next", nextButton.wraps.OnClick)
-      assert.matches("lt%-next", clear.wraps.OnClick)
       assert.equals(nextButton, clear.attrs["frameref-next"])
+      local seen = {}
+      for _ = 1, 9 do
+        snippet(nextButton, {}, "LeftButton", true)
+        seen[#seen + 1] = nextButton.attrs.macrotext
+      end
+      assert.equals("/wm [@cursor]1", seen[1])
+      assert.equals("/wm [@cursor]8", seen[8])
+      assert.equals("/wm [@cursor]1", seen[9])
     end)
 
     it("acts on key down only, so the wrapped cycle advances once per press", function()
@@ -884,6 +993,256 @@ describe("RaidMarkers", function()
       state.combat = false
       addon.fire("PLAYER_REGEN_ENABLED")
       assert.is_nil(nextButton.attrs.type)
+    end)
+  end)
+
+  describe("placement mode and order", function()
+    local ORDINALS = { "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
+    local IDLE = { 0.8, 0.8, 0.8 }
+
+    local function mode(a) return (a or addon).named("LittleThingsWorldMarkerMode") end
+    local function nextButton(a) return (a or addon).named("LittleThingsWorldMarkerNext") end
+    local function clearButton(a) return (a or addon).named("LittleThingsWorldMarkerClear") end
+
+    local function setOrder(a, order)
+      local _, byLabel = pages(a)
+      for i = 1, 8 do byLabel[ORDINALS[i]].set(order[i] or 0) end
+    end
+
+    local function ringed()
+      local found = {}
+      for i = 1, 8 do
+        local button = world(i)
+        assert.equals(button.nextRing.shown, button.nextGap.shown)
+        if button.nextRing.shown then found[#found + 1] = i end
+      end
+      return found
+    end
+
+    it("offers a Placement order group of 8 combat-locked dropdowns", function()
+      _G.WORLD_MARKER1 = "Blue Square"
+      local named = load(state)
+      named.module.Enable()
+      local specs, byLabel = pages(named)
+      _G.WORLD_MARKER1 = nil
+      for i, label in ipairs(ORDINALS) do
+        local spec = assert(byLabel[label], label)
+        assert.is_true(spec.combatLocked)
+        assert.equals(i, spec.default)
+        assert.equals(i, spec.get())
+        assert.equals(9, #spec.options)
+        assert.same({ text = "None", value = 0 }, spec.options[1])
+        assert.same({ text = "Blue Square", value = 1 }, spec.options[2])
+        assert.same({ text = "World marker 8", value = 8 }, spec.options[9])
+        assert.is_string(spec.tooltip)
+      end
+      assert.equals(byLabel["8th"], specs[#specs])
+    end)
+
+    it("cycles the non-empty slots in order and wraps", function()
+      setOrder(addon, { 5, 0, 1 })
+      local nb = nextButton()
+      assert.equals(2, nb.attrs["lt-count"])
+      assert.same({ 5, 1 }, { nb.attrs["lt-order1"], nb.attrs["lt-order2"] })
+      assert.same({ 5, 0, 1, 0, 0, 0, 0, 0 }, addon.ns.db.raidMarkerPanel.order)
+      local seen = {}
+      for _ = 1, 4 do
+        assert.is_nil(snippet(nb, {}, "LeftButton", true))
+        seen[#seen + 1] = nb.attrs.macrotext
+      end
+      assert.same({ "/wm [@cursor]5", "/wm [@cursor]1", "/wm [@cursor]5", "/wm [@cursor]1" }, seen)
+    end)
+
+    it("allows duplicates", function()
+      setOrder(addon, { 3, 3, 0, 0, 0, 0, 0, 2 })
+      local nb = nextButton()
+      local seen = {}
+      for _ = 1, 3 do
+        snippet(nb, {}, "LeftButton", true)
+        seen[#seen + 1] = nb.attrs.macrotext
+      end
+      assert.same({ "/wm [@cursor]3", "/wm [@cursor]3", "/wm [@cursor]2" }, seen)
+    end)
+
+    it("clear sends the cycle back to the first slot", function()
+      setOrder(addon, { 5, 0, 1 })
+      local nb = nextButton()
+      snippet(nb, {}, "LeftButton", true)
+      snippet(clearButton(), {}, "LeftButton", true)
+      assert.equals(1, nb.attrs["lt-index"])
+      snippet(nb, {}, "LeftButton", true)
+      assert.equals("/wm [@cursor]5", nb.attrs.macrotext)
+    end)
+
+    it("cancels the next click when the order is empty", function()
+      setOrder(addon, {})
+      local nb = nextButton()
+      assert.equals(0, nb.attrs["lt-count"])
+      assert.is_false(snippet(nb, {}, "LeftButton", true))
+      assert.is_nil(nb.attrs.macrotext)
+    end)
+
+    it("resets the cycle when the order changes", function()
+      local nb = nextButton()
+      snippet(nb, {}, "LeftButton", true)
+      snippet(nb, {}, "LeftButton", true)
+      setOrder(addon, { 7, 6 })
+      assert.equals(1, nb.attrs["lt-index"])
+      snippet(nb, {}, "LeftButton", true)
+      assert.equals("/wm [@cursor]7", nb.attrs.macrotext)
+    end)
+
+    it("applies an order changed in combat after combat", function()
+      local nb = nextButton()
+      state.combat = true
+      setOrder(addon, { 4 })
+      assert.same({}, addon.blocked)
+      assert.equals(8, nb.attrs["lt-count"])
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.equals(1, nb.attrs["lt-count"])
+      assert.equals(4, nb.attrs["lt-order1"])
+    end)
+
+    it("left click enters the mode with both bindings, right click and a second left click leave it", function()
+      local m, b = mode(), {}
+      assert.is_false(snippet(m, b, "LeftButton", true))
+      assert.same({ true, "LittleThingsWorldMarkerNext", "LeftButton" }, b.BUTTON1)
+      assert.same({ true, "LittleThingsWorldMarkerMode", "RightButton" }, b.ESCAPE)
+      assert.is_true(m.attrs["lt-active"])
+      snippet(m, b, "RightButton", true)
+      assert.same({}, b)
+      assert.is_nil(m.attrs["lt-active"])
+      snippet(m, b, "LeftButton", true)
+      assert.is_truthy(b.BUTTON1)
+      snippet(m, b, "LeftButton", true)
+      assert.same({}, b)
+      assert.is_nil(m.attrs["lt-active"])
+    end)
+
+    it("toggles once per press: the mode button is clicked on down only and ignores an up", function()
+      local m, b = mode(), {}
+      assert.same({ "AnyDown" }, m.clicks)
+      snippet(m, b, "LeftButton", true)
+      snippet(m, b, "LeftButton", false)
+      assert.is_truthy(b.BUTTON1)
+      snippet(m, b, "RightButton", false)
+      assert.is_truthy(b.BUTTON1)
+      snippet(m, b, "RightButton", true)
+      assert.same({}, b)
+      assert.same({ "AnyDown" }, nextButton().clicks)
+    end)
+
+    it("stays on after the last marker and wraps", function()
+      local m, b = mode(), {}
+      setOrder(addon, { 2, 6 })
+      snippet(m, b, "LeftButton", true)
+      for _ = 1, 3 do snippet(nextButton(), b, "LeftButton", true) end
+      assert.equals("/wm [@cursor]2", nextButton().attrs.macrotext)
+      assert.is_true(m.attrs["lt-active"])
+      assert.is_truthy(b.BUTTON1)
+    end)
+
+    it("refuses the mode and greys the button when the order is empty", function()
+      setOrder(addon, {})
+      local m, b = mode(), {}
+      assert.same({ 0.5, 0.5, 0.5 }, m.label.color)
+      assert.equals("Placement order is empty", m.reason)
+      snippet(m, b, "LeftButton", true)
+      assert.same({}, b)
+      assert.is_nil(m.attrs["lt-active"])
+      setOrder(addon, { 1 })
+      assert.is_nil(rawget(m, "reason"))
+      assert.same(IDLE, m.label.color)
+    end)
+
+    it("ends an active mode when the order becomes empty", function()
+      local m, b = mode(), {}
+      snippet(m, b, "LeftButton", true)
+      setOrder(addon, {})
+      assert.same({ m }, state.clearedBindings)
+      assert.is_nil(m.attrs["lt-active"])
+    end)
+
+    it("shows the next position in gold and rings the next marker while on", function()
+      local m, b = mode(), {}
+      assert.equals("Place", m.label.text)
+      assert.same(IDLE, m.label.color)
+      assert.same(BORDER, m.border)
+      assert.same({}, ringed())
+      setOrder(addon, { 5, 0, 1 })
+      snippet(m, b, "LeftButton", true)
+      assert.equals("1/2", m.label.text)
+      assert.same({ 1, 0.82, 0 }, m.label.color)
+      assert.same(GOLD, m.border)
+      assert.same({ 5 }, ringed())
+      snippet(nextButton(), b, "LeftButton", true)
+      assert.equals("2/2", m.label.text)
+      assert.same({ 1 }, ringed())
+      snippet(nextButton(), b, "LeftButton", true)
+      assert.equals("1/2", m.label.text)
+      snippet(m, b, "RightButton", true)
+      assert.equals("Place", m.label.text)
+      assert.same(BORDER, m.border)
+      assert.same({}, ringed())
+    end)
+
+    it("draws the next ring as a white circle with a dark gap around the dot", function()
+      local button = world(3)
+      local d = dot(button)
+      assert.same({ 22, 22 }, { button.nextRing.width, button.nextRing.height })
+      assert.same({ 1, 1, 1, 1 }, button.nextRing.vertexColor)
+      assert.same({ 18, 18 }, { button.nextGap.width, button.nextGap.height })
+      assert.same({ 0, 0, 0, 1 }, button.nextGap.vertexColor)
+      for _, t in ipairs({ button.nextRing, button.nextGap }) do
+        assert.equals("Interface\\CharacterFrame\\TempPortraitAlphaMask", t.mask)
+        assert.are_not.equal(d, t)
+      end
+    end)
+
+    it("explains the mode in its tooltip", function()
+      local m = mode()
+      assert.equals("Placement mode: left click on the ground places the next world marker. Right click or Esc to stop.", m.title)
+      assert.same({ "Left-clicks on the world do not target or turn the camera while it is on." }, m.lines())
+      m.scripts.OnEnter(m)
+      m.scripts.OnLeave(m)
+    end)
+
+    it("starts off on login", function()
+      local fresh = load(state)
+      fresh.module.Enable()
+      assert.is_nil(mode(fresh).attrs["lt-active"])
+      assert.equals("Place", mode(fresh).label.text)
+    end)
+
+    it("ends the mode when switched off, out of combat only", function()
+      local m, b = mode(), {}
+      state.group = true
+      addon.fire("GROUP_ROSTER_UPDATE")
+      snippet(m, b, "LeftButton", true)
+      state.combat = true
+      addon.module.OnSwitch(false)
+      assert.same({}, state.clearedBindings)
+      assert.is_true(m.attrs["lt-active"])
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.same({ m }, state.clearedBindings)
+      assert.is_nil(m.attrs["lt-active"])
+      assert.equals("Place", m.label.text)
+    end)
+
+    it("ends the mode when the visibility rule hides the panel", function()
+      local m, b = mode(), {}
+      state.group = true
+      addon.fire("GROUP_ROSTER_UPDATE")
+      snippet(m, b, "LeftButton", true)
+      addon.fire("PARTY_LEADER_CHANGED")
+      assert.same({}, state.clearedBindings)
+      state.group = false
+      addon.fire("GROUP_ROSTER_UPDATE")
+      assert.is_false(addon.panel():IsShown())
+      assert.same({ m }, state.clearedBindings)
+      assert.is_nil(m.attrs["lt-active"])
     end)
   end)
 

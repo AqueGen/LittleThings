@@ -17,6 +17,8 @@ local WORLD_COLORS = {
     { 4, 149, 255 }, { 15, 155, 12 }, { 168, 14, 192 }, { 167, 20, 13 },
     { 222, 218, 50 }, { 208, 84, 0 }, { 116, 155, 179 }, { 243, 241, 235 },
 }
+local WORLD_FOR_TARGET = { 5, 6, 3, 2, 7, 1, 4, 8 }
+local ORDINALS = { "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
 
 local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
     showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false }
@@ -27,23 +29,40 @@ local dragging, previewing = false, false
 local pending = {}
 local targetButtons, worldButtons = {}, {}
 local groupButtons = {}
+local clearTarget, clearWorld, modeButton
 local readyText, readyTint, readyToken, lastStatuses
 local countdownRunning, countdownSecret, countdownToken = false, false, 0
 local bindNext, bindClear
 
 local NEXT_BODY = [[
-local n = self:GetAttribute("lt-next") or 1
-self:SetAttribute("macrotext", "/wm [@cursor]" .. n)
-self:SetAttribute("lt-next", n % 8 + 1)
+local n = self:GetAttribute("lt-count") or 0
+if n == 0 then return false end
+local i = self:GetAttribute("lt-index") or 1
+if i > n then i = 1 end
+self:SetAttribute("macrotext", "/wm [@cursor]" .. self:GetAttribute("lt-order" .. i))
+self:SetAttribute("lt-index", i % n + 1)
 ]]
-local CLEAR_BODY = [[self:GetFrameRef("next"):SetAttribute("lt-next", 1)]]
+local CLEAR_BODY = [[self:GetFrameRef("next"):SetAttribute("lt-index", 1)]]
+local MODE_BODY = [[
+if not down then return false end
+if button == "RightButton" or self:GetAttribute("lt-active") then
+    self:ClearBindings()
+    self:SetAttribute("lt-active", nil)
+elseif (self:GetFrameRef("next"):GetAttribute("lt-count") or 0) > 0 then
+    self:SetBindingClick(true, "BUTTON1", "LittleThingsWorldMarkerNext", "LeftButton")
+    self:SetBindingClick(true, "ESCAPE", self:GetName(), "RightButton")
+    self:SetAttribute("lt-active", true)
+end
+return false
+]]
 
 local READY_COLORS = { waiting = { 1, 0.82, 0 }, notready = { 1, 0.2, 0.2 }, ready = { 0.2, 1, 0.2 } }
-local WHITE, GREY, RED = { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }
+local WHITE, GREY, RED, IDLE = { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }, { 0.8, 0.8, 0.8 }
 
 local function InitializeDb()
     ns.db.raidMarkerPanel = ns.db.raidMarkerPanel or {}
     ns.ApplyDefaults(ns.db.raidMarkerPanel, DEFAULTS)
+    ns.db.raidMarkerPanel.order = ns.db.raidMarkerPanel.order or { 1, 2, 3, 4, 5, 6, 7, 8 }
 end
 
 local function Ring(button, on)
@@ -51,10 +70,10 @@ local function Ring(button, on)
     button:SetBackdropBorderColor(color[1], color[2], color[3], color[4])
 end
 
-local function NewButton(row, template, width)
-    local button = CreateFrame("Button", nil, row, template and template .. ",BackdropTemplate" or "BackdropTemplate")
+local function NewButton(row, template, width, name)
+    local button = CreateFrame("Button", name, row, template and template .. ",BackdropTemplate" or "BackdropTemplate")
     button:SetSize(width, SIZE)
-    button.width = width
+    button.span = width
     button:SetBackdrop(FLAT)
     button:SetBackdropColor(0, 0, 0, 0.5)
     Ring(button, false)
@@ -124,8 +143,8 @@ local function ShowTip(button)
     GameTooltip:Show()
 end
 
-local function SecureButton(row, width, title, attributes)
-    local button = NewButton(row, "SecureActionButtonTemplate", width)
+local function SecureButton(row, width, title, attributes, name)
+    local button = NewButton(row, "SecureActionButtonTemplate", width, name)
     button:RegisterForClicks("AnyUp", "AnyDown")
     for key, value in pairs(attributes) do
         button:SetAttribute(key, value)
@@ -198,61 +217,68 @@ local function UpdateReady(finished)
     end
 end
 
-local function LayoutRow(row, vertical)
-    local offset, across = 0, 0
-    for _, button in ipairs(row.buttons) do
-        button:ClearAllPoints()
-        if vertical then
-            button:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -offset)
-            offset = offset + SIZE + GAP
-            across = math.max(across, button.width)
-        else
-            button:SetPoint("TOPLEFT", row, "TOPLEFT", offset, 0)
-            offset = offset + button.width + GAP
-            across = SIZE
-        end
-    end
-    if vertical then
-        row:SetSize(across, offset - GAP)
-        return across, offset - GAP
-    end
-    row:SetSize(offset - GAP, across)
-    return offset - GAP, across
-end
-
-local function Cell(button, x, y, width)
+local function Cell(button, parent, x, y, width)
     button:SetSize(width, SIZE)
     button:ClearAllPoints()
-    button:SetPoint("TOPLEFT", block, "TOPLEFT", x, y)
+    button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
 end
 
-local function LayoutBlock()
+local function LayoutRow(row)
+    local offset = 0
+    for _, button in ipairs(row.buttons) do
+        Cell(button, row, offset, 0, button.span)
+        offset = offset + button.span + GAP
+    end
+    row:SetSize(offset - GAP, SIZE)
+    return offset - GAP
+end
+
+local function LayoutHorizontal()
+    local width = LayoutRow(row1)
+    LayoutRow(row2)
     local cell = block.cell
-    local width, height = 2 * cell + GAP, 2 * SIZE + GAP
-    Cell(groupButtons.ready, 0, 0, cell)
-    Cell(groupButtons.pull, cell + GAP, 0, cell)
-    Cell(groupButtons.role, 0, -(SIZE + GAP), width)
-    block:SetSize(width, height)
-    return width, height
+    local bw, bh = 2 * cell + GAP, 2 * SIZE + GAP
+    Cell(groupButtons.ready, block, 0, 0, cell)
+    Cell(groupButtons.pull, block, cell + GAP, 0, cell)
+    Cell(groupButtons.role, block, 0, -(SIZE + GAP), bw)
+    block:SetSize(bw, bh)
+    row2:SetPoint("TOPLEFT", row1, "BOTTOMLEFT", 0, -GAP)
+    block:SetPoint("TOPLEFT", row1, "TOPRIGHT", GAP, 0)
+    panel:SetSize(width + GAP + bw + 2 * PAD, math.max(2 * SIZE + GAP, bh) + 2 * PAD)
+end
+
+local function LayoutVertical()
+    local width = math.max(2 * SIZE + GAP, block.cell)
+    local inset = math.floor((width - 2 * SIZE - GAP) / 2)
+    local step = SIZE + GAP
+    for t, button in ipairs(targetButtons) do
+        Cell(button, row1, inset, -(t - 1) * step, SIZE)
+        Cell(worldButtons[WORLD_FOR_TARGET[t]], row2, inset + step, -(t - 1) * step, SIZE)
+    end
+    Cell(clearTarget, row1, 0, -8 * step, inset + SIZE)
+    Cell(clearWorld, row2, inset + step, -8 * step, width - inset - step)
+    Cell(modeButton, row2, 0, -9 * step, width)
+    local height = 10 * step - GAP
+    row1:SetSize(width, height)
+    row2:SetSize(width, height)
+    Cell(groupButtons.ready, block, 0, 0, width)
+    Cell(groupButtons.pull, block, 0, -step, width)
+    Cell(groupButtons.role, block, 0, -2 * step, width)
+    block:SetSize(width, 3 * step - GAP)
+    row2:SetPoint("TOPLEFT", row1, "TOPLEFT", 0, 0)
+    block:SetPoint("TOPLEFT", row1, "BOTTOMLEFT", 0, -GAP)
+    panel:SetSize(width + 2 * PAD, height + GAP + 3 * step - GAP + 2 * PAD)
 end
 
 local function Layout()
-    local vertical = ns.db.raidMarkerPanel.vertical
-    local w1, h1 = LayoutRow(row1, vertical)
-    local w2, h2 = LayoutRow(row2, vertical)
-    local bw, bh = LayoutBlock()
     row1:ClearAllPoints()
     row1:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, -PAD)
     row2:ClearAllPoints()
     block:ClearAllPoints()
-    if vertical then
-        row2:SetPoint("TOPLEFT", row1, "TOPRIGHT", GAP, 0)
-        block:SetPoint("TOPLEFT", row1, "BOTTOMLEFT", 0, -GAP)
-        panel:SetSize(math.max(w1 + GAP + w2, bw) + 2 * PAD, math.max(h1, h2) + GAP + bh + 2 * PAD)
+    if ns.db.raidMarkerPanel.vertical then
+        LayoutVertical()
     else
-        row2:SetPoint("TOPLEFT", row1, "BOTTOMLEFT", 0, -GAP)
-        block:SetPoint("TOPLEFT", row1, "TOPRIGHT", GAP, 0)
-        panel:SetSize(math.max(w1, w2) + GAP + bw + 2 * PAD, math.max(h1 + GAP + h2, bh) + 2 * PAD)
+        LayoutHorizontal()
     end
 end
 
@@ -304,6 +330,46 @@ local function RefreshTarget()
     end
 end
 
+local function PaintMode()
+    local count = bindNext:GetAttribute("lt-count") or 0
+    local on = modeButton:GetAttribute("lt-active")
+    local index = bindNext:GetAttribute("lt-index") or 1
+    if index > count then
+        index = 1
+    end
+    local upcoming = on and bindNext:GetAttribute("lt-order" .. index)
+    local color = count == 0 and GREY or on and GOLD or IDLE
+    modeButton.reason = count == 0 and "Placement order is empty" or nil
+    modeButton.label:SetText(on and (index .. "/" .. count) or "Place")
+    modeButton.label:SetTextColor(color[1], color[2], color[3])
+    Ring(modeButton, on)
+    for i, button in ipairs(worldButtons) do
+        button.nextRing:SetShown(i == upcoming)
+        button.nextGap:SetShown(i == upcoming)
+    end
+end
+
+local function StopMode()
+    if modeButton and modeButton:GetAttribute("lt-active") then
+        ClearOverrideBindings(modeButton)
+        modeButton:SetAttribute("lt-active", nil)
+        PaintMode()
+    end
+end
+
+local function ApplyOrder()
+    local cycle = Rules.Cycle(ns.db.raidMarkerPanel.order)
+    bindNext:SetAttribute("lt-count", #cycle)
+    for i, marker in ipairs(cycle) do
+        bindNext:SetAttribute("lt-order" .. i, marker)
+    end
+    bindNext:SetAttribute("lt-index", 1)
+    if #cycle == 0 then
+        StopMode()
+    end
+    PaintMode()
+end
+
 local function RefreshWorld()
     for i, button in ipairs(worldButtons) do
         local placed = IsRaidMarkerActive(i)
@@ -338,6 +404,7 @@ local function RequestVisibility()
         panel:Show()
     else
         panel:Hide()
+        StopMode()
     end
 end
 
@@ -345,6 +412,26 @@ local function NewRow()
     local row = CreateFrame("Frame", nil, panel)
     row.buttons = {}
     return row
+end
+
+local function Circle(button, layer, size, r, g, b)
+    local texture = button:CreateTexture(nil, layer)
+    texture:SetSize(size, size)
+    texture:SetPoint("CENTER")
+    texture:SetTexture("Interface\\Buttons\\WHITE8x8")
+    texture:SetVertexColor(r, g, b, 1)
+    texture:SetMask(CIRCLE_MASK)
+    return texture
+end
+
+local function BindingButton(name, attributes)
+    local button = CreateFrame("Button", name, nil, "SecureActionButtonTemplate")
+    button:RegisterForClicks("AnyDown")
+    button:SetAttribute("useOnKeyDown", true)
+    for key, value in pairs(attributes) do
+        button:SetAttribute(key, value)
+    end
+    return button
 end
 
 local function ApplyCombatHide()
@@ -402,6 +489,7 @@ local function Build()
     panel:SetScript("OnShow", function()
         RefreshTarget()
         RefreshWorld()
+        PaintMode()
         StopTicker()
         ticker = C_Timer.NewTicker(1, RefreshWorld)
     end)
@@ -411,6 +499,13 @@ local function Build()
             StopDrag()
         end
     end)
+
+    bindNext = BindingButton("LittleThingsWorldMarkerNext", {})
+    bindClear = BindingButton("LittleThingsWorldMarkerClear", { action = "clear" })
+    local header = CreateFrame("Frame", nil, nil, "SecureHandlerBaseTemplate")
+    header:WrapScript(bindNext, "OnClick", NEXT_BODY)
+    SecureHandlerSetFrameRef(bindClear, "next", bindNext)
+    header:WrapScript(bindClear, "OnClick", CLEAR_BODY)
 
     row1, row2, block = NewRow(), NewRow(), NewRow()
 
@@ -424,7 +519,7 @@ local function Build()
         SetRaidTargetIconTexture(icon, i)
         targetButtons[i] = button
     end
-    local clearTarget = SecureButton(row1, CLEAR_WIDTH, "Clear all target markers", { type = "raidtarget", action = "clear-all" })
+    clearTarget = SecureButton(row1, CLEAR_WIDTH + SIZE + GAP, "Clear all target markers", { type = "raidtarget", action = "clear-all" })
     clearTarget.label = Label(clearTarget, "Clear all")
 
     local ready = GroupButton("ready", "Ready", "ready", "Ready check", nil, function()
@@ -455,45 +550,37 @@ local function Build()
     for i, color in ipairs(WORLD_COLORS) do
         local button = SecureButton(row2, SIZE, MarkerTitle(_G["WORLD_MARKER" .. i] or ("World marker " .. i)),
             { type = "worldmarker", marker = i, action1 = "set", action2 = "clear" })
-        local dot = button:CreateTexture(nil, "ARTWORK")
-        dot:SetSize(DOT, DOT)
-        dot:SetPoint("CENTER")
-        dot:SetTexture("Interface\\Buttons\\WHITE8x8")
-        dot:SetVertexColor(color[1] / 255, color[2] / 255, color[3] / 255, 1)
-        dot:SetMask(CIRCLE_MASK)
+        Circle(button, "ARTWORK", DOT, color[1] / 255, color[2] / 255, color[3] / 255)
+        button.nextRing = Circle(button, "BACKGROUND", DOT + 6, 1, 1, 1)
+        button.nextGap = Circle(button, "BORDER", DOT + 2, 0, 0, 0)
         worldButtons[i] = button
     end
-    local clearWorld = SecureButton(row2, CLEAR_WIDTH, "Clear all world markers", { type = "worldmarker", action = "clear" })
+    modeButton = SecureButton(row2, SIZE, "Placement mode: left click on the ground places the next world marker. Right click or Esc to stop.",
+        {}, "LittleThingsWorldMarkerMode")
+    modeButton:RegisterForClicks("AnyDown")
+    modeButton.label = Label(modeButton, "Place")
+    modeButton.lines = function()
+        return { "Left-clicks on the world do not target or turn the camera while it is on." }
+    end
+    SecureHandlerSetFrameRef(modeButton, "next", bindNext)
+    header:WrapScript(modeButton, "OnClick", MODE_BODY)
+
+    clearWorld = SecureButton(row2, CLEAR_WIDTH, "Clear all world markers", { type = "worldmarker", action = "clear" })
     local clearIcon = clearWorld:CreateTexture(nil, "ARTWORK")
     clearIcon:SetSize(DOT, DOT)
     clearIcon:SetPoint("CENTER")
     clearIcon:SetAtlas(CLEAR_ICON)
 
+    modeButton:SetScript("OnAttributeChanged", PaintMode)
+    bindNext:SetScript("OnAttributeChanged", PaintMode)
+    ApplyOrder()
     Layout()
     Place()
 end
 
-local function BindingButton(name, attributes)
-    local button = CreateFrame("Button", name, nil, "SecureActionButtonTemplate")
-    button:RegisterForClicks("AnyDown")
-    button:SetAttribute("useOnKeyDown", true)
-    for key, value in pairs(attributes) do
-        button:SetAttribute(key, value)
-    end
-    return button
-end
-
 local function SyncBindings()
-    if InCombatLockdown() or not (bindNext or active) then
+    if not bindNext or InCombatLockdown() then
         return
-    end
-    if not bindNext then
-        bindNext = BindingButton("LittleThingsWorldMarkerNext", { ["lt-next"] = 1 })
-        bindClear = BindingButton("LittleThingsWorldMarkerClear", { action = "clear" })
-        local header = CreateFrame("Frame", nil, nil, "SecureHandlerBaseTemplate")
-        header:WrapScript(bindNext, "OnClick", NEXT_BODY)
-        SecureHandlerSetFrameRef(bindClear, "next", bindNext)
-        header:WrapScript(bindClear, "OnClick", CLEAR_BODY)
     end
     bindNext:SetAttribute("type", active and "macro" or nil)
     bindClear:SetAttribute("type", active and "worldmarker" or nil)
@@ -543,6 +630,9 @@ local handlers = {
             end
             if pending[ApplyCombatHide] then
                 ApplyCombatHide()
+            end
+            if pending[ApplyOrder] then
+                ApplyOrder()
             end
             pending = {}
         end
@@ -637,7 +727,7 @@ function RaidMarkers.Pages(page)
     group:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f", combatLocked = true,
         tooltip = "Size of the whole panel." }, Place))
     group:Check(Option("vertical", { label = "Vertical", combatLocked = true,
-        tooltip = "Each row becomes a column: target markers on the left, world markers on the right." }, Layout))
+        tooltip = "One column: each target marker next to the world marker of the same symbol, the other buttons below." }, Layout))
     group:Slider(Option("pullLeft", { label = "Pull, left click (seconds)", min = 3, max = 60,
         tooltip = "Countdown length when the pull button is left-clicked." }))
     group:Slider(Option("pullRight", { label = "Pull, right click (seconds)", min = 3, max = 60,
@@ -651,6 +741,23 @@ function RaidMarkers.Pages(page)
                 ApplyOutOfCombat(Place)
             end
         end })
+
+    local options = { { text = "None", value = 0 } }
+    for n = 1, 8 do
+        options[n + 1] = { text = _G["WORLD_MARKER" .. n] or ("World marker " .. n), value = n }
+    end
+    local placement = page:Group("Placement order")
+    for i, label in ipairs(ORDINALS) do
+        placement:Dropdown({ label = label, options = options, default = i, combatLocked = true,
+            tooltip = "World marker placed at this step by the placement mode and the next world marker key. None skips the step.",
+            get = function() return ns.db.raidMarkerPanel.order[i] end,
+            set = function(value)
+                ns.db.raidMarkerPanel.order[i] = value
+                if panel then
+                    ApplyOutOfCombat(ApplyOrder)
+                end
+            end })
+    end
 end
 
 RaidMarkers.key = "raidMarkers"

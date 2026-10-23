@@ -179,7 +179,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 15. Raid marker panel
 
-Switch on Raid marker panel (Group content). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Lock position, Scale, Vertical, Pull left/right seconds and Reset position. The panel also shows while this page is open, so it can be placed solo.
+Switch on Raid marker panel (Group content). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Lock position, Scale, Vertical, Pull left/right seconds and Reset position, and a Placement order group (1st..8th). The panel also shows while this page is open, so it can be placed solo.
 
 - [ ] No Lua error on login with the module on and off; switching it on and off live works.
 - [ ] Solo: open the Raid marker panel page - the panel appears; drag it, close the window - it hides and keeps the new spot after /reload.
@@ -206,7 +206,16 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] Hide in combat on: start dragging, pull a mob - the outline disappears at the pull, the panel keeps the spot where the outline was, no `ADDON_ACTION_BLOCKED`.
 - [ ] `/dump LittleThingsRaidMarkers:IsProtected()` in a group - note the result.
 - [ ] Scale and Vertical change the panel at once out of combat and are greyed in combat.
-- [ ] Key bindings (under LittleThings): Next world marker at the cursor cycles 1..8 and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places marker 1.
+- [ ] Key bindings (under LittleThings): Next world marker at the cursor follows the Placement order (1..8 by default) and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places the 1st slot again.
+- [ ] Horizontal layout: the Place button sits between the world dots and the world clear icon, both rows end at the same edge, and "Place" fits its button.
+- [ ] Placement mode: left click on Place - the label turns gold with "1/N", the button gets a gold border and the next world dot a white ring.
+- [ ] With the mode on, every left click on the ground places the next marker of the Placement order at the cursor; after the last one it wraps to the first and the mode stays on.
+- [ ] Right click on Place ends the mode; so does Esc, and Esc does not open the game menu while the mode is on. A second left click on Place also ends it.
+- [ ] **The mode turns on, places markers and turns off in combat, with no `ADDON_ACTION_BLOCKED`.**
+- [ ] After the mode ends, left click targets and left-drag turns the camera again.
+- [ ] The mode ends when the panel hides by the visibility rule (for example leaving the group) and when the module is switched off, after combat if that happens in combat. After /reload the mode is off.
+- [ ] Placement order: set a few slots to None - the mode and the key skip them; set all to None - Place turns grey, its tooltip says "Placement order is empty" and a click does nothing. A duplicate slot places the same marker again.
+- [ ] Vertical layout: one column, each target marker next to the world marker of the same symbol (star next to the yellow star, and so on); Clear all and the world clear icon under the pairs, then Place, Ready, Pull and Role across the column; "Clear all" fits its button.
 - [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**
 - [ ] **`/console taintLog 1`, a full key: no LittleThings entries in `Logs/taint.log`.**
 - [ ] MRT's own Marks Bar is switched off by the owner (`/rt mb` toggle) so the two panels do not overlap.

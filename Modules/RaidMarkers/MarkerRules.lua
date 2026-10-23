@@ -47,5 +47,16 @@ function Rules.ReadyLabel(ready, total)
     return "Ready " .. ready .. "/" .. total
 end
 
+function Rules.Cycle(order)
+    local cycle = {}
+    for i = 1, 8 do
+        local marker = order[i]
+        if type(marker) == "number" and marker >= 1 and marker <= 8 and marker % 1 == 0 then
+            cycle[#cycle + 1] = marker
+        end
+    end
+    return cycle
+end
+
 if ns then ns.MarkerRules = Rules end
 return Rules
