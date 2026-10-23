@@ -8,8 +8,10 @@ function Rules.Visible(s)
 end
 
 function Rules.GroupActionBlock(s, action)
-    if not s.inGroup then return "Not in a group" end
-    if not (s.leader or (s.inRaid and s.assistant)) then return "Leader or assistant only" end
+    if action ~= "rc" then
+        if not s.inGroup then return "Not in a group" end
+        if not (s.leader or (s.inRaid and s.assistant)) then return "Leader or assistant only" end
+    end
     if s.combat then return "Not in combat" end
     if s.lockdown then return "Blocked while the game restricts chat (combat, encounter or active key)" end
     if action == "role" and s.lfg then return "Not in a Group Finder group" end

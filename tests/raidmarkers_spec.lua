@@ -2,55 +2,107 @@ local SECRET = setmetatable({}, { __tostring = function() return "secret" end })
 
 local function noop() end
 
-local FRAME_PROTECTED = {
+local function set(list)
+  local s = {}
+  for _, v in ipairs(list) do s[v] = true end
+  return s
+end
+
+local RESIZING_PROTECTED = {
+  "ClearAllPoints", "ClearPoint", "SetAllPoints", "SetPoint", "SetSize", "SetWidth", "SetHeight", "AdjustPointsOffset",
+  "SetPointsOffset", "ClearPointsOffset",
+}
+local SCRIPT_REGION_PROTECTED = {
+  "EnableMouse", "EnableMouseMotion", "EnableMouseWheel", "SetParent", "SetMouseClickEnabled", "SetMouseMotionEnabled",
+  "SetPassThroughButtons", "SetPropagateMouseClicks", "SetPropagateMouseMotion", "SetCollapsesLayout",
+  "SetRoundLayoutToNearestPixel",
+}
+local FRAME_ONLY_PROTECTED = {
   "Show", "Hide", "SetShown", "Raise", "Lower", "SetScale", "SetFrameStrata", "SetFrameLevel", "SetFixedFrameStrata",
   "SetFixedFrameLevel", "SetUsingParentLevel", "SetClampedToScreen", "SetClampRectInsets", "SetHitRectInsets", "SetToplevel",
   "StartMoving", "StartSizing", "StopMovingOrSizing", "ClearAttribute", "ClearAttributes", "EnableKeyboard",
   "EnableGamePadButton", "EnableGamePadStick", "SetHyperlinksEnabled", "SetID", "SetIgnoreParentScale", "ResizeToBoundsRect",
   "AddRoleset", "RemoveRoleset", "SetRolesets",
-  "ClearAllPoints", "ClearPoint", "SetAllPoints", "SetPoint", "SetSize", "SetWidth", "SetHeight", "AdjustPointsOffset",
-  "SetPointsOffset", "ClearPointsOffset",
-  "EnableMouse", "EnableMouseMotion", "EnableMouseWheel", "SetParent", "SetMouseClickEnabled", "SetMouseMotionEnabled",
-  "SetPassThroughButtons", "SetPropagateMouseClicks", "SetPropagateMouseMotion", "SetCollapsesLayout",
-  "SetRoundLayoutToNearestPixel",
-  "Enable", "Disable", "SetEnabled", "RegisterForClicks", "RegisterForMouse",
 }
-local REGION_PROTECTED = { "SetScale", "SetIgnoreParentScale" }
+local BUTTON_ONLY_PROTECTED = { "Enable", "Disable", "SetEnabled", "RegisterForClicks", "RegisterForMouse" }
 
-local function new_object(frames, name, template, region)
-  local f = { name = name, template = template, attrs = {}, scripts = {}, events = {}, shown = true, showCalls = 0, calls = {} }
-  function f:SetAttribute(k, v) self.attrs[k] = v end
-  function f:SetScript(script, fn) self.scripts[script] = fn end
-  function f:RegisterEvent(event) self.events[event] = true end
-  function f:Show() self.shown = true self.showCalls = self.showCalls + 1 end
-  function f:Hide() self.shown = false end
-  function f:IsShown() return self.shown end
-  function f:SetEnabled(v) self.enabled = v end
-  function f:SetShown(v) self.shown = v and true or false end
-  function f:SetMotionScriptsWhileDisabled(v) self.motionWhileDisabled = v end
-  function f:SetPoint(...) self.setPoints = (rawget(self, "setPoints") or 0) + 1 self.lastPoint = { ... } end
-  function f:GetPoint() return "TOPLEFT", nil, "TOPLEFT", 10.4, 20.6 end
-  function f:IsEnabled() return self.enabled ~= false end
-  function f:SetText(t) self.text = t end
-  function f:SetTextColor(r, g, b) self.color = { r, g, b } end
-  function f:CreateTexture() return new_object(frames, nil, nil, true) end
-  function f:CreateFontString() return new_object(frames, nil, nil, true) end
-  function f:RegisterForClicks(...) self.clicks = { ... } end
-  function f:WrapScript(frame, script, preBody) frame.wraps = rawget(frame, "wraps") or {} frame.wraps[script] = preBody end
-  local protected = region and REGION_PROTECTED or FRAME_PROTECTED
-  if not region and template and template:find("Secure") then
-    protected = { "SetAttribute", unpack(FRAME_PROTECTED) }
+local function concat(...)
+  local out = {}
+  for _, list in ipairs({ ... }) do
+    for _, v in ipairs(list) do out[#out + 1] = v end
   end
-  for _, method in ipairs(protected) do
-    local impl = rawget(f, method) or noop
+  return out
+end
+
+local PROTECTED = {
+  Frame = set(concat(RESIZING_PROTECTED, SCRIPT_REGION_PROTECTED, FRAME_ONLY_PROTECTED)),
+  Button = set(concat(RESIZING_PROTECTED, SCRIPT_REGION_PROTECTED, FRAME_ONLY_PROTECTED, BUTTON_ONLY_PROTECTED)),
+  Texture = set(concat(RESIZING_PROTECTED, SCRIPT_REGION_PROTECTED, { "SetScale", "SetIgnoreParentScale" })),
+}
+PROTECTED.FontString = PROTECTED.Texture
+
+local ALLOWED = {
+  Frame = { "SetScript", "RegisterEvent", "Show", "Hide", "IsShown", "SetPoint", "ClearAllPoints", "SetSize", "SetScale",
+    "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
+    "CreateTexture", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetWidth", "GetHeight",
+    "GetEffectiveScale", "WrapScript" },
+  Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateFontString", "SetHighlightTexture",
+    "RegisterForClicks", "SetAttribute", "SetAlpha" },
+  Texture = { "SetAllPoints", "SetPoint", "SetColorTexture", "SetTexture", "SetBlendMode", "Hide", "SetShown" },
+  FontString = { "SetPoint", "SetText", "SetTextColor" },
+}
+
+local MOVER = "LittleThingsRaidMarkersMover"
+
+local IMPL = {}
+function IMPL:SetAttribute(k, v) self.attrs[k] = v end
+function IMPL:SetScript(script, fn) self.scripts[script] = fn end
+function IMPL:RegisterEvent(event) self.events[event] = true end
+function IMPL:Show() self.shown = true self.showCalls = self.showCalls + 1 end
+function IMPL:Hide() self.shown = false end
+function IMPL:IsShown() return self.shown end
+function IMPL:SetShown(v) self.shown = v and true or false end
+function IMPL:SetPoint(...)
+  self.setPoints = (rawget(self, "setPoints") or 0) + 1
+  self.lastPoint = { ... }
+  self.points[#self.points + 1] = { ... }
+end
+function IMPL:SetSize(w, h) self.width, self.height = w, h end
+function IMPL:SetScale(s) self.scale = s end
+function IMPL:GetLeft() return self.left or 0 end
+function IMPL:GetBottom() return self.bottom or 0 end
+function IMPL:GetWidth() return self.width or 0 end
+function IMPL:GetHeight() return self.height or 0 end
+function IMPL:GetEffectiveScale() return (self.scale or 1) * _G.UIParent:GetEffectiveScale() end
+function IMPL:SetText(t) self.text = t end
+function IMPL:SetTextColor(r, g, b) self.color = { r, g, b } end
+function IMPL:RegisterForClicks(...) self.clicks = { ... } end
+function IMPL:WrapScript(frame, script, preBody) frame.wraps = rawget(frame, "wraps") or {} frame.wraps[script] = preBody end
+
+local new_object
+
+function IMPL:CreateTexture() return new_object(self.frames, "Texture", nil, nil, self) end
+function IMPL:CreateFontString() return new_object(self.frames, "FontString", nil, nil, self) end
+
+new_object = function(frames, kind, name, template, parent)
+  local f = { frames = frames, kind = kind, name = name, template = template, parent = parent, attrs = {}, scripts = {},
+    events = {}, points = {}, shown = true, showCalls = 0, calls = {} }
+  local protected = PROTECTED[kind]
+  local secure = template and template:find("Secure")
+  local exempt = name == MOVER
+  for _, method in ipairs(assert(ALLOWED[kind], kind)) do
+    local impl = IMPL[method] or noop
+    local recorded = protected[method] or (secure and method == "SetAttribute")
     f[method] = function(self, ...)
       self.calls[method] = (self.calls[method] or 0) + 1
-      if frames.state.combat then frames.blocked[#frames.blocked + 1] = method end
+      if recorded and not exempt and frames.state.combat then frames.blocked[#frames.blocked + 1] = method end
       return impl(self, ...)
     end
   end
   frames[#frames + 1] = f
-  return setmetatable(f, { __index = function(_, k) if k:match("^%u") then return noop end end })
+  return setmetatable(f, { __index = function(_, k)
+    if type(k) == "string" and k:match("^%u") then error(kind .. ":" .. k .. " is not on the fake allowlist", 2) end
+  end })
 end
 
 local function load(state, db)
@@ -65,8 +117,8 @@ local function load(state, db)
       end
     end,
   }
-  _G.UIParent = {}
-  _G.CreateFrame = function(_, name, _, template) return new_object(frames, name, template) end
+  _G.UIParent = { GetEffectiveScale = function() return 0.8 end }
+  _G.CreateFrame = function(kind, name, parent, template) return new_object(frames, kind, name, template, parent) end
   _G.InCombatLockdown = function() return state.combat end
   _G.IsInGroup = function() return state.group end
   _G.IsInRaid = function() return state.raid end
@@ -77,9 +129,13 @@ local function load(state, db)
   _G.IsRaidMarkerActive = function() return false end
   _G.SetRaidTargetIconTexture = noop
   _G.SecureHandlerSetFrameRef = function(frame, label, ref) frame.attrs["frameref-" .. label] = ref end
-  local timers = {}
+  local timers, tickers = {}, {}
   _G.C_Timer = {
-    NewTicker = function() return { Cancel = noop } end,
+    NewTicker = function(_, fn)
+      local t = { Cancel = noop, fn = fn }
+      tickers[#tickers + 1] = t
+      return t
+    end,
     After = function(delay, fn)
       if delay == 0 then fn() else timers[#timers + 1] = fn end
     end,
@@ -136,6 +192,24 @@ local function load(state, db)
     for _, fn in ipairs(due) do fn() end
   end
 
+  local function tick()
+    tickers[#tickers].fn()
+  end
+
+  local function eventFrame()
+    for _, f in ipairs(frames) do
+      if next(f.events) then return f end
+    end
+  end
+
+  local function children(parent)
+    local found = {}
+    for _, f in ipairs(frames) do
+      if f.parent == parent then found[#found + 1] = f end
+    end
+    return found
+  end
+
   local function groupButtons()
     local found = {}
     for _, f in ipairs(frames) do
@@ -145,7 +219,8 @@ local function load(state, db)
   end
 
   return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance,
-    groupButtons = groupButtons, blocked = frames.blocked }
+    groupButtons = groupButtons, blocked = frames.blocked, tick = tick, eventFrame = eventFrame, children = children,
+    mover = function() return named("LittleThingsRaidMarkersMover") end }
 end
 
 describe("RaidMarkers", function()
@@ -206,93 +281,164 @@ describe("RaidMarkers", function()
     end
   end)
 
-  it("saves a drag that ends in combat and places the panel after combat", function()
-    local panel = addon.panel()
-    panel.scripts.OnDragStart(panel)
-    state.combat = true
-    local placed = rawget(panel, "setPoints")
-    panel.scripts.OnDragStop(panel)
-    assert.equals(placed, rawget(panel, "setPoints"))
-    state.combat = false
-    addon.fire("PLAYER_REGEN_ENABLED")
-    local db = addon.ns.db.raidMarkerPanel
-    assert.same({ "TOPLEFT", "TOPLEFT", 10, 21 }, { db.point, db.relativePoint, db.x, db.y })
-    assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 10, 21 }, panel.lastPoint)
-  end)
-
-  it("finishes a drag when combat starts", function()
-    local panel = addon.panel()
-    local db = addon.ns.db.raidMarkerPanel
-    panel.scripts.OnDragStart(panel)
-    addon.fire("PLAYER_REGEN_DISABLED")
-    assert.equals(1, panel.calls.StopMovingOrSizing)
-    assert.same({ "TOPLEFT", "TOPLEFT", 10, 21 }, { db.point, db.relativePoint, db.x, db.y })
-
-    db.x, db.y = 0, 0
-    panel.scripts.OnDragStart(panel)
-    state.combat = true
-    addon.fire("PLAYER_REGEN_DISABLED")
-    panel.scripts.OnDragStop(panel)
-    assert.same({}, addon.blocked)
-    assert.equals(1, panel.calls.StopMovingOrSizing)
-    assert.same({ 0, 0 }, { db.x, db.y })
-    state.combat = false
-    addon.fire("PLAYER_REGEN_ENABLED")
-    assert.equals(2, panel.calls.StopMovingOrSizing)
-    assert.same({ 10, 21 }, { db.x, db.y })
-    assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 10, 21 }, panel.lastPoint)
-  end)
-
-  it("calls no protected function in combat", function()
-    state.group, state.leader = true, true
-    addon.fire("GROUP_ROSTER_UPDATE")
-    local specs, buttons = {}, {}
+  local function pages(a)
+    local specs = {}
     local group = {
       Check = function(_, spec) specs[#specs + 1] = spec end,
       Slider = function(_, spec) specs[#specs + 1] = spec end,
-      Button = function(_, spec) buttons[#buttons + 1] = spec end,
+      Button = function(_, spec) specs[#specs + 1] = spec end,
     }
-    addon.module.Pages({ Group = function() return group end })
+    a.module.Pages({ Group = function() return group end })
+    local byLabel = {}
+    for _, spec in ipairs(specs) do byLabel[spec.label] = spec end
+    return specs, byLabel
+  end
+
+  local function startDrag(panel)
+    panel.scale, panel.left, panel.bottom, panel.width, panel.height = 2, 100, 50, 300, 60
+    addon.ns.db.raidMarkerPanel.scale = 2
+    panel.scripts.OnDragStart(panel)
+  end
+
+  it("drags only the mover and places the panel where the outline was released", function()
+    local panel, mover = addon.panel(), addon.mover()
+    startDrag(panel)
+    assert.is_true(mover:IsShown())
+    assert.equals(1, mover.calls.StartMoving)
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 200, 100 }, mover.lastPoint)
+    assert.same({ 600, 120 }, { mover.width, mover.height })
+    mover.left, mover.bottom = 401, 301
+    panel.scripts.OnDragStop(panel)
+    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_false(mover:IsShown())
+    assert.is_nil(panel.calls.StartMoving)
+    assert.is_nil(panel.calls.StopMovingOrSizing)
+    local db = addon.ns.db.raidMarkerPanel
+    assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.lastPoint)
+  end)
+
+  it("keeps the mover a separate childless frame never anchored to the panel", function()
+    local panel, mover = addon.panel(), addon.mover()
+    startDrag(panel)
+    panel.scripts.OnDragStop(panel)
+    assert.equals(_G.UIParent, mover.parent)
+    assert.is_nil(mover.template)
+    for _, child in ipairs(addon.children(mover)) do
+      assert.equals("Texture", child.kind)
+    end
+    for _, point in ipairs(mover.points) do
+      assert.are_not.equal(panel, point[2])
+    end
+    for _, point in ipairs(panel.points) do
+      assert.are_not.equal(mover, point[2])
+    end
+  end)
+
+  it("saves a drag released in combat and places the panel after combat", function()
+    local panel, mover = addon.panel(), addon.mover()
+    startDrag(panel)
+    addon.fire("PLAYER_REGEN_DISABLED")
+    state.combat = true
+    addon.fire("PLAYER_REGEN_DISABLED")
+    assert.is_nil(mover.calls.StopMovingOrSizing)
+    local placed = panel.setPoints
+    mover.left, mover.bottom = 401, 301
+    panel.scripts.OnDragStop(panel)
+    assert.same({}, addon.blocked)
+    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_false(mover:IsShown())
+    assert.equals(placed, panel.setPoints)
+    local db = addon.ns.db.raidMarkerPanel
+    assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.lastPoint)
+  end)
+
+  it("applies settings changed in combat when combat ends, and nothing else", function()
     local panel = addon.panel()
+    local _, specs = pages(addon)
+    state.combat = true
+    specs["Scale"].set(1.5)
+    specs["Vertical"].set(true)
+    assert.same({}, addon.blocked)
+    assert.equals(1, panel.scale)
+    local sized = panel.calls.SetSize
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.equals(1.5, panel.scale)
+    assert.equals(sized + 1, panel.calls.SetSize)
+    local counts = { panel.calls.SetPoint, panel.calls.SetScale, panel.calls.SetSize, panel.calls.ClearAllPoints }
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.same(counts, { panel.calls.SetPoint, panel.calls.SetScale, panel.calls.SetSize, panel.calls.ClearAllPoints })
+  end)
+
+  it("calls no protected function in combat", function()
+    local rcCalls = 0
+    state.mrt = true
+    state.gmrt = { A = { RaidCheck = { ReadyCheckWindow = function() rcCalls = rcCalls + 1 end } } }
+    addon = load(state)
+    addon.module.Enable()
+    state.group, state.leader = true, true
+    addon.fire("GROUP_ROSTER_UPDATE")
+    local specs = pages(addon)
+    local panel = addon.panel()
+    assert.truthy(addon.button("MRT Raid Check"))
+
+    local events = {
+      { "READY_CHECK", "Leader", 30 },
+      { "READY_CHECK_CONFIRM", "party1", true },
+      { "READY_CHECK_FINISHED", false },
+      { "START_PLAYER_COUNTDOWN", SECRET, SECRET, SECRET },
+      { "CANCEL_PLAYER_COUNTDOWN", SECRET },
+      { "START_PLAYER_COUNTDOWN", "Someone", 10, 10 },
+      { "CANCEL_PLAYER_COUNTDOWN", "Someone" },
+      { "RAID_TARGET_UPDATE" },
+      { "PLAYER_TARGET_CHANGED" },
+      { "GROUP_ROSTER_UPDATE", before = function() state.leader, state.assistant = false, true end },
+      { "PARTY_LEADER_CHANGED" },
+      { "PLAYER_ENTERING_WORLD", false, false },
+      { "ADDON_RESTRICTION_STATE_CHANGED", 0, 1 },
+      { "PLAYER_REGEN_DISABLED" },
+      { "PLAYER_REGEN_ENABLED" },
+    }
+    local listed = {}
+    for _, entry in ipairs(events) do listed[entry[1]] = true end
+    for event in pairs(addon.eventFrame().events) do
+      assert(listed[event], "no payload for " .. event)
+    end
 
     state.combat = true
-    addon.fire("READY_CHECK")
-    addon.fire("READY_CHECK_CONFIRM")
-    addon.fire("READY_CHECK_FINISHED")
-    addon.advance()
-    addon.fire("START_PLAYER_COUNTDOWN", SECRET, SECRET, SECRET)
-    addon.fire("CANCEL_PLAYER_COUNTDOWN")
-    addon.fire("START_PLAYER_COUNTDOWN", "Someone", 10, 10)
-    addon.fire("CANCEL_PLAYER_COUNTDOWN")
+    for _, entry in ipairs(events) do
+      if entry.before then entry.before() end
+      addon.fire(entry[1], unpack(entry, 2))
+      if entry[1] == "READY_CHECK_FINISHED" then addon.advance() end
+    end
     state.targetIndex = 4
     addon.fire("RAID_TARGET_UPDATE")
-    addon.fire("PLAYER_TARGET_CHANGED")
-    state.leader, state.assistant = false, true
-    addon.fire("GROUP_ROSTER_UPDATE")
-    addon.fire("PARTY_LEADER_CHANGED")
-    addon.fire("PLAYER_ENTERING_WORLD", false, false)
-    addon.fire("ADDON_RESTRICTION_STATE_CHANGED", 0, 1)
-    addon.fire("PLAYER_REGEN_DISABLED")
-    addon.fire("PLAYER_REGEN_ENABLED")
+    state.leader, state.assistant = true, false
     for _, button in ipairs(addon.groupButtons()) do
       button.scripts.OnEnter(button)
+      assert.equals("Not in combat", button.reason)
       button.scripts.OnClick(button, "LeftButton")
       button.scripts.OnClick(button, "RightButton")
+      button.scripts.OnLeave(button)
     end
     panel.scripts.OnDragStart(panel)
     panel.scripts.OnDragStop(panel)
     panel.scripts.OnShow(panel)
+    addon.tick()
+    panel.scripts.OnHide(panel)
     addon.module.OnSwitch(false)
     addon.module.OnSwitch(true)
     for _, spec in ipairs(specs) do
-      spec.set(spec.default)
-    end
-    for _, spec in ipairs(buttons) do
-      spec.onClick()
+      if spec.set then spec.set(spec.default) else spec.onClick() end
     end
 
     assert.same({}, addon.blocked)
     assert.same({}, state.calls)
+    assert.equals(0, rcCalls)
   end)
 
   it("fills defaults before any page exists", function()
@@ -575,6 +721,27 @@ describe("RaidMarkers", function()
       local rc = mrt.button("MRT Raid Check")
       rc.scripts.OnClick(rc, "LeftButton")
       assert.same({ raidCheck, nil, nil, true }, args)
+    end)
+
+    it("greys RC in combat and in chat lockdown, never by rank, and does not call MRT", function()
+      local calls = 0
+      state.mrt, state.gmrt = true, { A = { RaidCheck = { ReadyCheckWindow = function() calls = calls + 1 end } } }
+      local mrt = load(state)
+      mrt.module.Enable()
+      local rc = mrt.button("MRT Raid Check")
+      state.group, state.raid = true, true
+      rc.scripts.OnEnter(rc)
+      assert.is_nil(rawget(rc, "reason"))
+      assert.same({ 1, 1, 1 }, rc.label.color)
+      for _, blocked in ipairs({ { combat = true, reason = "Not in combat" },
+        { lockdown = true, reason = "Blocked while the game restricts chat (combat, encounter or active key)" } }) do
+        state.combat, state.lockdown = blocked.combat, blocked.lockdown
+        rc.scripts.OnEnter(rc)
+        assert.equals(blocked.reason, rc.reason)
+        assert.same({ 0.5, 0.5, 0.5 }, rc.label.color)
+        rc.scripts.OnClick(rc, "LeftButton")
+      end
+      assert.equals(0, calls)
     end)
   end)
 end)

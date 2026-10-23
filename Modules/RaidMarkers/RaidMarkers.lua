@@ -16,7 +16,9 @@ local WORLD_COLORS = {
 local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5 }
 
 local active = false
-local panel, row1, row2, events, ticker
+local panel, row1, row2, events, ticker, mover
+local dragging = false
+local pending = {}
 local targetButtons, worldButtons = {}, {}
 local groupButtons = {}
 local readyText, readyTint, readyToken, lastStatuses
@@ -226,14 +228,37 @@ local function Place()
     panel:SetScale(db.scale)
 end
 
-local function FinishDrag()
-    panel.moving = false
-    panel:StopMovingOrSizing()
+local function ApplyOutOfCombat(apply)
+    if InCombatLockdown() then
+        pending[apply] = true
+    else
+        apply()
+    end
+end
+
+local function PanelScale()
+    return panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+end
+
+local function StartDrag()
+    local scale = PanelScale()
+    mover:SetSize(panel:GetWidth() * scale, panel:GetHeight() * scale)
+    mover:ClearAllPoints()
+    mover:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", panel:GetLeft() * scale, panel:GetBottom() * scale)
+    mover:Show()
+    mover:StartMoving()
+    dragging = true
+end
+
+local function StopDrag()
+    dragging = false
+    mover:StopMovingOrSizing()
+    local scale = PanelScale()
     local db = ns.db.raidMarkerPanel
-    local point, _, relativePoint, x, y = panel:GetPoint()
-    db.point, db.relativePoint = point, relativePoint
-    db.x, db.y = math.floor(x + 0.5), math.floor(y + 0.5)
-    Place()
+    db.point, db.relativePoint = "BOTTOMLEFT", "BOTTOMLEFT"
+    db.x, db.y = math.floor(mover:GetLeft() / scale + 0.5), math.floor(mover:GetBottom() / scale + 0.5)
+    mover:Hide()
+    ApplyOutOfCombat(Place)
 end
 
 local function RefreshTarget()
@@ -297,18 +322,25 @@ local function Build()
     bg:SetAllPoints()
     bg:SetColorTexture(0, 0, 0, 0.4)
 
-    panel:SetMovable(true)
+    mover = CreateFrame("Frame", "LittleThingsRaidMarkersMover", UIParent)
+    mover:Hide()
+    mover:SetMovable(true)
+    mover:SetClampedToScreen(true)
+    mover:SetFrameStrata("DIALOG")
+    local outline = mover:CreateTexture(nil, "OVERLAY")
+    outline:SetAllPoints()
+    outline:SetColorTexture(1, 0.82, 0, 0.3)
+
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
-    panel:SetScript("OnDragStart", function(self)
+    panel:SetScript("OnDragStart", function()
         if not ns.db.raidMarkerPanel.locked and not InCombatLockdown() then
-            self.moving = true
-            self:StartMoving()
+            StartDrag()
         end
     end)
-    panel:SetScript("OnDragStop", function(self)
-        if self.moving and not InCombatLockdown() then
-            FinishDrag()
+    panel:SetScript("OnDragStop", function()
+        if dragging then
+            StopDrag()
         end
     end)
     panel:SetScript("OnShow", function()
@@ -358,7 +390,7 @@ local function Build()
         InitiateRolePoll()
     end)
     if C_AddOns.IsAddOnLoaded("MRT") and GMRT and GMRT.A and GMRT.A.RaidCheck and GMRT.A.RaidCheck.ReadyCheckWindow then
-        local rc = GroupButton("rc", "", SIZE, nil, "MRT Raid Check", nil, function()
+        local rc = GroupButton("rc", "", SIZE, "rc", "MRT Raid Check", nil, function()
             pcall(GMRT.A.RaidCheck.ReadyCheckWindow, GMRT.A.RaidCheck, nil, nil, true)
         end)
         local icon = rc:CreateTexture(nil, "ARTWORK")
@@ -440,20 +472,19 @@ local handlers = {
     PLAYER_ENTERING_WORLD = Refresh,
     PLAYER_REGEN_ENABLED = function()
         if panel and not InCombatLockdown() then
-            if panel.moving then
-                FinishDrag()
+            if pending[Layout] then
+                Layout()
             end
-            Layout()
-            Place()
+            if pending[Place] then
+                Place()
+            end
+            pending = {}
         end
         Build()
         SyncBindings()
         Refresh()
     end,
     PLAYER_REGEN_DISABLED = function()
-        if panel and panel.moving and not InCombatLockdown() then
-            FinishDrag()
-        end
         C_Timer.After(0, PaintGroupButtons)
     end,
     RAID_TARGET_UPDATE = RefreshTarget,
@@ -502,8 +533,8 @@ local function Option(key, spec, apply)
     spec.get = function() return ns.db.raidMarkerPanel[key] end
     spec.set = function(value)
         ns.db.raidMarkerPanel[key] = value
-        if apply and panel and not InCombatLockdown() then
-            apply()
+        if apply and panel then
+            ApplyOutOfCombat(apply)
         end
     end
     return spec
@@ -528,8 +559,8 @@ function RaidMarkers.Pages(page)
         onClick = function()
             local db = ns.db.raidMarkerPanel
             db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
-            if panel and not InCombatLockdown() then
-                Place()
+            if panel then
+                ApplyOutOfCombat(Place)
             end
         end })
 end

@@ -194,8 +194,10 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] Ready check with one decline: the button goes red. With one player silent until the end: red. All ready: green. It resets after 5 s.
 - [ ] "Ready 20/20" in a 20-player raid fits the button.
 - [ ] The RC button opens MRT Raid Check; with MRT disabled the button is absent.
+- [ ] RC in combat and inside an active key: greyed with the reason, no error.
 - [ ] Dragging: the panel can only be grabbed by its padding and gaps, because the secure buttons take the mouse. Note whether that is comfortable. Lock position stops the drag; the position survives /reload; Reset position brings it back.
-- [ ] **Start dragging the panel, pull a mob, release: no `ADDON_ACTION_BLOCKED`, the panel stays where it was dropped.**
+- [ ] **Start dragging the panel, pull a mob, release: no `ADDON_ACTION_BLOCKED`; the outline stops at the release point; the panel jumps there when combat ends; it survives /reload; click-targeting and right-drag camera work during the pull.**
+- [ ] `/dump LittleThingsRaidMarkers:IsProtected()` in a group - note the result.
 - [ ] Scale and Vertical change the panel at once out of combat and are greyed in combat.
 - [ ] Key bindings (under LittleThings): Next world marker at the cursor cycles 1..8 and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places marker 1.
 - [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**
