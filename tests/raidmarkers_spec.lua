@@ -69,20 +69,45 @@ local function handle(f, bindings)
   return h
 end
 
-local function snippet(f, bindings, button, down)
-  local body = assert(f.wraps and f.wraps.OnClick, "no OnClick wrap")
-  local fn = assert(loadstring("local self, button, down = ...\n" .. body))
+local SIGNATURES = { OnClick = "self, button, down", OnHide = "self" }
+
+local function wrapped(f, script, bindings, ...)
+  local body = assert(f.wraps and f.wraps[script], "no " .. script .. " wrap")
+  local fn = assert(loadstring("local " .. SIGNATURES[script] .. " = ...\n" .. body))
   setfenv(fn, {})
-  return fn(handle(f, bindings), button, down)
+  return fn(handle(f, bindings), ...)
+end
+
+local function snippet(f, bindings, button, down)
+  return wrapped(f, "OnClick", bindings, button, down)
+end
+
+local function within(f, ancestor)
+  while f do
+    if f == ancestor then return true end
+    f = rawget(f, "parent")
+  end
+  return false
 end
 
 local IMPL = {}
-function IMPL:SetAttribute(k, v) self.attrs[k] = v end
+function IMPL:SetAttribute(k, v)
+  self.attrs[k] = v
+  if self.scripts.OnAttributeChanged then self.scripts.OnAttributeChanged(self, k, v) end
+end
 function IMPL:GetAttribute(k) return self.attrs[k] end
 function IMPL:SetScript(script, fn) self.scripts[script] = fn end
 function IMPL:RegisterEvent(event) self.events[event] = true end
 function IMPL:Show() self.shown = true self.showCalls = self.showCalls + 1 end
-function IMPL:Hide() self.shown = false end
+function IMPL:Hide()
+  if not self.shown then return end
+  self.shown = false
+  for _, f in ipairs(self.frames) do
+    if rawget(f, "wraps") and f.wraps.OnHide and within(f, self) then
+      wrapped(f, "OnHide", self.frames.state.bindings or {})
+    end
+  end
+end
 function IMPL:IsShown() return self.shown end
 function IMPL:SetShown(v) self.shown = v and true or false end
 function IMPL:SetPoint(...)
@@ -110,7 +135,10 @@ function IMPL:SetTexture(texture) self.texture = texture end
 function IMPL:SetVertexColor(...) self.vertexColor = { ... } end
 function IMPL:SetAtlas(atlas) self.atlas = atlas end
 function IMPL:SetMask(mask) self.mask = mask end
-function IMPL:GetStringWidth() return self.frames.state.textWidth or 0 end
+function IMPL:GetStringWidth()
+  local state = self.frames.state
+  return state.textWidths and state.textWidths[self.text] or state.textWidth or 0
+end
 function IMPL:WrapScript(frame, script, preBody) frame.wraps = rawget(frame, "wraps") or {} frame.wraps[script] = preBody end
 
 local new_object
@@ -611,8 +639,8 @@ describe("RaidMarkers", function()
     local row2 = world(1).parent
     assert.same({ "TOPLEFT", row1, "TOPRIGHT", 2, 0 }, block.lastPoint)
     assert.same({ "TOPLEFT", row1, "BOTTOMLEFT", 0, -2 }, row2.lastPoint)
-    assert.same({ 312, 26 }, { row1.width, row1.height })
-    assert.same({ 312, 26 }, { row2.width, row2.height })
+    assert.same({ 284, 26 }, { row1.width, row1.height })
+    assert.same({ 284, 26 }, { row2.width, row2.height })
     for _, button in ipairs({ ready, pull, role }) do
       assert.equals(block, button.lastPoint[2])
     end
@@ -623,7 +651,7 @@ describe("RaidMarkers", function()
     assert.same({ 66, 0 }, offsets(pull))
     assert.same({ 0, -28 }, offsets(role))
     assert.same({ 130, 54 }, { block.width, block.height })
-    assert.same({ 312 + 2 + 130 + 8, 54 + 8 }, { panel.width, panel.height })
+    assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { panel.width, panel.height })
   end)
 
   local function clears(a)
@@ -645,9 +673,9 @@ describe("RaidMarkers", function()
       placed(target(i), row1, (i - 1) * 28, 0, 26)
       placed(world(i), row2, (i - 1) * 28, 0, 26)
     end
-    placed(clearTarget, row1, 224, 0, 88)
-    placed(mode, row2, 224, 0, 26)
-    placed(clearWorld, row2, 252, 0, 60)
+    placed(clearTarget, row1, 224, 0, 60)
+    placed(mode, row2, 224, 0, 32)
+    placed(clearWorld, row2, 258, 0, 26)
   end)
 
   local ORDER = { 8, 4, 1, 7, 2, 3, 6, 5 }
@@ -663,8 +691,8 @@ describe("RaidMarkers", function()
       placed(find("raidtarget", t), row1, inset, -(t - 1) * 28, 26)
       placed(find("worldmarker", ORDER[9 - t]), row2, inset + 28, -(t - 1) * 28, 26)
     end
-    placed(clearTarget, row1, 0, -224, inset + 26)
-    placed(clearWorld, row2, inset + 28, -224, width - inset - 28)
+    placed(clearTarget, row1, 0, -224, width - 28)
+    placed(clearWorld, row2, width - 26, -224, 26)
     placed(mode, row2, 0, -252, width)
     assert.same({ width, 278 }, { row1.width, row1.height })
     assert.same({ width, 278 }, { row2.width, row2.height })
@@ -686,15 +714,26 @@ describe("RaidMarkers", function()
     column(addon, 64, 5)
     specs["Vertical"].set(false)
     local clearTarget = clears(addon)
-    placed(clearTarget, target(1).parent, 224, 0, 88)
-    assert.same({ 312, 26 }, { target(1).parent.width, target(1).parent.height })
+    placed(clearTarget, target(1).parent, 224, 0, 60)
+    assert.same({ 284, 26 }, { target(1).parent.width, target(1).parent.height })
   end)
 
   it("widens the column to the measured ready cell", function()
-    state.textWidth = 70.2
+    state.textWidths = { ["Ready 20/20"] = 70.2 }
     local wide = load(state, { raidMarkerPanel = { vertical = true } })
     wide.module.Enable()
     column(wide, 79, 12)
+  end)
+
+  it("widens the column so the measured Clear all text fits next to the world clear icon", function()
+    state.textWidths = { ["Clear all"] = 50 }
+    local wide = load(state, { raidMarkerPanel = { vertical = true } })
+    wide.module.Enable()
+    column(wide, 86, 16)
+    local _, specs = pages(wide)
+    specs["Vertical"].set(false)
+    local clearTarget = clears(wide)
+    assert.same({ 60, 26 }, { clearTarget.width, clearTarget.height })
   end)
 
   it("widens the block cells when the ready label needs more than 64 px", function()
@@ -706,7 +745,7 @@ describe("RaidMarkers", function()
     assert.same({ 81, 0 }, offsets(pull))
     assert.same({ 160, 26 }, { role.width, role.height })
     assert.equals("Ready", ready.label.text)
-    assert.same({ 312 + 2 + 160 + 8, 54 + 8 }, { wide.panel().width, wide.panel().height })
+    assert.same({ 284 + 2 + 160 + 8, 54 + 8 }, { wide.panel().width, wide.panel().height })
   end)
 
   it("drags only the mover and places the panel where the outline was released", function()
@@ -856,6 +895,11 @@ describe("RaidMarkers", function()
     snippet(mode, bound, "RightButton", true)
     assert.same({}, bound)
     snippet(mode, bound, "LeftButton", true)
+    assert.is_truthy(bound.BUTTON1)
+    wrapped(mode, "OnHide", bound)
+    assert.same({}, bound)
+    assert.is_nil(mode.attrs["lt-active"])
+    snippet(mode, bound, "LeftButton", true)
     panel.scripts.OnDragStart(panel)
     panel.scripts.OnDragStop(panel)
     panel.scripts.OnShow(panel)
@@ -973,6 +1017,12 @@ describe("RaidMarkers", function()
         assert.same({ "AnyDown" }, button.clicks)
         assert.is_true(button.attrs.useOnKeyDown)
       end
+      assert.is_nil(snippet(nextButton, {}, "LeftButton", true))
+      assert.equals("/wm [@cursor]1", nextButton.attrs.macrotext)
+      assert.equals(2, nextButton.attrs["lt-index"])
+      assert.is_false(snippet(nextButton, {}, "LeftButton", false))
+      assert.equals("/wm [@cursor]1", nextButton.attrs.macrotext)
+      assert.equals(2, nextButton.attrs["lt-index"])
     end)
 
     it("binding buttons go dead when switched off", function()
@@ -1003,6 +1053,11 @@ describe("RaidMarkers", function()
     local function mode(a) return (a or addon).named("LittleThingsWorldMarkerMode") end
     local function nextButton(a) return (a or addon).named("LittleThingsWorldMarkerNext") end
     local function clearButton(a) return (a or addon).named("LittleThingsWorldMarkerClear") end
+
+    before_each(function()
+      state.group, state.leader = true, true
+      addon.fire("GROUP_ROSTER_UPDATE")
+    end)
 
     local function setOrder(a, order)
       local _, byLabel = pages(a)
@@ -1215,32 +1270,97 @@ describe("RaidMarkers", function()
       assert.equals("Place", mode(fresh).label.text)
     end)
 
-    it("ends the mode when switched off, out of combat only", function()
+    it("clears the bindings from the restricted environment when the mode button hides", function()
       local m, b = mode(), {}
-      state.group = true
-      addon.fire("GROUP_ROSTER_UPDATE")
       snippet(m, b, "LeftButton", true)
+      assert.is_truthy(b.BUTTON1)
+      wrapped(m, "OnHide", b)
+      assert.same({}, b)
+      assert.is_nil(m.attrs["lt-active"])
+      assert.equals("Place", m.label.text)
+      assert.same({}, state.clearedBindings)
+    end)
+
+    it("ends the mode when switched off, out of combat only", function()
+      local m = mode()
+      state.bindings = {}
+      snippet(m, state.bindings, "LeftButton", true)
       state.combat = true
       addon.module.OnSwitch(false)
-      assert.same({}, state.clearedBindings)
+      assert.is_truthy(state.bindings.BUTTON1)
       assert.is_true(m.attrs["lt-active"])
       state.combat = false
       addon.fire("PLAYER_REGEN_ENABLED")
-      assert.same({ m }, state.clearedBindings)
+      assert.is_false(addon.panel():IsShown())
+      assert.same({}, state.bindings)
       assert.is_nil(m.attrs["lt-active"])
       assert.equals("Place", m.label.text)
     end)
 
     it("ends the mode when the visibility rule hides the panel", function()
-      local m, b = mode(), {}
-      state.group = true
-      addon.fire("GROUP_ROSTER_UPDATE")
-      snippet(m, b, "LeftButton", true)
+      local m = mode()
+      state.bindings = {}
+      snippet(m, state.bindings, "LeftButton", true)
       addon.fire("PARTY_LEADER_CHANGED")
-      assert.same({}, state.clearedBindings)
+      assert.is_truthy(state.bindings.BUTTON1)
       state.group = false
       addon.fire("GROUP_ROSTER_UPDATE")
       assert.is_false(addon.panel():IsShown())
+      assert.same({}, state.bindings)
+      assert.is_nil(m.attrs["lt-active"])
+    end)
+
+    it("resets the cycle from the panel's world clear icon", function()
+      local _, clearWorld = clears(addon)
+      local nb = nextButton()
+      assert.equals(nb, clearWorld.attrs["frameref-next"])
+      snippet(nb, {}, "LeftButton", true)
+      snippet(nb, {}, "LeftButton", true)
+      snippet(clearWorld, {}, "LeftButton", true)
+      assert.equals(1, nb.attrs["lt-index"])
+      snippet(nb, {}, "LeftButton", true)
+      assert.equals("/wm [@cursor]1", nb.attrs.macrotext)
+    end)
+
+    it("refuses the mode without lead or assist and greys the button", function()
+      local m, b = mode(), {}
+      state.leader = false
+      addon.fire("GROUP_ROSTER_UPDATE")
+      assert.is_nil(m.attrs["lt-allowed"])
+      assert.same({ 0.5, 0.5, 0.5 }, m.label.color)
+      assert.equals("Needs lead or assist", m.reason)
+      assert.is_false(snippet(m, b, "LeftButton", true))
+      assert.same({}, b)
+      assert.is_nil(m.attrs["lt-active"])
+      state.raid, state.assistant = true, true
+      addon.fire("GROUP_ROSTER_UPDATE")
+      assert.is_true(m.attrs["lt-allowed"])
+      assert.same(IDLE, m.label.color)
+      assert.is_nil(rawget(m, "reason"))
+      snippet(m, b, "LeftButton", true)
+      assert.is_truthy(b.BUTTON1)
+    end)
+
+    it("is not allowed solo", function()
+      local fresh = load(state)
+      state.group, state.leader = false, false
+      fresh.module.Enable()
+      assert.is_nil(mode(fresh).attrs["lt-allowed"])
+      assert.equals("Needs lead or assist", mode(fresh).reason)
+    end)
+
+    it("ends an active mode when the rank is lost, after combat if in combat", function()
+      local m, b = mode(), {}
+      snippet(m, b, "LeftButton", true)
+      state.combat = true
+      state.leader = false
+      addon.fire("PARTY_LEADER_CHANGED")
+      assert.same({}, addon.blocked)
+      assert.is_true(m.attrs["lt-allowed"])
+      assert.is_true(m.attrs["lt-active"])
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.is_nil(m.attrs["lt-allowed"])
       assert.same({ m }, state.clearedBindings)
       assert.is_nil(m.attrs["lt-active"])
     end)

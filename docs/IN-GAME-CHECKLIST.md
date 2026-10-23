@@ -209,11 +209,14 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] Key bindings (under LittleThings): Next world marker at the cursor follows the Placement order (1..8 by default) and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places the 1st slot again.
 - [ ] Horizontal layout: the Place button sits between the world dots and the world clear icon, both rows end at the same edge, and "Place" fits its button.
 - [ ] Placement mode: left click on Place - the label turns gold with "1/N", the button gets a gold border and the next world dot a white ring.
-- [ ] With the mode on, every left click on the ground places the next marker of the Placement order at the cursor; after the last one it wraps to the first and the mode stays on.
+- [ ] With the mode on, every left click on the ground places the next marker of the Placement order at the cursor: with the default order four clicks place 1, 2, 3, 4 (not 1, 3, 5, 7); after the last one it wraps to the first and the mode stays on.
 - [ ] Right click on Place ends the mode; so does Esc, and Esc does not open the game menu while the mode is on. A second left click on Place also ends it.
 - [ ] **The mode turns on, places markers and turns off in combat, with no `ADDON_ACTION_BLOCKED`.**
 - [ ] After the mode ends, left click targets and left-drag turns the camera again.
-- [ ] The mode ends when the panel hides by the visibility rule (for example leaving the group) and when the module is switched off, after combat if that happens in combat. After /reload the mode is off.
+- [ ] The mode ends when the panel hides by the visibility rule (for example leaving the group) and when the module is switched off, after combat if that happens in combat. After /reload the mode is off and left click targets.
+- [ ] **Hide in combat on, placement mode on, pull: the mode ends at once, left click targets again during the fight, no `ADDON_ACTION_BLOCKED`.**
+- [ ] Placement mode: the panel's world clear icon removes all ground markers and the next click places the first marker of the order.
+- [ ] Placement mode without lead/assist: the button is grey and does not turn on.
 - [ ] Placement order: set a few slots to None - the mode and the key skip them; set all to None - Place turns grey, its tooltip says "Placement order is empty" and a click does nothing. A duplicate slot places the same marker again.
 - [ ] Vertical layout: one column, each target marker next to the world marker of the same symbol (star next to the yellow star, and so on); Clear all and the world clear icon under the pairs, then Place, Ready, Pull and Role across the column; "Clear all" fits its button.
 - [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**

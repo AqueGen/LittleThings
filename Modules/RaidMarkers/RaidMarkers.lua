@@ -6,6 +6,7 @@ local RaidMarkers = {}
 
 local SIZE, GAP, PAD = 26, 2, 4
 local CLEAR_WIDTH = 60
+local MODE_WIDTH = CLEAR_WIDTH - GAP - SIZE
 local CELL_MIN, CELL_PAD = 64, 8
 local DOT = 16
 local CIRCLE_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
@@ -35,6 +36,7 @@ local countdownRunning, countdownSecret, countdownToken = false, false, 0
 local bindNext, bindClear
 
 local NEXT_BODY = [[
+if not down then return false end
 local n = self:GetAttribute("lt-count") or 0
 if n == 0 then return false end
 local i = self:GetAttribute("lt-index") or 1
@@ -48,13 +50,14 @@ if not down then return false end
 if button == "RightButton" or self:GetAttribute("lt-active") then
     self:ClearBindings()
     self:SetAttribute("lt-active", nil)
-elseif (self:GetFrameRef("next"):GetAttribute("lt-count") or 0) > 0 then
+elseif self:GetAttribute("lt-allowed") and (self:GetFrameRef("next"):GetAttribute("lt-count") or 0) > 0 then
     self:SetBindingClick(true, "BUTTON1", "LittleThingsWorldMarkerNext", "LeftButton")
     self:SetBindingClick(true, "ESCAPE", self:GetName(), "RightButton")
     self:SetAttribute("lt-active", true)
 end
 return false
 ]]
+local HIDE_BODY = [[self:ClearBindings() self:SetAttribute("lt-active", nil)]]
 
 local READY_COLORS = { waiting = { 1, 0.82, 0 }, notready = { 1, 0.2, 0.2 }, ready = { 0.2, 1, 0.2 } }
 local WHITE, GREY, RED, IDLE = { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }, { 0.8, 0.8, 0.8 }
@@ -248,15 +251,15 @@ local function LayoutHorizontal()
 end
 
 local function LayoutVertical()
-    local width = math.max(2 * SIZE + GAP, block.cell)
+    local width = math.max(2 * SIZE + GAP, block.cell, clearTarget.cell + GAP + SIZE)
     local inset = math.floor((width - 2 * SIZE - GAP) / 2)
     local step = SIZE + GAP
     for t, button in ipairs(targetButtons) do
         Cell(button, row1, inset, -(t - 1) * step, SIZE)
         Cell(worldButtons[WORLD_FOR_TARGET[t]], row2, inset + step, -(t - 1) * step, SIZE)
     end
-    Cell(clearTarget, row1, 0, -8 * step, inset + SIZE)
-    Cell(clearWorld, row2, inset + step, -8 * step, width - inset - step)
+    Cell(clearTarget, row1, 0, -8 * step, width - step)
+    Cell(clearWorld, row2, width - SIZE, -8 * step, SIZE)
     Cell(modeButton, row2, 0, -9 * step, width)
     local height = 10 * step - GAP
     row1:SetSize(width, height)
@@ -338,8 +341,9 @@ local function PaintMode()
         index = 1
     end
     local upcoming = on and bindNext:GetAttribute("lt-order" .. index)
-    local color = count == 0 and GREY or on and GOLD or IDLE
-    modeButton.reason = count == 0 and "Placement order is empty" or nil
+    local allowed = modeButton:GetAttribute("lt-allowed")
+    local color = (count == 0 or not allowed) and GREY or on and GOLD or IDLE
+    modeButton.reason = not allowed and "Needs lead or assist" or count == 0 and "Placement order is empty" or nil
     modeButton.label:SetText(on and (index .. "/" .. count) or "Place")
     modeButton.label:SetTextColor(color[1], color[2], color[3])
     Ring(modeButton, on)
@@ -390,7 +394,7 @@ local function RequestVisibility()
     if not panel or InCombatLockdown() then
         return
     end
-    local shown = active and Rules.Visible({
+    local group = {
         inGroup = IsInGroup(),
         inRaid = IsInRaid(),
         leader = HasRank(UnitIsGroupLeader),
@@ -399,12 +403,16 @@ local function RequestVisibility()
         showSolo = ns.db.raidMarkerPanel.showSolo,
         partyLeaderOnly = ns.db.raidMarkerPanel.partyLeaderOnly,
         raidWithoutRank = ns.db.raidMarkerPanel.raidWithoutRank,
-    })
-    if shown then
+    }
+    local allowed = Rules.CanMark(group)
+    modeButton:SetAttribute("lt-allowed", allowed or nil)
+    if not allowed then
+        StopMode()
+    end
+    if active and Rules.Visible(group) then
         panel:Show()
     else
         panel:Hide()
-        StopMode()
     end
 end
 
@@ -519,8 +527,9 @@ local function Build()
         SetRaidTargetIconTexture(icon, i)
         targetButtons[i] = button
     end
-    clearTarget = SecureButton(row1, CLEAR_WIDTH + SIZE + GAP, "Clear all target markers", { type = "raidtarget", action = "clear-all" })
+    clearTarget = SecureButton(row1, CLEAR_WIDTH, "Clear all target markers", { type = "raidtarget", action = "clear-all" })
     clearTarget.label = Label(clearTarget, "Clear all")
+    clearTarget.cell = math.ceil(clearTarget.label:GetStringWidth()) + CELL_PAD
 
     local ready = GroupButton("ready", "Ready", "ready", "Ready check", nil, function()
         C_PartyInfo.DoReadyCheck()
@@ -555,7 +564,7 @@ local function Build()
         button.nextGap = Circle(button, "BORDER", DOT + 2, 0, 0, 0)
         worldButtons[i] = button
     end
-    modeButton = SecureButton(row2, SIZE, "Placement mode: left click on the ground places the next world marker. Right click or Esc to stop.",
+    modeButton = SecureButton(row2, MODE_WIDTH, "Placement mode: left click on the ground places the next world marker. Right click or Esc to stop.",
         {}, "LittleThingsWorldMarkerMode")
     modeButton:RegisterForClicks("AnyDown")
     modeButton.label = Label(modeButton, "Place")
@@ -564,8 +573,11 @@ local function Build()
     end
     SecureHandlerSetFrameRef(modeButton, "next", bindNext)
     header:WrapScript(modeButton, "OnClick", MODE_BODY)
+    header:WrapScript(modeButton, "OnHide", HIDE_BODY)
 
-    clearWorld = SecureButton(row2, CLEAR_WIDTH, "Clear all world markers", { type = "worldmarker", action = "clear" })
+    clearWorld = SecureButton(row2, SIZE, "Clear all world markers", { type = "worldmarker", action = "clear" })
+    SecureHandlerSetFrameRef(clearWorld, "next", bindNext)
+    header:WrapScript(clearWorld, "OnClick", CLEAR_BODY)
     local clearIcon = clearWorld:CreateTexture(nil, "ARTWORK")
     clearIcon:SetSize(DOT, DOT)
     clearIcon:SetPoint("CENTER")
