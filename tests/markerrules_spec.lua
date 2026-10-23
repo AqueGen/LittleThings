@@ -49,12 +49,6 @@ describe("Rules.GroupActionBlock", function()
     assert.equals("Not in a Group Finder group", Rules.GroupActionBlock(s, "role"))
     assert.is_nil(Rules.GroupActionBlock(s, "pull"))
   end)
-  it("gates Raid Check by combat and chat lockdown, never by rank", function()
-    assert.is_nil(Rules.GroupActionBlock({ inGroup = true, inRaid = true }, "rc"))
-    assert.equals("Not in combat", Rules.GroupActionBlock({ inGroup = true, inRaid = true, combat = true }, "rc"))
-    assert.equals("Blocked while the game restricts chat (combat, encounter or active key)",
-      Rules.GroupActionBlock({ inGroup = true, inRaid = true, lockdown = true }, "rc"))
-  end)
 end)
 
 describe("Rules.PullSeconds", function()

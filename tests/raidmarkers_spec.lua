@@ -169,10 +169,7 @@ local function load(state, db)
   _G.HasLFGRestrictions = function() return state.lfg end
   _G.GetReadyCheckStatus = function(unit) return state.status and state.status[unit] end
   _G.GetNumGroupMembers = function() return state.members or 1 end
-  _G.C_AddOns = { IsAddOnLoaded = function() return state.mrt end }
   _G.GameTooltip = setmetatable({}, { __index = function() return noop end })
-  _G.ExRT = state.exrt
-  _G.GMRT = state.gmrt
   assert(loadfile("Modules/RaidMarkers/MarkerRules.lua"))("LittleThings", ns)
   assert(loadfile("Modules/RaidMarkers/RaidMarkers.lua"))("LittleThings", ns)
 
@@ -571,17 +568,16 @@ describe("RaidMarkers", function()
   end)
 
   local function cells(a)
-    return a.button("Ready check"), a.button("Pull countdown"), a.button("Role check"), a.button("MRT Raid Check")
+    return a.button("Ready check"), a.button("Pull countdown"), a.button("Role check")
   end
 
   local function offsets(button)
     return { button.lastPoint[4], button.lastPoint[5] }
   end
 
-  it("lays the group buttons out as a 2x2 block right of both rows", function()
+  it("lays the group buttons out as a block right of both rows, Role spanning the bottom", function()
     local panel = addon.panel()
-    local ready, pull, role, rc = cells(addon)
-    assert.is_nil(rc)
+    local ready, pull, role = cells(addon)
     local block = ready.parent
     local row1 = target(1).parent
     local row2 = world(1).parent
@@ -590,9 +586,11 @@ describe("RaidMarkers", function()
     assert.same({ 284, 26 }, { row1.width, row1.height })
     assert.same({ 284, 26 }, { row2.width, row2.height })
     for _, button in ipairs({ ready, pull, role }) do
-      assert.same({ 64, 26 }, { button.width, button.height })
       assert.equals(block, button.lastPoint[2])
     end
+    assert.same({ 64, 26 }, { ready.width, ready.height })
+    assert.same({ 64, 26 }, { pull.width, pull.height })
+    assert.same({ 130, 26 }, { role.width, role.height })
     assert.same({ 0, 0 }, offsets(ready))
     assert.same({ 66, 0 }, offsets(pull))
     assert.same({ 0, -28 }, offsets(role))
@@ -600,7 +598,7 @@ describe("RaidMarkers", function()
     assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { panel.width, panel.height })
   end)
 
-  it("puts the 2x2 block under the columns in the vertical layout", function()
+  it("puts the block under the columns in the vertical layout, Role spanning the bottom", function()
     local _, specs = pages(addon)
     specs["Vertical"].set(true)
     local panel = addon.panel()
@@ -612,27 +610,18 @@ describe("RaidMarkers", function()
     assert.same({ 0, 0 }, offsets(ready))
     assert.same({ 66, 0 }, offsets(pull))
     assert.same({ 0, -28 }, offsets(role))
+    assert.same({ 130, 26 }, { role.width, role.height })
     assert.same({ math.max(60 + 2 + 60, 130) + 8, 250 + 2 + 54 + 8 }, { panel.width, panel.height })
-  end)
-
-  it("fills the fourth cell with RC when MRT is loaded", function()
-    state.mrt, state.gmrt = true, { A = { RaidCheck = { ReadyCheckWindow = noop } } }
-    local mrt = load(state)
-    mrt.module.Enable()
-    local ready, _, _, rc = cells(mrt)
-    assert.equals(ready.parent, rc.lastPoint[2])
-    assert.same({ 66, -28 }, offsets(rc))
-    assert.same({ 64, 26 }, { rc.width, rc.height })
-    assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { mrt.panel().width, mrt.panel().height })
   end)
 
   it("widens the block cells when the ready label needs more than 64 px", function()
     state.textWidth = 70.2
     local wide = load(state)
     wide.module.Enable()
-    local ready, pull = cells(wide)
+    local ready, pull, role = cells(wide)
     assert.same({ 79, 26 }, { ready.width, ready.height })
     assert.same({ 81, 0 }, offsets(pull))
+    assert.same({ 160, 26 }, { role.width, role.height })
     assert.equals("Ready", ready.label.text)
   end)
 
@@ -724,16 +713,10 @@ describe("RaidMarkers", function()
   end)
 
   it("calls no protected function in combat", function()
-    local rcCalls = 0
-    state.mrt = true
-    state.gmrt = { A = { RaidCheck = { ReadyCheckWindow = function() rcCalls = rcCalls + 1 end } } }
-    addon = load(state)
-    addon.module.Enable()
     state.group, state.leader = true, true
     addon.fire("GROUP_ROSTER_UPDATE")
     local specs, _, page = pages(addon)
     local panel = addon.panel()
-    assert.truthy(addon.button("MRT Raid Check"))
 
     local events = {
       { "READY_CHECK", "Leader", 30 },
@@ -789,7 +772,6 @@ describe("RaidMarkers", function()
 
     assert.same({}, addon.blocked)
     assert.same({}, state.calls)
-    assert.equals(0, rcCalls)
   end)
 
   it("fills defaults before any page exists", function()
@@ -1056,43 +1038,6 @@ describe("RaidMarkers", function()
       state.status = { raid1 = "ready", raid2 = "notready", player = "ready" }
       addon.fire("READY_CHECK")
       assert.equals("Ready 1/2", addon.button("Ready check").label.text)
-    end)
-
-    it("hides RC without MRT and calls Raid Check with it", function()
-      assert.is_nil(addon.button("MRT Raid Check"))
-      local args
-      local raidCheck = { ReadyCheckWindow = function(...) args = { ... } end }
-      state.mrt, state.exrt = true, { A = { RaidCheck = raidCheck } }
-      local stray = load(state)
-      stray.module.Enable()
-      assert.is_nil(stray.button("MRT Raid Check"))
-      state.exrt, state.gmrt = nil, { A = { RaidCheck = raidCheck } }
-      local mrt = load(state)
-      mrt.module.Enable()
-      local rc = mrt.button("MRT Raid Check")
-      rc.scripts.OnClick(rc, "LeftButton")
-      assert.same({ raidCheck, nil, nil, true }, args)
-    end)
-
-    it("greys RC in combat and in chat lockdown, never by rank, and does not call MRT", function()
-      local calls = 0
-      state.mrt, state.gmrt = true, { A = { RaidCheck = { ReadyCheckWindow = function() calls = calls + 1 end } } }
-      local mrt = load(state)
-      mrt.module.Enable()
-      local rc = mrt.button("MRT Raid Check")
-      state.group, state.raid = true, true
-      rc.scripts.OnEnter(rc)
-      assert.is_nil(rawget(rc, "reason"))
-      assert.same({ 1, 1, 1 }, rc.label.color)
-      for _, blocked in ipairs({ { combat = true, reason = "Not in combat" },
-        { lockdown = true, reason = "Blocked while the game restricts chat (combat, encounter or active key)" } }) do
-        state.combat, state.lockdown = blocked.combat, blocked.lockdown
-        rc.scripts.OnEnter(rc)
-        assert.equals(blocked.reason, rc.reason)
-        assert.same({ 0.5, 0.5, 0.5 }, rc.label.color)
-        rc.scripts.OnClick(rc, "LeftButton")
-      end
-      assert.equals(0, calls)
     end)
   end)
 end)

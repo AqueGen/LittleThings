@@ -10,7 +10,6 @@ local CELL_MIN, CELL_PAD = 64, 8
 local DOT = 16
 local CIRCLE_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local CLEAR_ICON = "common-icon-redx"
-local CELLS = { "ready", "pull", "role", "rc" }
 local FLAT = ns.Widgets.FLAT
 local GOLD, BORDER = { 1, 0.82, 0, 1 }, { 0.4, 0.4, 0.4, 1 }
 local TARGET_ICONS = "Interface\\TargetingFrame\\UI-RaidTargetingIcons"
@@ -41,7 +40,6 @@ local CLEAR_BODY = [[self:GetFrameRef("next"):SetAttribute("lt-next", 1)]]
 
 local READY_COLORS = { waiting = { 1, 0.82, 0 }, notready = { 1, 0.2, 0.2 }, ready = { 0.2, 1, 0.2 } }
 local WHITE, GREY, RED = { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }
-local MRT_ICON = 609902
 
 local function InitializeDb()
     ns.db.raidMarkerPanel = ns.db.raidMarkerPanel or {}
@@ -101,14 +99,12 @@ end
 
 local function PaintGroupButtons()
     for key, button in pairs(groupButtons) do
-        if button.action then
-            local reason = BlockReason(button.action)
-            local color = reason and GREY or (key == "ready" and readyTint) or WHITE
-            button.reason = reason
-            button.label:SetTextColor(color[1], color[2], color[3])
-            if key == "ready" then
-                button.label:SetText(readyText or "Ready")
-            end
+        local reason = BlockReason(button.action)
+        local color = reason and GREY or (key == "ready" and readyTint) or WHITE
+        button.reason = reason
+        button.label:SetTextColor(color[1], color[2], color[3])
+        if key == "ready" then
+            button.label:SetText(readyText or "Ready")
         end
     end
 end
@@ -146,7 +142,7 @@ local function GroupButton(key, text, action, title, lines, onClick)
     button:SetScript("OnEnter", ShowTip)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
     button:SetScript("OnClick", function(self, mouse)
-        if action and BlockReason(action) then
+        if BlockReason(action) then
             return
         end
         onClick(self, mouse)
@@ -224,17 +220,18 @@ local function LayoutRow(row, vertical)
     return offset - GAP, across
 end
 
+local function Cell(button, x, y, width)
+    button:SetSize(width, SIZE)
+    button:ClearAllPoints()
+    button:SetPoint("TOPLEFT", block, "TOPLEFT", x, y)
+end
+
 local function LayoutBlock()
     local cell = block.cell
-    for i, key in ipairs(CELLS) do
-        local button = groupButtons[key]
-        if button then
-            button:SetSize(cell, SIZE)
-            button:ClearAllPoints()
-            button:SetPoint("TOPLEFT", block, "TOPLEFT", (i - 1) % 2 * (cell + GAP), -math.floor((i - 1) / 2) * (SIZE + GAP))
-        end
-    end
     local width, height = 2 * cell + GAP, 2 * SIZE + GAP
+    Cell(groupButtons.ready, 0, 0, cell)
+    Cell(groupButtons.pull, cell + GAP, 0, cell)
+    Cell(groupButtons.role, 0, -(SIZE + GAP), width)
     block:SetSize(width, height)
     return width, height
 end
@@ -453,15 +450,6 @@ local function Build()
     GroupButton("role", "Role", "role", "Role check", nil, function()
         InitiateRolePoll()
     end)
-    if C_AddOns.IsAddOnLoaded("MRT") and GMRT and GMRT.A and GMRT.A.RaidCheck and GMRT.A.RaidCheck.ReadyCheckWindow then
-        local rc = GroupButton("rc", "", "rc", "MRT Raid Check", nil, function()
-            pcall(GMRT.A.RaidCheck.ReadyCheckWindow, GMRT.A.RaidCheck, nil, nil, true)
-        end)
-        local icon = rc:CreateTexture(nil, "ARTWORK")
-        icon:SetSize(SIZE - 6, SIZE - 6)
-        icon:SetPoint("CENTER")
-        icon:SetTexture(MRT_ICON)
-    end
     PaintGroupButtons()
 
     for i, color in ipairs(WORLD_COLORS) do

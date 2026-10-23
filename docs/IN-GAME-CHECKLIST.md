@@ -198,11 +198,9 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] After a key ends out of combat, Ready and Pull become usable without a reload.
 - [ ] The target highlight follows the target: a marked target lights its marker, a new target moves or clears it.
 - [ ] A placed world marker shows a gold ring; the dots stay bright.
-- [ ] The panel and every button have a thin border; the group buttons form a 2x2 block right of both rows.
+- [ ] The panel and every button have a thin border; the group buttons form a block right of both rows: Ready and Pull on top, Role across the bottom.
 - [ ] Ready check with one decline: the button goes red. With one player silent until the end: red. All ready: green. It resets after 5 s.
 - [ ] "Ready 20/20" in a 20-player raid fits the button.
-- [ ] The RC button opens MRT Raid Check; with MRT disabled the button is absent.
-- [ ] RC in combat and inside an active key: greyed with the reason, no error.
 - [ ] Dragging: the panel can only be grabbed by its padding and gaps, because the secure buttons take the mouse. Note whether that is comfortable. Lock position stops the drag; the position survives /reload; Reset position brings it back.
 - [ ] **Start dragging the panel, pull a mob, release (Hide in combat off): no `ADDON_ACTION_BLOCKED`; the outline stops at the release point; the panel jumps there when combat ends; it survives /reload; click-targeting and right-drag camera work during the pull.**
 - [ ] Hide in combat on: start dragging, pull a mob - the outline disappears at the pull, the panel keeps the spot where the outline was, no `ADDON_ACTION_BLOCKED`.
