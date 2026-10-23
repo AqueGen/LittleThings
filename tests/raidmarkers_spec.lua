@@ -48,7 +48,7 @@ local ALLOWED = {
     "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateFontString", "SetHighlightTexture",
     "RegisterForClicks", "SetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
-  Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetAtlas", "SetMask", "SetBlendMode",
+  Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "SetMask", "SetBlendMode",
     "Hide", "SetShown" },
   FontString = { "SetPoint", "SetText", "SetTextColor", "GetStringWidth" },
 }
@@ -85,6 +85,7 @@ function IMPL:SetBackdropColor(...) self.bg = { ... } end
 function IMPL:SetBackdropBorderColor(...) self.border = { ... } end
 function IMPL:SetColorTexture(...) self.colorTexture = { ... } end
 function IMPL:SetTexture(texture) self.texture = texture end
+function IMPL:SetVertexColor(...) self.vertexColor = { ... } end
 function IMPL:SetAtlas(atlas) self.atlas = atlas end
 function IMPL:SetMask(mask) self.mask = mask end
 function IMPL:GetStringWidth() return self.frames.state.textWidth or 0 end
@@ -505,7 +506,8 @@ describe("RaidMarkers", function()
       local d = assert(dot(world(i)))
       assert.equals("Interface\\CharacterFrame\\TempPortraitAlphaMask", d.mask)
       assert.same({ 16, 16 }, { d.width, d.height })
-      assert.same({ color[1] / 255, color[2] / 255, color[3] / 255, 1 }, d.colorTexture)
+      assert.equals("Interface\\Buttons\\WHITE8x8", d.texture)
+      assert.same({ color[1] / 255, color[2] / 255, color[3] / 255, 1 }, d.vertexColor)
     end
   end)
 

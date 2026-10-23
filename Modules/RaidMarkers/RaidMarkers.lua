@@ -470,7 +470,8 @@ local function Build()
         local dot = button:CreateTexture(nil, "ARTWORK")
         dot:SetSize(DOT, DOT)
         dot:SetPoint("CENTER")
-        dot:SetColorTexture(color[1] / 255, color[2] / 255, color[3] / 255, 1)
+        dot:SetTexture("Interface\\Buttons\\WHITE8x8")
+        dot:SetVertexColor(color[1] / 255, color[2] / 255, color[3] / 255, 1)
         dot:SetMask(CIRCLE_MASK)
         worldButtons[i] = button
     end
