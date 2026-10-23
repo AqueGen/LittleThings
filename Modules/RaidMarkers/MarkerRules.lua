@@ -58,6 +58,28 @@ function Rules.TipSide(left, bottom, right, top, screenW, screenH, vertical)
     return bottom >= screenH - top and "below" or "above"
 end
 
+function Rules.HealerUnit(roles)
+    for _, entry in ipairs(roles) do
+        if entry.role == "HEALER" then
+            return entry.unit
+        end
+    end
+end
+
+function Rules.DownCount(states)
+    local count = 0
+    for _, s in ipairs(states) do
+        if s.dead == true or s.connected == false then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function Rules.DownLabel(n)
+    return n > 0 and n .. " down" or ""
+end
+
 function Rules.Cycle(order)
     local cycle = {}
     for i = 1, 8 do

@@ -126,6 +126,42 @@ describe("Rules.TipSide", function()
   end)
 end)
 
+describe("Rules.HealerUnit", function()
+  it("returns the first healer", function()
+    assert.equals("party2", Rules.HealerUnit({
+      { unit = "player", role = "TANK" }, { unit = "party1", role = "DAMAGER" },
+      { unit = "party2", role = "HEALER" }, { unit = "party3", role = "HEALER" },
+    }))
+  end)
+  it("skips a secret role", function()
+    assert.equals("party1", Rules.HealerUnit({ { unit = "player", role = "secret" }, { unit = "party1", role = "HEALER" } }))
+  end)
+  it("is nil without a healer", function()
+    assert.is_nil(Rules.HealerUnit({ { unit = "player", role = "TANK" }, { unit = "party1", role = "NONE" } }))
+    assert.is_nil(Rules.HealerUnit({}))
+  end)
+end)
+
+describe("Rules.DownCount", function()
+  it("counts dead and offline members once each", function()
+    assert.equals(3, Rules.DownCount({
+      { dead = true, connected = true }, { dead = false, connected = false },
+      { dead = true, connected = false }, { dead = false, connected = true },
+    }))
+  end)
+  it("never counts a secret state", function()
+    assert.equals(0, Rules.DownCount({ { dead = "secret", connected = true }, { dead = false, connected = "secret" } }))
+  end)
+  it("is 0 for nobody", function()
+    assert.equals(0, Rules.DownCount({}))
+  end)
+end)
+
+describe("Rules.DownLabel", function()
+  it("is empty for 0", function() assert.equals("", Rules.DownLabel(0)) end)
+  it("shows the count", function() assert.equals("2 down", Rules.DownLabel(2)) end)
+end)
+
 describe("Rules.Cycle", function()
   it("keeps the non-empty slots in order, duplicates included", function()
     assert.same({ 5, 1 }, Rules.Cycle({ 5, 0, 1, 0, 0, 0, 0, 0 }))

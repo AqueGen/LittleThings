@@ -218,6 +218,9 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] **Hide in combat on, placement mode on, pull: the mode ends at once, left click targets again during the fight, no `ADDON_ACTION_BLOCKED`.**
 - [ ] Placement mode: the panel's world clear icon removes all ground markers and the next click places the first marker of the order.
 - [ ] Placement mode without lead/assist: the button is grey and does not turn on.
+- [ ] Healer mana on, party with a healer: the bar follows the healer's mana in and out of combat and inside a key, no Lua errors.
+- [ ] No healer / raid / solo: no bar.
+- [ ] Dead or offline count shows "1 down" when a member dies or disconnects and disappears when they are back.
 - [ ] Placement order: set a few slots to None - the mode and the key skip them; set all to None - Place turns grey, its tooltip says "Placement order is empty" and a click does nothing. A duplicate slot places the same marker again.
 - [ ] Vertical layout: one column, each target marker next to the world marker of the same symbol (star next to the yellow star, and so on); Clear all and the world clear icon under the pairs, then Place, Ready, Pull and Role across the column; "Clear all" fits its button.
 - [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**

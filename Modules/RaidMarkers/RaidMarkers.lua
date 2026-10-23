@@ -9,6 +9,8 @@ local CLEAR_WIDTH = 60
 local MODE_WIDTH = CLEAR_WIDTH - GAP - SIZE
 local CELL_MIN, CELL_PAD = 64, 8
 local DOT = 16
+local BAR_HEIGHT, DOWN_HEIGHT = 4, 14
+local PARTY = { "player", "party1", "party2", "party3", "party4" }
 local CIRCLE_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local CLEAR_ICON = "common-icon-redx"
 local FLAT = ns.Widgets.FLAT
@@ -28,7 +30,8 @@ local TIP_ANCHORS = {
 local ORDINALS ={ "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
 
 local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
-    showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false }
+    showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false,
+    healerMana = false, groupDown = false }
 
 local active = false
 local panel, row1, row2, block, events, ticker, mover, container
@@ -36,7 +39,7 @@ local dragging, previewing = false, false
 local pending = {}
 local targetButtons, worldButtons = {}, {}
 local groupButtons = {}
-local clearTarget, clearWorld, modeButton
+local clearTarget, clearWorld, modeButton, manaBar, downText
 local readyText, readyTint, readyToken, lastStatuses
 local countdownRunning, countdownSecret, countdownToken = false, false, 0
 local bindNext, bindClear
@@ -67,6 +70,7 @@ local HIDE_BODY = [[self:ClearBindings() self:SetAttribute("lt-active", nil)]]
 
 local READY_COLORS = { waiting = { 1, 0.82, 0 }, notready = { 1, 0.2, 0.2 }, ready = { 0.2, 1, 0.2 } }
 local WHITE, GREY, RED, IDLE = { 1, 1, 1 }, { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }, { 0.8, 0.8, 0.8 }
+local MANA = { 0, 0.44, 0.87 }
 
 local function InitializeDb()
     ns.db.raidMarkerPanel = ns.db.raidMarkerPanel or {}
@@ -248,6 +252,11 @@ local function LayoutRow(row)
     return offset - GAP
 end
 
+local function PlaceBar(width)
+    manaBar:SetPoint("TOPLEFT", block, "BOTTOMLEFT", 0, -GAP)
+    manaBar:SetSize(width, BAR_HEIGHT)
+end
+
 local function LayoutHorizontal()
     local width = LayoutRow(row1)
     LayoutRow(row2)
@@ -259,6 +268,15 @@ local function LayoutHorizontal()
     block:SetSize(bw, bh)
     row2:SetPoint("TOPLEFT", row1, "BOTTOMLEFT", 0, -GAP)
     block:SetPoint("TOPLEFT", row1, "TOPRIGHT", GAP, 0)
+    local db = ns.db.raidMarkerPanel
+    if db.healerMana then
+        PlaceBar(bw)
+        bh = bh + GAP + BAR_HEIGHT
+    end
+    if db.groupDown then
+        downText:SetPoint("LEFT", block, "RIGHT", GAP, 0)
+        bw = bw + GAP + downText.cell
+    end
     panel:SetSize(width + GAP + bw + 2 * PAD, math.max(2 * SIZE + GAP, bh) + 2 * PAD)
 end
 
@@ -282,7 +300,17 @@ local function LayoutVertical()
     block:SetSize(width, 3 * step - GAP)
     row2:SetPoint("TOPLEFT", row1, "TOPLEFT", 0, 0)
     block:SetPoint("TOPLEFT", row1, "BOTTOMLEFT", 0, -GAP)
-    panel:SetSize(width + 2 * PAD, height + GAP + 3 * step - GAP + 2 * PAD)
+    local db = ns.db.raidMarkerPanel
+    local below, extra = block, 0
+    if db.healerMana then
+        PlaceBar(width)
+        below, extra = manaBar, GAP + BAR_HEIGHT
+    end
+    if db.groupDown then
+        downText:SetPoint("TOP", below, "BOTTOM", 0, -GAP)
+        extra = extra + GAP + DOWN_HEIGHT
+    end
+    panel:SetSize(width + 2 * PAD, height + GAP + 3 * step - GAP + extra + 2 * PAD)
 end
 
 local function Layout()
@@ -290,6 +318,10 @@ local function Layout()
     row1:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, -PAD)
     row2:ClearAllPoints()
     block:ClearAllPoints()
+    manaBar:ClearAllPoints()
+    downText:ClearAllPoints()
+    manaBar:SetShown(ns.db.raidMarkerPanel.healerMana)
+    downText:SetShown(ns.db.raidMarkerPanel.groupDown)
     if ns.db.raidMarkerPanel.vertical then
         LayoutVertical()
     else
@@ -393,6 +425,47 @@ local function RefreshWorld()
             Ring(button, placed)
         end
     end
+end
+
+local function RefreshHelpers()
+    local db = ns.db.raidMarkerPanel
+    local party = IsInGroup() and not IsInRaid()
+    local healer
+    if db.healerMana and party then
+        local roles = {}
+        for _, unit in ipairs(PARTY) do
+            local role = UnitGroupRolesAssigned(unit)
+            roles[#roles + 1] = { unit = unit, role = issecretvalue(role) and "secret" or role }
+        end
+        healer = Rules.HealerUnit(roles)
+    end
+    manaBar.unit = healer
+    if healer then
+        manaBar:SetMinMaxValues(0, UnitPowerMax(healer, Enum.PowerType.Mana))
+        manaBar:SetValue(UnitPower(healer, Enum.PowerType.Mana))
+    end
+    manaBar:SetAlpha(healer and 1 or 0)
+    local down = 0
+    if db.groupDown and party then
+        local states = {}
+        for _, unit in ipairs(PARTY) do
+            if UnitExists(unit) then
+                local dead, connected = UnitIsDeadOrGhost(unit), UnitIsConnected(unit)
+                states[#states + 1] = {
+                    dead = issecretvalue(dead) and "secret" or dead,
+                    connected = issecretvalue(connected) and "secret" or connected,
+                }
+            end
+        end
+        down = Rules.DownCount(states)
+    end
+    downText:SetText(Rules.DownLabel(down))
+    downText:SetAlpha(down > 0 and 1 or 0)
+end
+
+local function Tick()
+    RefreshWorld()
+    RefreshHelpers()
 end
 
 local function StopTicker()
@@ -513,8 +586,9 @@ local function Build()
         RefreshTarget()
         RefreshWorld()
         PaintMode()
+        RefreshHelpers()
         StopTicker()
-        ticker = C_Timer.NewTicker(1, RefreshWorld)
+        ticker = C_Timer.NewTicker(1, Tick)
     end)
     panel:SetScript("OnHide", function()
         StopTicker()
@@ -571,6 +645,36 @@ local function Build()
     end)
     PaintGroupButtons()
 
+    manaBar = CreateFrame("StatusBar", nil, panel)
+    manaBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
+    manaBar:SetStatusBarColor(MANA[1], MANA[2], MANA[3])
+    local manaBack = manaBar:CreateTexture(nil, "BACKGROUND")
+    manaBack:SetAllPoints()
+    manaBack:SetColorTexture(0, 0, 0, 0.6)
+    manaBar:SetAlpha(0)
+    manaBar.title = "Healer mana"
+    manaBar.lines = function()
+        local name = manaBar.unit and UnitName(manaBar.unit)
+        if name and not issecretvalue(name) then
+            return { name }
+        end
+        return {}
+    end
+    manaBar:EnableMouse(true)
+    manaBar:SetScript("OnEnter", function(self)
+        if self.unit then
+            ShowTip(self)
+        end
+    end)
+    manaBar:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    downText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    downText:SetTextColor(RED[1], RED[2], RED[3])
+    downText:SetText(Rules.DownLabel(5))
+    downText.cell = math.ceil(downText:GetStringWidth())
+    downText:SetText("")
+    downText:SetAlpha(0)
+
     for i, color in ipairs(WORLD_COLORS) do
         local button = SecureButton(row2, SIZE, MarkerTitle(_G["WORLD_MARKER" .. i] or ("World marker " .. i)),
             { type = "worldmarker", marker = i, action1 = "set", action2 = "clear" })
@@ -613,9 +717,16 @@ local function SyncBindings()
     bindClear:SetAttribute("type", active and "worldmarker" or nil)
 end
 
+local function RolesChanged()
+    if panel then
+        RefreshHelpers()
+    end
+end
+
 local function Refresh()
     RequestVisibility()
     PaintGroupButtons()
+    RolesChanged()
 end
 
 local function StartCountdown(_, timeRemaining)
@@ -644,6 +755,7 @@ local handlers = {
     GROUP_ROSTER_UPDATE = Refresh,
     PARTY_LEADER_CHANGED = Refresh,
     PLAYER_ENTERING_WORLD = Refresh,
+    PLAYER_ROLES_ASSIGNED = RolesChanged,
     PLAYER_REGEN_ENABLED = function()
         if panel and not InCombatLockdown() then
             if pending[Layout] then
@@ -768,6 +880,12 @@ function RaidMarkers.Pages(page)
                 ApplyOutOfCombat(Place)
             end
         end })
+
+    local helpers = page:Group("Tank helpers")
+    helpers:Check(Option("healerMana", { label = "Healer mana", combatLocked = true,
+        tooltip = "A bar under the group buttons with your party healer's mana. Party only." }, Layout))
+    helpers:Check(Option("groupDown", { label = "Dead or offline count", combatLocked = true,
+        tooltip = "A red count next to the group buttons when party members are dead or offline. Party only." }, Layout))
 
     local options = { { text = "None", value = 0 } }
     for n = 1, 8 do

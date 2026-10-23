@@ -1,5 +1,12 @@
 local SECRET = setmetatable({}, { __tostring = function() return "secret" end })
 
+local function touched() error("secret value touched", 2) end
+local function opaque()
+  return setmetatable({}, { __lt = touched, __le = touched, __eq = touched, __add = touched, __sub = touched, __mul = touched,
+    __div = touched, __unm = touched, __concat = touched, __tostring = touched, __len = touched })
+end
+local MANA, MANA_MAX = opaque(), opaque()
+
 local function noop() end
 
 local function set(list)
@@ -41,18 +48,21 @@ local PROTECTED = {
 }
 PROTECTED.FontString = PROTECTED.Texture
 PROTECTED.MaskTexture = PROTECTED.Texture
+PROTECTED.StatusBar = PROTECTED.Frame
 
 local ALLOWED = {
   Frame = { "SetScript", "RegisterEvent", "Show", "Hide", "IsShown", "SetPoint", "ClearAllPoints", "SetSize", "SetScale",
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
-    "CreateTexture", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
+    "CreateTexture", "CreateFontString", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
     "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateMaskTexture", "CreateFontString", "SetHighlightTexture",
     "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
   Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "AddMaskTexture",
     "SetBlendMode", "Hide", "SetShown" },
   MaskTexture = { "SetTexture", "SetAllPoints" },
-  FontString = { "SetPoint", "SetText", "SetTextColor", "GetStringWidth" },
+  FontString = { "SetPoint", "ClearAllPoints", "SetText", "SetTextColor", "GetStringWidth", "SetAlpha", "SetShown" },
+  StatusBar = { "SetScript", "SetPoint", "ClearAllPoints", "SetSize", "SetShown", "SetAlpha", "EnableMouse", "CreateTexture",
+    "SetStatusBarTexture", "SetStatusBarColor", "SetMinMaxValues", "SetValue" },
 }
 
 local MOVER = "LittleThingsRaidMarkersMover"
@@ -137,6 +147,11 @@ function IMPL:SetTexture(texture, horizontal, vertical) self.texture, self.wrap 
 function IMPL:SetVertexColor(...) self.vertexColor = { ... } end
 function IMPL:SetAtlas(atlas) self.atlas = atlas end
 function IMPL:AddMaskTexture(mask) self.masks = rawget(self, "masks") or {} self.masks[#self.masks + 1] = mask end
+function IMPL:SetAlpha(alpha) self.alpha = alpha end
+function IMPL:SetStatusBarTexture(texture) self.barTexture = texture end
+function IMPL:SetStatusBarColor(...) self.barColor = { ... } end
+function IMPL:SetMinMaxValues(low, high) self.minMax = { low, high } end
+function IMPL:SetValue(value) self.value = value end
 function IMPL:GetRight() return self.right or 0 end
 function IMPL:GetTop() return self.top or 0 end
 function IMPL:GetStringWidth()
@@ -192,7 +207,7 @@ local function load(state, db)
   _G.IsInRaid = function() return state.raid end
   _G.UnitIsGroupLeader = function() return state.leader end
   _G.UnitIsGroupAssistant = function() return state.assistant end
-  _G.issecretvalue = function(v) return v == SECRET end
+  _G.issecretvalue = function(v) return rawequal(v, SECRET) or rawequal(v, MANA) or rawequal(v, MANA_MAX) end
   _G.GetRaidTargetIndex = function() return state.targetIndex end
   _G.IsRaidMarkerActive = function(i) return state.placed and state.placed[i] or false end
   _G.SetRaidTargetIconTexture = noop
@@ -229,6 +244,25 @@ local function load(state, db)
   _G.HasLFGRestrictions = function() return state.lfg end
   _G.GetReadyCheckStatus = function(unit) return state.status and state.status[unit] end
   _G.GetNumGroupMembers = function() return state.members or 1 end
+  _G.Enum = { PowerType = { Mana = 0 } }
+  local function party(field, unit, default)
+    local values = state[field]
+    if values and values[unit] ~= nil then return values[unit] end
+    return default
+  end
+  _G.UnitGroupRolesAssigned = function(unit) return party("roles", unit, "NONE") end
+  _G.UnitExists = function(unit) return party("present", unit, false) end
+  _G.UnitIsDeadOrGhost = function(unit) return party("dead", unit, false) end
+  _G.UnitIsConnected = function(unit) return party("connected", unit, true) end
+  _G.UnitName = function(unit) return party("names", unit, nil) end
+  _G.UnitPower = function(unit, kind)
+    assert(kind == 0, "mana only")
+    return party("power", unit, 0)
+  end
+  _G.UnitPowerMax = function(unit, kind)
+    assert(kind == 0, "mana only")
+    return party("powerMax", unit, 0)
+  end
   state.tip = {}
   _G.GameTooltip = setmetatable({}, { __index = function(_, method)
     return function(_, ...) state.tip[#state.tip + 1] = { method, ... } end
@@ -300,7 +334,17 @@ local function load(state, db)
 
   return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance,
     groupButtons = groupButtons, blocked = frames.blocked, tick = tick, eventFrame = eventFrame, children = children,
-    mover = function() return named("LittleThingsRaidMarkersMover") end }
+    mover = function() return named("LittleThingsRaidMarkersMover") end,
+    manaBar = function()
+      for _, f in ipairs(frames) do
+        if f.kind == "StatusBar" then return f end
+      end
+    end,
+    downText = function()
+      for _, f in ipairs(frames) do
+        if f.kind == "FontString" and f.parent == panel() then return f end
+      end
+    end }
 end
 
 describe("RaidMarkers", function()
@@ -386,7 +430,7 @@ describe("RaidMarkers", function()
 
   it("puts the visibility options in their own group first, all off by default", function()
     local specs, byLabel, _, titles = pages(addon)
-    assert.same({ "Visibility", "Raid marker panel", "Placement order" }, titles)
+    assert.same({ "Visibility", "Raid marker panel", "Tank helpers", "Placement order" }, titles)
     for i, option in ipairs(VISIBILITY) do
       local spec = byLabel[option[2]]
       assert.equals(specs[i], spec)
@@ -883,10 +927,16 @@ describe("RaidMarkers", function()
   it("calls no protected function in combat", function()
     state.group, state.leader = true, true
     addon.fire("GROUP_ROSTER_UPDATE")
-    local specs, _, page = pages(addon)
+    local specs, byLabel, page = pages(addon)
     local panel = addon.panel()
+    byLabel["Healer mana"].set(true)
+    byLabel["Dead or offline count"].set(true)
+    state.roles, state.present = { party1 = "HEALER" }, { player = true, party1 = true, party2 = true }
+    state.power, state.powerMax = { party1 = MANA, party2 = MANA }, { party1 = MANA_MAX, party2 = MANA_MAX }
+    state.dead, state.names = { party2 = true }, { party2 = SECRET }
 
     local events = {
+      { "PLAYER_ROLES_ASSIGNED", before = function() state.roles = { party2 = "HEALER", party1 = SECRET } end },
       { "READY_CHECK", "Leader", 30 },
       { "READY_CHECK_CONFIRM", "party1", true },
       { "READY_CHECK_FINISHED", false },
@@ -949,6 +999,11 @@ describe("RaidMarkers", function()
     panel.scripts.OnDragStop(panel)
     panel.scripts.OnShow(panel)
     addon.tick()
+    local bar = addon.manaBar()
+    assert.is_true(rawequal(MANA, bar.value))
+    assert.equals("1 down", addon.downText().text)
+    bar.scripts.OnEnter(bar)
+    bar.scripts.OnLeave(bar)
     panel.scripts.OnHide(panel)
     page.scripts.OnShow(page)
     page.scripts.OnHide(page)
@@ -1409,6 +1464,164 @@ describe("RaidMarkers", function()
       assert.is_nil(m.attrs["lt-allowed"])
       assert.same({ m }, state.clearedBindings)
       assert.is_nil(m.attrs["lt-active"])
+    end)
+  end)
+
+  describe("tank helpers", function()
+    local function helpers(a, mana, down)
+      local _, byLabel = pages(a)
+      byLabel["Healer mana"].set(mana)
+      byLabel["Dead or offline count"].set(down)
+    end
+
+    local function inParty(a)
+      state.group = true
+      state.present = { player = true, party1 = true, party2 = true, party3 = true }
+      state.roles = { player = "TANK", party1 = "DAMAGER", party2 = "HEALER", party3 = "DAMAGER" }
+      a.fire("GROUP_ROSTER_UPDATE")
+      a.panel().scripts.OnShow(a.panel())
+    end
+
+    it("offers two combat-locked checkboxes, both off", function()
+      local _, byLabel = pages(addon)
+      local mana, down = byLabel["Healer mana"], byLabel["Dead or offline count"]
+      assert.equals("A bar under the group buttons with your party healer's mana. Party only.", mana.tooltip)
+      assert.equals("A red count next to the group buttons when party members are dead or offline. Party only.", down.tooltip)
+      for _, spec in ipairs({ mana, down }) do
+        assert.is_true(spec.combatLocked)
+        assert.is_false(spec.default)
+        assert.is_false(spec.get())
+      end
+    end)
+
+    it("passes the healer's mana to the bar untouched", function()
+      helpers(addon, true, false)
+      state.power, state.powerMax = { party2 = MANA }, { party2 = MANA_MAX }
+      inParty(addon)
+      addon.tick()
+      local bar = addon.manaBar()
+      assert.is_true(rawequal(MANA, bar.value))
+      assert.equals(0, bar.minMax[1])
+      assert.is_true(rawequal(MANA_MAX, bar.minMax[2]))
+      assert.equals(1, bar.alpha)
+      assert.equals("Interface\\Buttons\\WHITE8x8", bar.barTexture)
+    end)
+
+    it("moves the bar to the new healer on a role change and skips a secret role", function()
+      helpers(addon, true, false)
+      state.power = { party2 = 40, party3 = 70 }
+      inParty(addon)
+      local bar = addon.manaBar()
+      assert.equals(40, bar.value)
+      state.roles = { party2 = SECRET, party3 = "HEALER" }
+      addon.fire("PLAYER_ROLES_ASSIGNED")
+      assert.equals(70, bar.value)
+      assert.equals(1, bar.alpha)
+    end)
+
+    it("hides the bar without a healer, in a raid and solo", function()
+      helpers(addon, true, false)
+      inParty(addon)
+      local bar = addon.manaBar()
+      assert.equals(1, bar.alpha)
+      state.roles = { party2 = "DAMAGER" }
+      addon.tick()
+      assert.equals(0, bar.alpha)
+      state.roles = { party2 = "HEALER" }
+      state.raid = true
+      addon.fire("GROUP_ROSTER_UPDATE")
+      assert.equals(0, bar.alpha)
+      state.raid, state.group = false, false
+      addon.tick()
+      assert.equals(0, bar.alpha)
+    end)
+
+    it("names the healer in the bar tooltip only when the name is readable", function()
+      helpers(addon, true, false)
+      inParty(addon)
+      local bar = addon.manaBar()
+      assert.equals("Healer mana", bar.title)
+      state.names = { party2 = "Mender" }
+      assert.same({ "Mender" }, bar.lines())
+      state.names = { party2 = SECRET }
+      assert.same({}, bar.lines())
+      bar.scripts.OnEnter(bar)
+      bar.scripts.OnLeave(bar)
+    end)
+
+    it("counts dead and offline party members, never a secret state", function()
+      helpers(addon, false, true)
+      inParty(addon)
+      local text = addon.downText()
+      assert.equals("", text.text)
+      assert.equals(0, text.alpha)
+      state.dead, state.connected = { party1 = true, party9 = true }, { party3 = false }
+      addon.tick()
+      assert.equals("2 down", text.text)
+      assert.equals(1, text.alpha)
+      assert.same({ 1, 0.2, 0.2 }, text.color)
+      state.dead, state.connected = { party1 = SECRET }, { party3 = SECRET }
+      addon.tick()
+      assert.equals("", text.text)
+      assert.equals(0, text.alpha)
+      state.dead = { party1 = true }
+      state.raid = true
+      addon.fire("GROUP_ROSTER_UPDATE")
+      assert.equals(0, text.alpha)
+    end)
+
+    it("reserves no space while both are off", function()
+      inParty(addon)
+      assert.is_false(addon.manaBar().shown)
+      assert.is_false(addon.downText().shown)
+      assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { addon.panel().width, addon.panel().height })
+    end)
+
+    it("puts the bar under the group block and the count right of it in the horizontal layout", function()
+      state.textWidths = { ["5 down"] = 30.5 }
+      local a = load(state)
+      a.module.Enable()
+      local block = a.button("Ready check").parent
+      helpers(a, true, false)
+      assert.is_true(a.manaBar().shown)
+      assert.is_false(a.downText().shown)
+      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 0, -2 }, a.manaBar().lastPoint)
+      assert.same({ 130, 4 }, { a.manaBar().width, a.manaBar().height })
+      assert.same({ 284 + 2 + 130 + 8, 60 + 8 }, { a.panel().width, a.panel().height })
+      helpers(a, true, true)
+      assert.is_true(a.downText().shown)
+      assert.same({ "LEFT", block, "RIGHT", 2, 0 }, a.downText().lastPoint)
+      assert.same({ 284 + 2 + 130 + 2 + 31 + 8, 60 + 8 }, { a.panel().width, a.panel().height })
+      helpers(a, false, true)
+      assert.is_false(a.manaBar().shown)
+      assert.same({ 284 + 2 + 130 + 2 + 31 + 8, 54 + 8 }, { a.panel().width, a.panel().height })
+    end)
+
+    it("stacks the bar and the count under the group block in the vertical layout", function()
+      local a = load(state, { raidMarkerPanel = { vertical = true } })
+      a.module.Enable()
+      local block = a.button("Ready check").parent
+      helpers(a, true, true)
+      local bar, text = a.manaBar(), a.downText()
+      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 0, -2 }, bar.lastPoint)
+      assert.same({ 64, 4 }, { bar.width, bar.height })
+      assert.same({ "TOP", bar, "BOTTOM", 0, -2 }, text.lastPoint)
+      assert.same({ 64 + 8, 278 + 2 + 82 + 6 + 16 + 8 }, { a.panel().width, a.panel().height })
+      helpers(a, false, true)
+      assert.same({ "TOP", block, "BOTTOM", 0, -2 }, text.lastPoint)
+      assert.same({ 64 + 8, 278 + 2 + 82 + 16 + 8 }, { a.panel().width, a.panel().height })
+    end)
+
+    it("applies a toggle made in combat after combat", function()
+      inParty(addon)
+      state.combat = true
+      helpers(addon, true, true)
+      assert.same({}, addon.blocked)
+      assert.is_false(addon.manaBar().shown)
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.is_true(addon.manaBar().shown)
+      assert.is_true(addon.downText().shown)
     end)
   end)
 
