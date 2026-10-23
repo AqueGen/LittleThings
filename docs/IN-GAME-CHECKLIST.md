@@ -198,6 +198,7 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] After a key ends out of combat, Ready and Pull become usable without a reload.
 - [ ] The target highlight follows the target: a marked target lights its marker, a new target moves or clears it.
 - [ ] A placed world marker shows a gold ring; the dots stay bright.
+- [ ] World marker dots and the next-marker ring are round.
 - [ ] The panel and every button have a thin border; the group buttons form a block right of both rows: Ready and Pull on top, Role across the bottom.
 - [ ] Ready check with one decline: the button goes red. With one player silent until the end: red. All ready: green. It resets after 5 s.
 - [ ] "Ready 20/20" in a 20-player raid fits the button.

@@ -19,7 +19,13 @@ local WORLD_COLORS = {
     { 222, 218, 50 }, { 208, 84, 0 }, { 116, 155, 179 }, { 243, 241, 235 },
 }
 local WORLD_FOR_TARGET = { 5, 6, 3, 2, 7, 1, 4, 8 }
-local ORDINALS = { "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
+local TIP_ANCHORS = {
+    below = { "TOPLEFT", "BOTTOMLEFT", 0, -4 },
+    above = { "BOTTOMLEFT", "TOPLEFT", 0, 4 },
+    right = { "TOPLEFT", "TOPRIGHT", 4, 0 },
+    left = { "TOPRIGHT", "TOPLEFT", -4, 0 },
+}
+local ORDINALS ={ "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
 
 local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
     showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false }
@@ -133,7 +139,13 @@ end
 
 local function ShowTip(button)
     PaintGroupButtons()
-    GameTooltip:SetOwner(button, "ANCHOR_TOP")
+    GameTooltip:SetOwner(panel, "ANCHOR_NONE")
+    GameTooltip:ClearAllPoints()
+    local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local side = Rules.TipSide(panel:GetLeft() * scale, panel:GetBottom() * scale, panel:GetRight() * scale, panel:GetTop() * scale,
+        UIParent:GetWidth(), UIParent:GetHeight(), ns.db.raidMarkerPanel.vertical)
+    local anchor = TIP_ANCHORS[side]
+    GameTooltip:SetPoint(anchor[1], panel, anchor[2], anchor[3], anchor[4])
     GameTooltip:AddLine(button.title, 1, 1, 1)
     if button.lines then
         for _, line in ipairs(button.lines()) do
@@ -428,7 +440,10 @@ local function Circle(button, layer, size, r, g, b)
     texture:SetPoint("CENTER")
     texture:SetTexture("Interface\\Buttons\\WHITE8x8")
     texture:SetVertexColor(r, g, b, 1)
-    texture:SetMask(CIRCLE_MASK)
+    local mask = button:CreateMaskTexture()
+    mask:SetTexture(CIRCLE_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    mask:SetAllPoints(texture)
+    texture:AddMaskTexture(mask)
     return texture
 end
 

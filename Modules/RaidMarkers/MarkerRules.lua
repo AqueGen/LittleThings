@@ -51,6 +51,13 @@ function Rules.ReadyLabel(ready, total)
     return "Ready " .. ready .. "/" .. total
 end
 
+function Rules.TipSide(left, bottom, right, top, screenW, screenH, vertical)
+    if vertical then
+        return screenW - right >= left and "right" or "left"
+    end
+    return bottom >= screenH - top and "below" or "above"
+end
+
 function Rules.Cycle(order)
     local cycle = {}
     for i = 1, 8 do

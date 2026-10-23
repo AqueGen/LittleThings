@@ -40,16 +40,18 @@ local PROTECTED = {
   Texture = set(concat(RESIZING_PROTECTED, SCRIPT_REGION_PROTECTED, { "SetScale", "SetIgnoreParentScale" })),
 }
 PROTECTED.FontString = PROTECTED.Texture
+PROTECTED.MaskTexture = PROTECTED.Texture
 
 local ALLOWED = {
   Frame = { "SetScript", "RegisterEvent", "Show", "Hide", "IsShown", "SetPoint", "ClearAllPoints", "SetSize", "SetScale",
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
-    "CreateTexture", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetWidth", "GetHeight",
+    "CreateTexture", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
     "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
-  Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateFontString", "SetHighlightTexture",
+  Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateMaskTexture", "CreateFontString", "SetHighlightTexture",
     "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
-  Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "SetMask", "SetBlendMode",
-    "Hide", "SetShown" },
+  Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "AddMaskTexture",
+    "SetBlendMode", "Hide", "SetShown" },
+  MaskTexture = { "SetTexture", "SetAllPoints" },
   FontString = { "SetPoint", "SetText", "SetTextColor", "GetStringWidth" },
 }
 
@@ -131,10 +133,12 @@ function IMPL:SetBackdrop(backdrop) self.backdrop = backdrop end
 function IMPL:SetBackdropColor(...) self.bg = { ... } end
 function IMPL:SetBackdropBorderColor(...) self.border = { ... } end
 function IMPL:SetColorTexture(...) self.colorTexture = { ... } end
-function IMPL:SetTexture(texture) self.texture = texture end
+function IMPL:SetTexture(texture, horizontal, vertical) self.texture, self.wrap = texture, { horizontal, vertical } end
 function IMPL:SetVertexColor(...) self.vertexColor = { ... } end
 function IMPL:SetAtlas(atlas) self.atlas = atlas end
-function IMPL:SetMask(mask) self.mask = mask end
+function IMPL:AddMaskTexture(mask) self.masks = rawget(self, "masks") or {} self.masks[#self.masks + 1] = mask end
+function IMPL:GetRight() return self.right or 0 end
+function IMPL:GetTop() return self.top or 0 end
 function IMPL:GetStringWidth()
   local state = self.frames.state
   return state.textWidths and state.textWidths[self.text] or state.textWidth or 0
@@ -145,6 +149,7 @@ local new_object
 
 function IMPL:CreateTexture() return new_object(self.frames, "Texture", nil, nil, self) end
 function IMPL:CreateFontString() return new_object(self.frames, "FontString", nil, nil, self) end
+function IMPL:CreateMaskTexture() return new_object(self.frames, "MaskTexture", nil, nil, self) end
 
 new_object = function(frames, kind, name, template, parent)
   local f = { frames = frames, kind = kind, name = name, template = template, parent = parent, attrs = {}, scripts = {},
@@ -180,7 +185,7 @@ local function load(state, db)
       end
     end,
   }
-  _G.UIParent = { GetEffectiveScale = function() return 0.8 end }
+  _G.UIParent = { GetEffectiveScale = function() return 0.8 end, GetWidth = function() return 1920 end, GetHeight = function() return 1080 end }
   _G.CreateFrame = function(kind, name, parent, template) return new_object(frames, kind, name, template, parent) end
   _G.InCombatLockdown = function() return state.combat end
   _G.IsInGroup = function() return state.group end
@@ -224,7 +229,10 @@ local function load(state, db)
   _G.HasLFGRestrictions = function() return state.lfg end
   _G.GetReadyCheckStatus = function(unit) return state.status and state.status[unit] end
   _G.GetNumGroupMembers = function() return state.members or 1 end
-  _G.GameTooltip = setmetatable({}, { __index = function() return noop end })
+  state.tip = {}
+  _G.GameTooltip = setmetatable({}, { __index = function(_, method)
+    return function(_, ...) state.tip[#state.tip + 1] = { method, ... } end
+  end })
   assert(loadfile("Modules/RaidMarkers/MarkerRules.lua"))("LittleThings", ns)
   assert(loadfile("Modules/RaidMarkers/RaidMarkers.lua"))("LittleThings", ns)
 
@@ -540,8 +548,18 @@ describe("RaidMarkers", function()
 
   local function dot(button)
     for _, child in ipairs(addon.children(button)) do
-      if rawget(child, "mask") then return child end
+      if rawget(child, "masks") then return child end
     end
+  end
+
+  local function round(texture)
+    assert.equals(1, #texture.masks)
+    local mask = texture.masks[1]
+    assert.equals("MaskTexture", mask.kind)
+    assert.equals(texture.parent, mask.parent)
+    assert.equals("Interface\\CharacterFrame\\TempPortraitAlphaMask", mask.texture)
+    assert.same({ "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE" }, mask.wrap)
+    assert.equals(texture, mask.allPoints)
   end
 
   local function panelButtons(a)
@@ -557,7 +575,7 @@ describe("RaidMarkers", function()
   it("draws world markers as round full-colour 16 px dots", function()
     for i, color in ipairs(WORLD) do
       local d = assert(dot(world(i)))
-      assert.equals("Interface\\CharacterFrame\\TempPortraitAlphaMask", d.mask)
+      round(d)
       assert.same({ 16, 16 }, { d.width, d.height })
       assert.equals("Interface\\Buttons\\WHITE8x8", d.texture)
       assert.same({ color[1] / 255, color[2] / 255, color[3] / 255, 1 }, d.vertexColor)
@@ -746,6 +764,33 @@ describe("RaidMarkers", function()
     assert.same({ 160, 26 }, { role.width, role.height })
     assert.equals("Ready", ready.label.text)
     assert.same({ 284 + 2 + 160 + 8, 54 + 8 }, { wide.panel().width, wide.panel().height })
+  end)
+
+  it("anchors every tooltip beside the panel on the side with more room", function()
+    local panel = addon.panel()
+    local ready = cells(addon)
+    local clearTarget, clearWorld = clears(addon)
+    local buttons = { target(1), world(2), clearTarget, clearWorld, addon.named("LittleThingsWorldMarkerMode"), ready }
+    local function tipAt(edges, scale)
+      panel.left, panel.bottom, panel.right, panel.top = unpack(edges)
+      panel.scale = scale
+      local points = {}
+      for _, button in ipairs(buttons) do
+        for i = #state.tip, 1, -1 do state.tip[i] = nil end
+        button.scripts.OnEnter(button)
+        assert.same({ "SetOwner", panel, "ANCHOR_NONE" }, state.tip[1])
+        assert.same({ "ClearAllPoints" }, state.tip[2])
+        points[#points + 1] = state.tip[3]
+      end
+      for _, point in ipairs(points) do assert.same(points[1], point) end
+      return points[1]
+    end
+    assert.same({ "SetPoint", "TOPLEFT", panel, "BOTTOMLEFT", 0, -4 }, tipAt({ 100, 900, 500, 960 }, 1))
+    assert.same({ "SetPoint", "BOTTOMLEFT", panel, "TOPLEFT", 0, 4 }, tipAt({ 100, 50, 500, 110 }, 1))
+    local _, specs = pages(addon)
+    specs["Vertical"].set(true)
+    assert.same({ "SetPoint", "TOPRIGHT", panel, "TOPLEFT", -4, 0 }, tipAt({ 1700, 100, 1760, 500 }, 1))
+    assert.same({ "SetPoint", "TOPLEFT", panel, "TOPRIGHT", 4, 0 }, tipAt({ 1700, 100, 1760, 500 }, 0.5))
   end)
 
   it("drags only the mover and places the panel where the outline was released", function()
@@ -1250,8 +1295,9 @@ describe("RaidMarkers", function()
       assert.same({ 18, 18 }, { button.nextGap.width, button.nextGap.height })
       assert.same({ 0, 0, 0, 1 }, button.nextGap.vertexColor)
       for _, t in ipairs({ button.nextRing, button.nextGap }) do
-        assert.equals("Interface\\CharacterFrame\\TempPortraitAlphaMask", t.mask)
+        round(t)
         assert.are_not.equal(d, t)
+        assert.are_not.equal(d.masks[1], t.masks[1])
       end
     end)
 
