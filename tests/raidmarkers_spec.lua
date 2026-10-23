@@ -211,6 +211,7 @@ local function load(state, db)
   local ns = {
     db = db or {},
     Widgets = { FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 } },
+    IconButtons = { ROLE_ATLAS = { HEALER = "UI-LFG-RoleIcon-Healer-Micro-GroupFinder" } },
     RegisterModule = function(_, m) module = m end,
     ApplyDefaults = function(target, defaults)
       for k, v in pairs(defaults) do
@@ -278,6 +279,11 @@ local function load(state, db)
   _G.UnitIsDeadOrGhost = function(unit) return party("dead", unit, false) end
   _G.UnitIsConnected = function(unit) return party("connected", unit, true) end
   _G.UnitName = function(unit) return party("names", unit, nil) end
+  _G.UnitClass = function(unit) return "Class", party("classes", unit, nil), 1 end
+  _G.C_ClassColor = { GetClassColor = function(classFile)
+    if classFile ~= "PRIEST" and classFile ~= "DRUID" then return nil end
+    return { WrapTextInColorCode = function(_, text) return "|c" .. classFile .. text .. "|r" end }
+  end }
   _G.UnitPower = function(unit, kind)
     assert(kind == 0, "mana only")
     return party("power", unit, 0)
@@ -381,6 +387,11 @@ local function load(state, db)
     manaBar = function()
       for _, f in ipairs(frames) do
         if f.kind == "StatusBar" then return f end
+      end
+    end,
+    manaIcon = function()
+      for _, f in ipairs(frames) do
+        if f.kind == "Texture" and f.parent and f.parent.kind == "StatusBar" and rawget(f, "atlas") then return f end
       end
     end,
     manaText = function()
@@ -1639,8 +1650,8 @@ describe("RaidMarkers", function()
       helpers(a, true, false, "none")
       assert.is_true(a.manaBar().shown)
       assert.is_false(a.downText().shown)
-      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 0, -2 }, a.manaBar().lastPoint)
-      assert.same({ 130, 4 }, { a.manaBar().width, a.manaBar().height })
+      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, a.manaBar().lastPoint)
+      assert.same({ 116, 4 }, { a.manaBar().width, a.manaBar().height })
       assert.same({ 284 + 2 + 130 + 8, 60 + 8 }, { a.panel().width, a.panel().height })
       helpers(a, true, true)
       assert.is_true(a.downText().shown)
@@ -1657,8 +1668,8 @@ describe("RaidMarkers", function()
       local block = a.button("Ready check").parent
       helpers(a, true, true, "none")
       local bar, text = a.manaBar(), a.downText()
-      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 0, -2 }, bar.lastPoint)
-      assert.same({ 64, 4 }, { bar.width, bar.height })
+      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, bar.lastPoint)
+      assert.same({ 50, 4 }, { bar.width, bar.height })
       assert.same({ "TOP", bar, "BOTTOM", 0, -2 }, text.lastPoint)
       assert.same({ 64 + 8, 278 + 2 + 82 + 6 + 16 + 8 }, { a.panel().width, a.panel().height })
       helpers(a, false, true)
@@ -1727,7 +1738,7 @@ describe("RaidMarkers", function()
       local text = addon.manaText()
       assert.equals("", text.text)
       assert.is_false(text.shown)
-      assert.same({ 130, 4 }, { addon.manaBar().width, addon.manaBar().height })
+      assert.same({ 116, 4 }, { addon.manaBar().width, addon.manaBar().height })
     end)
 
     it("makes the bar 12 px tall with the text centred on it", function()
@@ -1735,16 +1746,90 @@ describe("RaidMarkers", function()
       helpers(addon, true, false, "percent")
       local bar, text = addon.manaBar(), addon.manaText()
       assert.same({ "CENTER" }, text.lastPoint)
-      assert.same({ 130, 12 }, { bar.width, bar.height })
-      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 0, -2 }, bar.lastPoint)
+      assert.same({ 116, 12 }, { bar.width, bar.height })
+      assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, bar.lastPoint)
       assert.same({ 284 + 2 + 130 + 8, 54 + 2 + 12 + 8 }, { addon.panel().width, addon.panel().height })
       local _, specs = pages(addon)
       specs["Vertical"].set(true)
-      assert.same({ 64, 12 }, { bar.width, bar.height })
+      assert.same({ 50, 12 }, { bar.width, bar.height })
       assert.same({ 64 + 8, 278 + 2 + 82 + 14 + 8 }, { addon.panel().width, addon.panel().height })
       helpers(addon, false, false, "both")
       assert.is_false(bar.shown)
       assert.same({ 64 + 8, 278 + 2 + 82 + 8 }, { addon.panel().width, addon.panel().height })
+    end)
+
+    it("puts a 12 px healer role icon left of the bar, its alpha following the bar", function()
+      helpers(addon, true, false)
+      inParty(addon)
+      local icon, bar = addon.manaIcon(), addon.manaBar()
+      assert.equals("UI-LFG-RoleIcon-Healer-Micro-GroupFinder", icon.atlas)
+      assert.same({ 12, 12 }, { icon.width, icon.height })
+      assert.equals(bar, icon.parent)
+      assert.same({ "RIGHT", bar, "LEFT", -2, 0 }, icon.lastPoint)
+      assert.equals(1, bar.alpha)
+      state.roles = { party2 = "DAMAGER" }
+      addon.tick()
+      assert.equals(0, bar.alpha)
+    end)
+
+    it("prefixes the class-coloured healer name for each text mode", function()
+      state.names, state.classes = { party2 = "Mender" }, { party2 = "PRIEST" }
+      state.power, state.percent = { party2 = 40 }, { party2 = 55 }
+      helpers(addon, true, false, "percent")
+      inParty(addon)
+      local text = addon.manaText()
+      assert.same({ "%s %d%%", "|cPRIESTMender|r", 55 }, text.formatted)
+      helpers(addon, true, false, "value")
+      addon.tick()
+      assert.same({ "%s %s", "|cPRIESTMender|r", "short 40" }, text.formatted)
+      helpers(addon, true, false, "both")
+      addon.tick()
+      assert.same({ "%s %s  %d%%", "|cPRIESTMender|r", "short 40", 55 }, text.formatted)
+      helpers(addon, true, false, "none")
+      addon.tick()
+      assert.equals("", text.text)
+    end)
+
+    it("leaves the name out when it is secret or missing, uncoloured when only the class is unusable", function()
+      state.power, state.percent = { party2 = 40 }, { party2 = 55 }
+      helpers(addon, true, false, "percent")
+      inParty(addon)
+      local text = addon.manaText()
+      state.names, state.classes = { party2 = SECRET }, { party2 = "PRIEST" }
+      addon.tick()
+      assert.same({ "%d%%", 55 }, text.formatted)
+      state.names = nil
+      addon.tick()
+      assert.same({ "%d%%", 55 }, text.formatted)
+      state.names, state.classes = { party2 = "Mender" }, { party2 = SECRET }
+      addon.tick()
+      assert.same({ "%s %d%%", "Mender", 55 }, text.formatted)
+      state.classes = { party2 = "WARLOCK" }
+      addon.tick()
+      assert.same({ "%s %d%%", "Mender", 55 }, text.formatted)
+    end)
+
+    it("still passes secret value and percent untouched alongside the name", function()
+      state.names, state.classes = { party2 = "Mender" }, { party2 = "DRUID" }
+      state.power, state.percent = { party2 = MANA }, { party2 = MANA_PCT }
+      helpers(addon, true, false, "both")
+      inParty(addon)
+      local formatted = addon.manaText().formatted
+      assert.is_true(rawequal(MANA_SHORT, formatted[3]))
+      assert.is_true(rawequal(MANA_PCT, formatted[4]))
+    end)
+
+    it("records no protected call in combat with the icon and name text on", function()
+      state.names, state.classes = { party2 = "Mender" }, { party2 = "PRIEST" }
+      state.power, state.percent = { party2 = MANA }, { party2 = MANA_PCT }
+      helpers(addon, true, false, "both")
+      inParty(addon)
+      state.combat = true
+      state.names = { party2 = SECRET }
+      addon.tick()
+      state.names = { party2 = "Mender" }
+      addon.tick()
+      assert.same({}, addon.blocked)
     end)
 
     it("applies a toggle made in combat after combat", function()

@@ -220,6 +220,7 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] Placement mode without lead/assist: the button is grey and does not turn on.
 - [ ] Healer mana on, party with a healer: the bar follows the healer's mana in and out of combat and inside a key, no Lua errors.
 - [ ] No healer / raid / solo: no bar.
+- [ ] Healer mana: a healer role icon sits left of the bar; with mana text on, the healer's name shows in class colour before the numbers.
 - [ ] Mana text Percent/Value/Both shows the healer's mana in that form in and out of combat and in a key; None shows only the bar.
 - [ ] Dead or offline count shows "1 down" when a member dies or disconnects and disappears when they are back.
 - [ ] Placement order: set a few slots to None - the mode and the key skip them; set all to None - Place turns grey, its tooltip says "Placement order is empty" and a click does nothing. A duplicate slot places the same marker again.

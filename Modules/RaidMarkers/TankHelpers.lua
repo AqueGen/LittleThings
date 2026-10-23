@@ -9,6 +9,19 @@ local RED = Shared.RED
 
 local manaCurve
 
+local function HealerName(unit)
+    local name = UnitName(unit)
+    if name == nil or issecretvalue(name) then
+        return nil
+    end
+    local _, classFile = UnitClass(unit)
+    if classFile == nil or issecretvalue(classFile) then
+        return name
+    end
+    local color = C_ClassColor.GetClassColor(classFile)
+    return color and color:WrapTextInColorCode(name) or name
+end
+
 function Shared.RefreshHelpers()
     local manaBar, manaText, downText = Shared.manaBar, Shared.manaText, Shared.downText
     local db = ns.db.raidMarkerPanel
@@ -28,12 +41,27 @@ function Shared.RefreshHelpers()
         manaBar:SetMinMaxValues(0, UnitPowerMax(healer, Enum.PowerType.Mana))
         manaBar:SetValue(power)
         local mode = db.manaText
+        local name = mode ~= "none" and HealerName(healer)
         if mode == "value" then
-            manaText:SetText(AbbreviateNumbers(power))
+            if name then
+                manaText:SetFormattedText("%s %s", name, AbbreviateNumbers(power))
+            else
+                manaText:SetText(AbbreviateNumbers(power))
+            end
         elseif mode == "percent" then
-            manaText:SetFormattedText("%d%%", UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve))
+            local percent = UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve)
+            if name then
+                manaText:SetFormattedText("%s %d%%", name, percent)
+            else
+                manaText:SetFormattedText("%d%%", percent)
+            end
         elseif mode == "both" then
-            manaText:SetFormattedText("%s  %d%%", AbbreviateNumbers(power), UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve))
+            local percent = UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve)
+            if name then
+                manaText:SetFormattedText("%s %s  %d%%", name, AbbreviateNumbers(power), percent)
+            else
+                manaText:SetFormattedText("%s  %d%%", AbbreviateNumbers(power), percent)
+            end
         else
             manaText:SetText("")
         end
@@ -67,6 +95,10 @@ function Shared.BuildHelpers()
     manaBack:SetAllPoints()
     manaBack:SetColorTexture(0, 0, 0, 0.6)
     manaBar:SetAlpha(0)
+    local icon = manaBar:CreateTexture(nil, "OVERLAY")
+    icon:SetAtlas(ns.IconButtons.ROLE_ATLAS.HEALER)
+    icon:SetSize(Shared.ICON, Shared.ICON)
+    icon:SetPoint("RIGHT", manaBar, "LEFT", -Shared.GAP, 0)
     Shared.manaText = manaBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     Shared.manaText:SetPoint("CENTER")
     manaCurve = C_CurveUtil.CreateCurve()

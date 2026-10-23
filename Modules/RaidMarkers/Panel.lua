@@ -18,7 +18,7 @@ local TIP_ANCHORS = {
 }
 local GREY, RED = { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }
 
-Shared.SIZE, Shared.GAP, Shared.CELL_PAD = SIZE, GAP, 8
+Shared.SIZE, Shared.GAP, Shared.CELL_PAD, Shared.ICON = SIZE, GAP, 8, 12
 Shared.GOLD, Shared.GREY, Shared.RED = GOLD, GREY, RED
 
 Shared.active = false
@@ -113,8 +113,9 @@ local function BarHeight()
 end
 
 local function PlaceBar(width)
-    Shared.manaBar:SetPoint("TOPLEFT", Shared.block, "BOTTOMLEFT", 0, -GAP)
-    Shared.manaBar:SetSize(width, BarHeight())
+    local indent = Shared.ICON + GAP
+    Shared.manaBar:SetPoint("TOPLEFT", Shared.block, "BOTTOMLEFT", indent, -GAP)
+    Shared.manaBar:SetSize(width - indent, BarHeight())
 end
 
 local function LayoutHorizontal()
