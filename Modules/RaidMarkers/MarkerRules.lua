@@ -3,6 +3,7 @@ local _, ns = ...
 local Rules = {}
 
 function Rules.Visible(s)
+    if s.preview then return true end
     if not s.inGroup then return false end
     return not s.inRaid or s.leader == true or s.assistant == true
 end

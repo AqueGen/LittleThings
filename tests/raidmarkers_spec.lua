@@ -288,11 +288,40 @@ describe("RaidMarkers", function()
       Slider = function(_, spec) specs[#specs + 1] = spec end,
       Button = function(_, spec) specs[#specs + 1] = spec end,
     }
-    a.module.Pages({ Group = function() return group end })
+    local frame = { scripts = {} }
+    function frame:HookScript(script, fn) self.scripts[script] = fn end
+    a.module.Pages({ Group = function() return group end, frame = frame })
     local byLabel = {}
     for _, spec in ipairs(specs) do byLabel[spec.label] = spec end
-    return specs, byLabel
+    return specs, byLabel, frame
   end
+
+  it("shows the panel solo while its settings page is open", function()
+    local _, _, page = pages(addon)
+    local panel = addon.panel()
+    assert.is_false(panel:IsShown())
+    page.scripts.OnShow(page)
+    assert.is_true(panel:IsShown())
+    page.scripts.OnHide(page)
+    assert.is_false(panel:IsShown())
+  end)
+
+  it("applies a preview change made in combat after combat", function()
+    local _, _, page = pages(addon)
+    local panel = addon.panel()
+    state.combat = true
+    page.scripts.OnShow(page)
+    assert.is_false(panel:IsShown())
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.is_true(panel:IsShown())
+    state.combat = true
+    page.scripts.OnHide(page)
+    assert.is_true(panel:IsShown())
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.is_false(panel:IsShown())
+  end)
 
   local function startDrag(panel)
     panel.scale, panel.left, panel.bottom, panel.width, panel.height = 2, 100, 50, 300, 60
@@ -316,6 +345,19 @@ describe("RaidMarkers", function()
     local db = addon.ns.db.raidMarkerPanel
     assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
     assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.lastPoint)
+  end)
+
+  it("finishes an active drag when the panel hides", function()
+    local panel, mover = addon.panel(), addon.mover()
+    startDrag(panel)
+    mover.left, mover.bottom = 401, 301
+    panel.scripts.OnHide(panel)
+    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_false(mover:IsShown())
+    local db = addon.ns.db.raidMarkerPanel
+    assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
+    panel.scripts.OnDragStop(panel)
+    assert.equals(1, mover.calls.StopMovingOrSizing)
   end)
 
   it("keeps the mover a separate childless frame never anchored to the panel", function()
@@ -382,7 +424,7 @@ describe("RaidMarkers", function()
     addon.module.Enable()
     state.group, state.leader = true, true
     addon.fire("GROUP_ROSTER_UPDATE")
-    local specs = pages(addon)
+    local specs, _, page = pages(addon)
     local panel = addon.panel()
     assert.truthy(addon.button("MRT Raid Check"))
 
@@ -430,6 +472,8 @@ describe("RaidMarkers", function()
     panel.scripts.OnShow(panel)
     addon.tick()
     panel.scripts.OnHide(panel)
+    page.scripts.OnShow(page)
+    page.scripts.OnHide(page)
     addon.module.OnSwitch(false)
     addon.module.OnSwitch(true)
     for _, spec in ipairs(specs) do

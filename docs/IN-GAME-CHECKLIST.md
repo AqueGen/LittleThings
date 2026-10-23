@@ -179,9 +179,10 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 15. Raid marker panel
 
-Switch on Raid marker panel (Group content). It is off by default. Its page has Lock position, Scale, Vertical, Pull left/right seconds and Reset position.
+Switch on Raid marker panel (Group content). It is off by default. Its page has Lock position, Scale, Vertical, Pull left/right seconds and Reset position. The panel also shows while this page is open, so it can be placed solo.
 
 - [ ] No Lua error on login with the module on and off; switching it on and off live works.
+- [ ] Solo: open the Raid marker panel page - the panel appears; drag it, close the window - it hides and keeps the new spot after /reload.
 - [ ] Party leader: all 8 target markers set (left click) and clear (right click) on the target, Clear all removes markers from every unit, world markers place and clear one by one, the last Clear all button clears every world marker.
 - [ ] Party member without lead: panel shown, the Ready, Pull and Role labels turn grey and their tooltips say why; the buttons are not disabled, a click does nothing.
 - [ ] Raid as a plain member: panel hidden. Given assistant out of combat: it shows. Given assistant in combat: it shows after combat, and there is no `ADDON_ACTION_BLOCKED`.

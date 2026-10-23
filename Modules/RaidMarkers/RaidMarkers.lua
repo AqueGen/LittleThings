@@ -17,7 +17,7 @@ local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, l
 
 local active = false
 local panel, row1, row2, events, ticker, mover
-local dragging = false
+local dragging, previewing = false, false
 local pending = {}
 local targetButtons, worldButtons = {}, {}
 local groupButtons = {}
@@ -294,6 +294,7 @@ local function RequestVisibility()
         inRaid = IsInRaid(),
         leader = HasRank(UnitIsGroupLeader),
         assistant = HasRank(UnitIsGroupAssistant),
+        preview = previewing,
     })
     if shown then
         panel:Show()
@@ -349,7 +350,12 @@ local function Build()
         StopTicker()
         ticker = C_Timer.NewTicker(1, RefreshWorld)
     end)
-    panel:SetScript("OnHide", StopTicker)
+    panel:SetScript("OnHide", function()
+        StopTicker()
+        if dragging then
+            StopDrag()
+        end
+    end)
 
     row1, row2 = NewRow(), NewRow()
 
@@ -540,8 +546,17 @@ local function Option(key, spec, apply)
     return spec
 end
 
+local function Preview(shown)
+    previewing = shown
+    RequestVisibility()
+end
+
 function RaidMarkers.Pages(page)
     InitializeDb()
+    if page.frame then
+        page.frame:HookScript("OnShow", function() Preview(true) end)
+        page.frame:HookScript("OnHide", function() Preview(false) end)
+    end
 
     local group = page:Group("Raid marker panel")
     group:Check(Option("locked", { label = "Lock position", combatLocked = true,
