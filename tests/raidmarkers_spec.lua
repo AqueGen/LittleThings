@@ -61,7 +61,7 @@ local ALLOWED = {
     "SetBlendMode", "Hide", "SetShown" },
   MaskTexture = { "SetTexture", "SetAllPoints" },
   FontString = { "SetPoint", "ClearAllPoints", "SetText", "SetTextColor", "GetStringWidth", "SetAlpha", "SetShown" },
-  StatusBar = { "SetScript", "SetPoint", "ClearAllPoints", "SetSize", "SetShown", "SetAlpha", "EnableMouse", "CreateTexture",
+  StatusBar = { "SetScript", "SetPoint", "ClearAllPoints", "SetSize", "SetShown", "SetAlpha", "EnableMouse", "SetMouseClickEnabled", "CreateTexture",
     "SetStatusBarTexture", "SetStatusBarColor", "SetMinMaxValues", "SetValue" },
 }
 

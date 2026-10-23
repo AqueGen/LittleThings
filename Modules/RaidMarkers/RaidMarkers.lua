@@ -313,6 +313,8 @@ local function LayoutVertical()
     panel:SetSize(width + 2 * PAD, height + GAP + 3 * step - GAP + extra + 2 * PAD)
 end
 
+local RefreshHelpers
+
 local function Layout()
     row1:ClearAllPoints()
     row1:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, -PAD)
@@ -327,6 +329,7 @@ local function Layout()
     else
         LayoutHorizontal()
     end
+    RefreshHelpers()
 end
 
 local function Place()
@@ -427,7 +430,7 @@ local function RefreshWorld()
     end
 end
 
-local function RefreshHelpers()
+function RefreshHelpers()
     local db = ns.db.raidMarkerPanel
     local party = IsInGroup() and not IsInRaid()
     local healer
@@ -655,12 +658,13 @@ local function Build()
     manaBar.title = "Healer mana"
     manaBar.lines = function()
         local name = manaBar.unit and UnitName(manaBar.unit)
-        if name and not issecretvalue(name) then
-            return { name }
+        if issecretvalue(name) then
+            return {}
         end
-        return {}
+        return { name }
     end
     manaBar:EnableMouse(true)
+    manaBar:SetMouseClickEnabled(false)
     manaBar:SetScript("OnEnter", function(self)
         if self.unit then
             ShowTip(self)
