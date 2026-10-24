@@ -8,4 +8,6 @@
     <Binding name="DAMAGEMETERCOMPANION_RESET" category="LittleThings">
         DamageMeterCompanion_ResetData()
     </Binding>
+    <Binding name="CLICK LittleThingsWorldMarkerNext:LeftButton" category="LittleThings"/>
+    <Binding name="CLICK LittleThingsWorldMarkerClear:LeftButton" category="LittleThings"/>
 </Bindings>

@@ -66,7 +66,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 6. Settings pages
 
-- [ ] Fresh profile: Damage meter, Group leader icons, Character panel and Performance are off, Group finder and Journal loot are on, each module's switch on its page with its description. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
+- [ ] Fresh profile: Damage meter, Group leader icons, Raid marker panel, Character panel and Performance are off, Group finder and Journal loot are on, each module's switch on its page with its description. A profile adopted from Damage Meter Companion keeps the damage meter on; a profile with any group finder tool on has Group finder on.
 - [ ] Switch Journal loot on: its options appear on its page at once. Switch it off: the options go and only the switch and description stay, and the menu entry greys.
 - [ ] Switch Group finder on: its page shows Sort Mythic+ applicants, Applicant filter panel, Group keystones and Warcraft Logs link, all ticked, each with its options under it. Untick one: its options go and the feature stops (the filter panel hides, the menu entry goes). Group finder off: every tool stops at once and the page shows only the switch and description, and the tools keep their own ticks for next time.
 - [ ] The behaviour page has readable numbers, snapping, snap distance, idle transparency, layer, and at the bottom a Blizzard section with Enable Damage Meter and Auto Reset that mirror Gameplay Enhancements both ways.
@@ -82,7 +82,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## Settings window
 
 - [ ] `/lt` opens the window; `/lt` again while open keeps it open on the same page. Esc and the X close it. Game > Options > AddOns > LittleThings shows a short page with Open LittleThings, which closes the game's options and opens the window. The damage meter gear menu's LittleThings settings opens the Damage meter page.
-- [ ] The menu shows Group content (Group finder, Group leader icons), Combat (Damage meter, Meter windows), Character and loot (Character panel, Journal loot), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
+- [ ] The menu shows Group content (Group finder, Group leader icons, Raid marker panel), Combat (Damage meter, Meter windows), Character and loot (Character panel, Journal loot), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
 - [ ] Drag by the title moves the window, the corner grip resizes it, it never goes below 800x480 and never changes size by itself. Position and size are the same after /reload.
 - [ ] Every page's controls do what the old Blizzard pages did: damage meter behaviour, layer, the two Blizzard switches, the Meter windows rows; both character panel bars; journal loot icons and loot spec buttons; group finder sections with their own switches; Memory, Graphics and Addons buttons. Values changed elsewhere (filter panel, /lt format) show on the page when it is opened again.
 - [ ] Changing Mythic+ sort by, Sort Mythic+ applicants or Damage meter offers a reload, as before.
@@ -176,3 +176,55 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Fresh install or a profile that never had it: Group finder page shows Summary site links unticked; no Compare applicants button on a Mythic+ listing and no Summary page entry in player menus.
 - [ ] Tick it: the button appears on a Mythic+ listing at once, and right-clicking a player shows Summary page under LittleThings. No Set address button anywhere.
 - [ ] Press Compare applicants: the popup holds a full https://brag-sheet.aquegen.workers.dev/compare?... link; pasted into the browser it starts checking the first batch (with a saved WCL key), and Open link from clipboard on an open compare page loads it too.
+
+## 15. Raid marker panel
+
+Switch on Raid marker panel (Group content). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Lock position, Scale, Vertical, Pull left/right seconds and Reset position, and a Placement order group (1st..8th). The panel also shows while this page is open, so it can be placed solo.
+
+- [ ] No Lua error on login with the module on and off; switching it on and off live works.
+- [ ] Solo: open the Raid marker panel page - the panel appears; drag it, close the window - it hides and keeps the new spot after /reload.
+- [ ] Solo, settings page open at the default position: the panel shows above the settings window.
+- [ ] Solo with the window closed: Show when solo on - the panel shows; off - it hides.
+- [ ] Party member without lead: In a party, only as leader on - the panel hides; off - it shows. As party leader it shows either way.
+- [ ] Raid member without lead or assist: In a raid, also without lead or assist on - the panel shows; off - it hides.
+- [ ] **Hide in combat on: pull a mob - the panel hides at once and returns after combat, no `ADDON_ACTION_BLOCKED`.**
+- [ ] Hide in combat off: the panel stays during combat.
+- [ ] Party leader: all 8 target markers set (left click) and clear (right click) on the target, Clear all removes markers from every unit, world markers place and clear one by one, the last Clear all button clears every world marker.
+- [ ] Party member without lead: panel shown, the Ready, Pull and Role labels turn grey and their tooltips say why; the buttons are not disabled, a click does nothing.
+- [ ] Raid as a plain member: panel hidden. Given assistant out of combat: it shows. Given assistant in combat: it shows after combat, and there is no `ADDON_ACTION_BLOCKED`.
+- [ ] **In combat and inside an active key: target and world markers still work; the Ready, Pull and Role labels turn grey and their tooltips say why (the buttons are not disabled).**
+- [ ] Pull: left click starts 10 s, right click 5 s; a click during the countdown cancels; another client with DBM shows the pull bar and cancels it too.
+- [ ] After a countdown started by someone else during chat lockdown finishes on its own, the next Pull click starts a pull instead of cancelling.
+- [ ] After a key ends out of combat, Ready and Pull become usable without a reload.
+- [ ] The target highlight follows the target: a marked target lights its marker, a new target moves or clears it.
+- [ ] A placed world marker shows a gold ring; the dots stay bright.
+- [ ] World marker dots and the next-marker ring are round.
+- [ ] The panel and every button have a thin border; the group buttons form a block right of both rows: Ready and Pull on top, Role across the bottom.
+- [ ] Ready check with one decline: the button goes red. With one player silent until the end: red. All ready: green. It resets after 5 s.
+- [ ] "Ready 20/20" in a 20-player raid fits the button.
+- [ ] Dragging: the panel can only be grabbed by its padding and gaps, because the secure buttons take the mouse. Note whether that is comfortable. Lock position stops the drag; the position survives /reload; Reset position brings it back.
+- [ ] **Start dragging the panel, pull a mob, release (Hide in combat off): no `ADDON_ACTION_BLOCKED`; the outline stops at the release point; the panel jumps there when combat ends; it survives /reload; click-targeting and right-drag camera work during the pull.**
+- [ ] Hide in combat on: start dragging, pull a mob - the outline disappears at the pull, the panel keeps the spot where the outline was, no `ADDON_ACTION_BLOCKED`.
+- [ ] `/dump LittleThingsRaidMarkers:IsProtected()` in a group - note the result.
+- [ ] Scale and Vertical change the panel at once out of combat and are greyed in combat.
+- [ ] Key bindings (under LittleThings): Next world marker at the cursor follows the Placement order (1..8 by default) and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places the 1st slot again.
+- [ ] Horizontal layout: the Place button sits between the world dots and the world clear icon, both rows end at the same edge, and "Place" fits its button.
+- [ ] Placement mode: left click on Place - the label turns gold with "1/N", the button gets a gold border and the next world dot a white ring.
+- [ ] With the mode on, every left click on the ground places the next marker of the Placement order at the cursor: with the default order four clicks place 1, 2, 3, 4 (not 1, 3, 5, 7); after the last one it wraps to the first and the mode stays on.
+- [ ] Right click on Place ends the mode; so does Esc, and Esc does not open the game menu while the mode is on. A second left click on Place also ends it.
+- [ ] **The mode turns on, places markers and turns off in combat, with no `ADDON_ACTION_BLOCKED`.**
+- [ ] After the mode ends, left click targets and left-drag turns the camera again.
+- [ ] The mode ends when the panel hides by the visibility rule (for example leaving the group) and when the module is switched off, after combat if that happens in combat. After /reload the mode is off and left click targets.
+- [ ] **Hide in combat on, placement mode on, pull: the mode ends at once, left click targets again during the fight, no `ADDON_ACTION_BLOCKED`.**
+- [ ] Placement mode: the panel's world clear icon removes all ground markers and the next click places the first marker of the order.
+- [ ] Placement mode without lead/assist: the button is grey and does not turn on.
+- [ ] Healer mana on, party with a healer: the bar follows the healer's mana in and out of combat and inside a key, no Lua errors.
+- [ ] No healer / raid / solo: no bar.
+- [ ] Healer mana: a healer role icon sits left of the bar; with mana text on, the healer's name shows in class colour before the numbers.
+- [ ] Mana text Percent/Value/Both shows the healer's mana in that form in and out of combat and in a key; None shows only the bar.
+- [ ] Dead or offline count shows "1 down" when a member dies or disconnects and disappears when they are back.
+- [ ] Placement order: set a few slots to None - the mode and the key skip them; set all to None - Place turns grey, its tooltip says "Placement order is empty" and a click does nothing. A duplicate slot places the same marker again.
+- [ ] Vertical layout: one column, each target marker next to the world marker of the same symbol (star next to the yellow star, and so on); Clear all and the world clear icon under the pairs, then Place, Ready, Pull and Role across the column; "Clear all" fits its button.
+- [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**
+- [ ] **`/console taintLog 1`, a full key: no LittleThings entries in `Logs/taint.log`.**
+- [ ] MRT's own Marks Bar is switched off by the owner (`/rt mb` toggle) so the two panels do not overlap.

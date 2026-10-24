@@ -184,9 +184,9 @@ function Group:Dropdown(spec)
             spec.set(spec.default)
         end
         dropdown:GenerateMenu()
-        local locked = Locked(spec)
-        dropdown:SetEnabled(not locked)
-        label:SetTextColor(unpack(locked and T.muted or T.text))
+        local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
+        dropdown:SetEnabled(enabled)
+        label:SetTextColor(unpack(enabled and T.text or T.muted))
     end, spec.visible)
 end
 
