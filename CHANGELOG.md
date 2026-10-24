@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/AqueGen/LittleThings/compare/v0.16.1...v0.17.0) (2026-10-24)
+
+
+### Features
+
+* raid marker panel ([#42](https://github.com/AqueGen/LittleThings/issues/42)) ([2d7dbf6](https://github.com/AqueGen/LittleThings/commit/2d7dbf625fd10558a4ad844f7819c4f6c9789a7a))
+
 ## [0.16.1](https://github.com/AqueGen/LittleThings/compare/v0.16.0...v0.16.1) (2026-10-11)
 
 
