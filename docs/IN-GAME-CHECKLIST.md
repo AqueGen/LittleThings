@@ -243,3 +243,14 @@ Switch on Battle res guard (Group content). It is off by default. Its page has a
 - [ ] Dead in a key, run `/run local c=C_Spell.GetSpellCharges(20484) print(c and c.currentCharges, c and issecretvalue(c.currentCharges))` and note whether the count is secret; the window's number matches the game's charge count.
 - [ ] Switch the module off while dead: the frame and window go at once and Release works.
 - [ ] **`/console taintLog 1`, die and release through the window and through Blizzard's own button: no LittleThings entries in `Logs/taint.log`, BugSack empty.**
+
+## 17. New in LittleThings
+
+- [ ] With an existing account DB, `/run LittleThingsDB.battleResGuard = nil` then `/reload`: a couple of seconds after login the New in LittleThings panel shows in the middle of the screen with one Battle res guard row: title, description and an Enable box.
+- [ ] Tick Enable: the settings window's Battle res guard page shows the switch on and the menu entry is no longer grey, no reload prompt.
+- [ ] `/run LittleThingsDB.damageMeter = nil` then `/reload`: tick Enable on the Damage meter row - the reload prompt names Damage meter.
+- [ ] `/run LittleThingsDB.groupFinder = false LittleThingsDB.signUpRoles = nil` then `/reload`: the row reads Group finder: Sign-up roles on the search panel. Tick Enable: Group finder is on too. Untick it: only Sign-up roles goes off, Group finder stays on.
+- [ ] Open settings closes the panel and opens the module's page (the parent's page for a child row). Close, Esc, then `/reload` again: no panel.
+- [ ] Clear a switch as above, `/reload` while in combat: no panel until combat ends, then it shows. Enter combat with the panel open: Enable greys and comes back after combat.
+- [ ] Delete `WTF/Account/<account>/SavedVariables/LittleThings.lua` with the game closed (fresh install), log in: no panel.
+- [ ] BugSack stays empty throughout.
