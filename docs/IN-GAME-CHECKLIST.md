@@ -254,3 +254,20 @@ Switch on Battle res guard (Group content). It is off by default. Its page has a
 - [ ] Clear a switch as above, `/reload` while in combat: no panel until combat ends, then it shows. Enter combat with the panel open: Enable greys and comes back after combat.
 - [ ] Delete `WTF/Account/<account>/SavedVariables/LittleThings.lua` with the game closed (fresh install), log in: no panel.
 - [ ] BugSack stays empty throughout.
+
+## 18. Gear you will not wear
+
+Switch on Gear you will not wear (Character and loot). It is off by default.
+
+- [ ] Wearing a Mythic-track piece, carry a soulbound Champion or Heroic piece for the same slot whose track tops out at or below the worn level: the tooltip shows "LittleThings: you will not wear this (max N <= equipped M)" in grey, the numbers matching the upgrade track and the worn item.
+- [ ] A Heroic piece whose track max is above the worn item: no line, no marker.
+- [ ] An item with an appearance you have not collected: no line, no marker.
+- [ ] A tier set piece, a trinket, a weapon, an off-hand or shield, a Bind on Equip piece, a Warbound until equipped piece: none of them marked.
+- [ ] A ring is compared with the lower of the two worn rings. Take one ring off: no ring is marked.
+- [ ] A neck and a ring (no appearance) still get marked when below the worn one.
+- [ ] Grey items get no tooltip line and no red cross, and keep their junk coin in Baganator.
+- [ ] Equip a different item in a slot: markers and tooltip lines for that slot update without reopening the bags.
+- [ ] Disable Baganator, `/reload`: Blizzard's bags (separate and combined) show a small red cross in the top right of marked items; Blizzard's own junk coin at a merchant is unchanged. Switch the module off: the crosses go at once.
+- [ ] With Baganator: Junk detection on the General tab lists "LittleThings: gear you will not wear", and Baganator picked it by itself if it was on Poor quality. Marked items get the junk coin and sort with junk. Switch the module off: only greys keep the coin, as with Poor quality; after `/reload` note what Junk detection shows and whether greys are still coined.
+- [ ] Hover items in the bank, in chat links and in the Adventure Guide: no line.
+- [ ] **`/console taintLog 1`, use and equip items from Blizzard's bags in combat: no LittleThings entries in `Logs/taint.log`, BugSack empty.**
