@@ -1,13 +1,15 @@
 local addonName, ns = ...
 
-local Rules = ns.BagJunkRules
+local Rules = ns.LowLevelGearRules
 local T = ns.Widgets.THEME
 
-local BagJunk = {}
+local LowLevelGear = {}
 
-local PLUGIN_LABEL = "LittleThings: gear you will not wear"
-local PLUGIN_ID = "littlethings_never_wear"
-local LINE = "LittleThings: you will not wear this (%s)"
+local CORNER_LABEL = "LittleThings: low level gear"
+local CORNER_ID = "littlethings_low_level"
+local CORNER_TEXT = "Low"
+local CORNER_COLOR = { 1, 0.35, 0.1 }
+local LINE = "LittleThings: low level gear (%s)"
 local MARKER_ATLAS = "common-icon-redx"
 local MARKER_SIZE = 14
 local REFRESH_DELAY = 0.5
@@ -47,12 +49,11 @@ local function Facts(location)
     end
 
     local link = C_Item.GetItemLink(location)
-    local quality = C_Item.GetItemQuality(location)
-    if not link or not quality then
+    if not link then
         return nil
     end
-    if quality == Enum.ItemQuality.Poor then
-        return { poor = true }
+    if C_Item.GetItemQuality(location) == Enum.ItemQuality.Poor then
+        return {}
     end
 
     local _, _, _, _, _, _, _, _, equipLoc, _, _, _, _, _, _, setID = C_Item.GetItemInfo(link)
@@ -72,31 +73,28 @@ local function Facts(location)
         accountUntilEquip = C_Item.IsBoundToAccountUntilEquip(location),
         uncollected = hasAppearance and not C_TransmogCollection.PlayerHasTransmogByItemInfo(link),
         itemLevel = C_Item.GetCurrentItemLevel(location),
+        hasUpgradeInfo = upgrade ~= nil,
         maxItemLevel = upgrade and upgrade.maxItemLevel,
+        trackStringID = upgrade and upgrade.trackStringID,
     }
 end
 
--- Greys count only for Baganator, whose junk source we replace; our own marker
--- and tooltip line are for gear.
-local function Judge(bag, slot, withPoor)
-    local location = ItemLocation:CreateFromBagAndSlot(bag, slot)
-    if not ns.IsOn("bagJunk") then
-        return withPoor and C_Item.DoesItemExist(location) and C_Item.GetItemQuality(location) == Enum.ItemQuality.Poor
+-- Returns nil while item data is still loading.
+local function Judge(bag, slot)
+    if not ns.IsOn("lowLevelGear") or bag < Enum.BagIndex.Backpack or bag > NUM_TOTAL_EQUIPPED_BAG_SLOTS then
+        return false
     end
 
-    local facts = Facts(location)
+    local facts = Facts(ItemLocation:CreateFromBagAndSlot(bag, slot))
     if not facts then
         incomplete = true
-        return false
-    end
-    if facts.poor and not withPoor then
-        return false
+        return nil
     end
     return Rules.Evaluate(facts, EquippedLevels())
 end
 
 local function OnTooltip(tooltip, data)
-    if not ns.IsOn("bagJunk") or tooltip:IsForbidden() then
+    if not ns.IsOn("lowLevelGear") or tooltip:IsForbidden() then
         return
     end
 
@@ -110,22 +108,17 @@ local function OnTooltip(tooltip, data)
         return
     end
 
-    local bag, slot = location:GetBagAndSlot()
-    if bag < Enum.BagIndex.Backpack or bag > NUM_TOTAL_EQUIPPED_BAG_SLOTS then
-        return
-    end
-
-    local junk, reason = Judge(bag, slot)
-    if junk then
+    local low, reason = Judge(location:GetBagAndSlot())
+    if low then
         tooltip:AddLine(LINE:format(reason), unpack(T.muted))
     end
 end
 
 local function PaintFrame(frame)
     for _, button in frame:EnumerateValidItems() do
-        local junk = Judge(button:GetBagID(), button:GetID())
+        local low = Judge(button:GetBagID(), button:GetID()) == true
         local marker = markers[button]
-        if junk and not marker then
+        if low and not marker then
             marker = button:CreateTexture(nil, "OVERLAY", nil, 7)
             marker:SetAtlas(MARKER_ATLAS)
             marker:SetSize(MARKER_SIZE, MARKER_SIZE)
@@ -133,7 +126,7 @@ local function PaintFrame(frame)
             markers[button] = marker
         end
         if marker then
-            marker:SetShown(junk)
+            marker:SetShown(low)
         end
     end
 end
@@ -167,7 +160,7 @@ local function QueueRefresh()
 end
 
 local function OnEvent(_, event)
-    if not ns.IsOn("bagJunk") then
+    if not ns.IsOn("lowLevelGear") then
         return
     end
     if event == "GET_ITEM_INFO_RECEIVED" then
@@ -182,16 +175,31 @@ local function OnEvent(_, event)
     QueueRefresh()
 end
 
+local function CornerInit(itemButton)
+    local text = itemButton:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    text:SetText(CORNER_TEXT)
+    text:SetTextColor(unpack(CORNER_COLOR))
+    text.sizeFont = true
+    return text
+end
+
+local function CornerUpdate(_, details)
+    local location = details.itemLocation
+    if not (location and location.bagID and location.slotIndex) then
+        return false
+    end
+    return Judge(location.bagID, location.slotIndex)
+end
+
 -- Enable runs at PLAYER_LOGIN, after every addon that is not load-on-demand,
 -- so Baganator is either loaded by now or not installed.
 local function RegisterBaganator()
-    if baganator or not (Baganator and Baganator.API and Baganator.API.RegisterJunkPlugin) then
+    if baganator or not (Baganator and Baganator.API and Baganator.API.RegisterCornerWidget) then
         return
     end
     baganator = true
-    Baganator.API.RegisterJunkPlugin(PLUGIN_LABEL, PLUGIN_ID, function(bag, slot)
-        return Judge(bag, slot, true) == true
-    end)
+    Baganator.API.RegisterCornerWidget(CORNER_LABEL, CORNER_ID, CornerUpdate, CornerInit,
+        { corner = "bottom_left", priority = 2 })
 end
 
 local function Install()
@@ -214,24 +222,24 @@ local function Install()
     events:SetScript("OnEvent", OnEvent)
 end
 
-function BagJunk.Enable()
+function LowLevelGear.Enable()
     Install()
     RegisterBaganator()
     equipped = nil
     Refresh()
 end
 
-function BagJunk.OnSwitch(enabled)
+function LowLevelGear.OnSwitch(enabled)
     if enabled then
-        BagJunk.Enable()
+        LowLevelGear.Enable()
     elseif installed then
         Refresh()
     end
 end
 
-function BagJunk.Pages(page)
-    page:Group("Baganator"):Note("With Baganator, pick " .. PLUGIN_LABEL .. " under Junk detection on the General tab of Baganator's settings. Baganator picks it by itself while Junk detection is still on its default, Poor quality. Grey items keep their junk coin with it.")
+function LowLevelGear.Pages(page)
+    page:Group("Baganator"):Note("With Baganator, the marker is a corner widget, " .. CORNER_LABEL .. ". It shows \"Low\" in the bottom left corner of the item icon, under the equipment set mark. Move it or turn it off under Icon Corners on the Icons tab of Baganator's settings.")
 end
 
-BagJunk.key = "bagJunk"
-ns.RegisterModule("BagJunk", BagJunk)
+LowLevelGear.key = "lowLevelGear"
+ns.RegisterModule("LowLevelGear", LowLevelGear)

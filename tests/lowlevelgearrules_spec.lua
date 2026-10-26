@@ -1,9 +1,9 @@
-package.path = "./Modules/BagJunk/?.lua;" .. package.path
+package.path = "./Modules/LowLevelGear/?.lua;" .. package.path
 
-local Rules = require("BagJunkRules")
+local Rules = require("LowLevelGearRules")
 
 local function item(fields)
-  local base = { poor = false, equipLoc = "INVTYPE_HEAD", bound = true, accountUntilEquip = false,
+  local base = { equipLoc = "INVTYPE_HEAD", bound = true, accountUntilEquip = false,
     uncollected = false, itemLevel = 619 }
   for k, v in pairs(fields or {}) do base[k] = v end
   return base
@@ -12,30 +12,35 @@ end
 local WORN = { [1] = 636, [2] = 636, [3] = 636, [5] = 636, [6] = 636, [7] = 636, [8] = 636,
   [9] = 636, [10] = 636, [11] = 640, [12] = 626, [15] = 636 }
 
-describe("BagJunkRules.Evaluate", function()
-  it("marks poor quality as junk whatever else it is", function()
-    local junk, reason = Rules.Evaluate(item({ poor = true, equipLoc = "INVTYPE_WEAPON", bound = false, uncollected = true }), WORN)
-    assert.is_true(junk)
-    assert.equals("poor quality", reason)
-  end)
-
+describe("LowLevelGearRules.Evaluate", function()
   it("marks bound armor whose max is below the worn piece, with the reason", function()
-    local junk, reason = Rules.Evaluate(item({ maxItemLevel = 619 }), WORN)
+    local junk, reason = Rules.Evaluate(item({ hasUpgradeInfo = true, maxItemLevel = 619 }), WORN)
     assert.is_true(junk)
     assert.equals("max 619 <= equipped 636", reason)
   end)
 
-  it("counts an equal level as junk", function()
-    assert.is_true((Rules.Evaluate(item({ maxItemLevel = 636 }), WORN)))
+  it("counts an equal level as low", function()
+    assert.is_true((Rules.Evaluate(item({ hasUpgradeInfo = true, maxItemLevel = 636 }), WORN)))
   end)
 
   it("keeps an item that upgrades above the worn piece", function()
-    assert.is_false((Rules.Evaluate(item({ itemLevel = 610, maxItemLevel = 639 }), WORN)))
+    assert.is_false((Rules.Evaluate(item({ itemLevel = 610, hasUpgradeInfo = true, maxItemLevel = 639 }), WORN)))
   end)
 
   it("falls back to the current level without an upgrade track", function()
     assert.is_true((Rules.Evaluate(item({ itemLevel = 630 }), WORN)))
     assert.is_false((Rules.Evaluate(item({ itemLevel = 640 }), WORN)))
+  end)
+
+  it("never marks a tracked item whose max level is 0 or missing", function()
+    assert.is_false((Rules.Evaluate(item({ itemLevel = 334, hasUpgradeInfo = true, maxItemLevel = 0 }), WORN)))
+    assert.is_false((Rules.Evaluate(item({ itemLevel = 334, hasUpgradeInfo = true }), WORN)))
+  end)
+
+  it("never marks an item on a track in the never set", function()
+    local never = { [9999] = true }
+    assert.is_false((Rules.Evaluate(item({ hasUpgradeInfo = true, maxItemLevel = 619, trackStringID = 9999 }), WORN, never)))
+    assert.is_true((Rules.Evaluate(item({ hasUpgradeInfo = true, maxItemLevel = 619, trackStringID = 9998 }), WORN, never)))
   end)
 
   it("never marks without a level", function()
