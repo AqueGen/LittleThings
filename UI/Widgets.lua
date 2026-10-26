@@ -46,7 +46,7 @@ end
 
 local function AskReload(spec, valueText)
     if spec.reload then
-        StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", spec.label, valueText)
+        StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", spec.name or spec.label, valueText)
     end
 end
 

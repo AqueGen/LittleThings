@@ -1,6 +1,6 @@
 # LittleThings
 
-Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. Settings live in the addon's own window (/lt): a menu on the left with every module, grouped, and the module's switch and options on the right. Group finder and Journal loot start on, the rest start off; a module that is off shows greyed in the menu and only its switch on its page. The window opens in combat too, with the switches and the options that change the game's own settings locked until combat ends. Off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing.
+Small touches on the default UI: the bits that were missing. Nothing is replaced and nothing is heavy. Settings live in the addon's own window (/lt): a menu on the left with every module, grouped, and the module's switch and options on the right. Group finder and Journal loot start on, the rest start off; a module that is off shows greyed in the menu and only its switch on its page. The window opens in combat too, with the switches and the options that change the game's own settings locked until combat ends. Off means the game runs exactly as Blizzard shipped it, and a module that is off costs nothing. After an update that adds modules, a New in LittleThings panel shows once at login, out of combat, with each new module's description and an Enable box; a fresh install skips it.
 
 Retail only, patch 12.1. No libraries, no dependencies.
 

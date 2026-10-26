@@ -233,6 +233,7 @@ local function AdoptOldSavedVariables()
 end
 
 local function InitializeSavedVariables()
+    ns.newModules = ns.WhatsNewRules.NewRows(LittleThingsDB, ns.MODULES)
     AdoptOldSavedVariables()
 
     LittleThingsDB = LittleThingsDB or {}
