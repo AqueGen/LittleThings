@@ -20,38 +20,44 @@ local SLOTS = {
 Rules.SLOTS = SLOTS
 Rules.EQUIPPED_SLOTS = { 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 15 }
 
--- Filled with the Myth track's trackStringID once an in-game probe reads it.
-Rules.NEVER_TRACKS = {}
+-- trackStringID from C_Item.GetItemUpgradeInfo, read in game on 2026-10-26 (Midnight season);
+-- maxItemLevel came back 0 for every item, so tracks are the only upgrade ceiling we have.
+-- An id missing here (Explorer, a new season) means the item is never marked.
+Rules.TRACK_RANK = { [971] = 1, [972] = 2, [973] = 3, [974] = 4, [978] = 5 }
+Rules.NEVER_TRACKS = { [978] = true }
 
-function Rules.Evaluate(item, equipped, neverTracks)
-    neverTracks = neverTracks or Rules.NEVER_TRACKS
+local function Worse(a, b)
+    local rankA, rankB = Rules.TRACK_RANK[a.track], Rules.TRACK_RANK[b.track]
+    if rankA ~= rankB then
+        return rankA < rankB and a or b
+    end
+    return a.level <= b.level and a or b
+end
+
+function Rules.Evaluate(item, equipped)
     local slots = SLOTS[item.equipLoc]
-    if not slots or item.setID or not item.bound or item.accountUntilEquip or item.uncollected
-        or neverTracks[item.trackStringID] then
+    local rank = Rules.TRACK_RANK[item.trackStringID]
+    if not slots or not rank or not item.itemLevel or item.setID or not item.bound or item.accountUntilEquip
+        or item.uncollected or Rules.NEVER_TRACKS[item.trackStringID] then
         return false
     end
 
     local worn
     for _, slot in ipairs(slots) do
-        local level = equipped[slot]
-        if not level then
+        local piece = equipped[slot]
+        if not (piece and piece.level and Rules.TRACK_RANK[piece.track]) then
             return false
         end
-        worn = worn and math.min(worn, level) or level
+        worn = worn and Worse(worn, piece) or piece
     end
 
-    local max = item.itemLevel
-    if item.hasUpgradeInfo then
-        max = item.maxItemLevel
-        if max and max <= 0 then
-            max = nil
-        end
-    end
-    if not max or max > worn then
+    local wornRank = Rules.TRACK_RANK[worn.track]
+    if rank > wornRank or (rank == wornRank and item.itemLevel >= worn.level) then
         return false
     end
 
-    return true, string.format("max %d <= equipped %d", max, worn)
+    return true, string.format("%s %d, worn %s %d", tostring(item.trackString), item.itemLevel,
+        tostring(worn.trackString), worn.level)
 end
 
 if ns then ns.LowLevelGearRules = Rules end

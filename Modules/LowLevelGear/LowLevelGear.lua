@@ -30,8 +30,11 @@ local function EquippedLevels()
     for _, slot in ipairs(Rules.EQUIPPED_SLOTS) do
         local location = ItemLocation:CreateFromEquipmentSlot(slot)
         if C_Item.DoesItemExist(location) then
-            levels[slot] = C_Item.GetCurrentItemLevel(location)
-            complete = complete and levels[slot] ~= nil
+            local link = C_Item.GetItemLink(location)
+            local upgrade = link and C_Item.GetItemUpgradeInfo(link)
+            levels[slot] = { level = C_Item.GetCurrentItemLevel(location),
+                track = upgrade and upgrade.trackStringID, trackString = upgrade and upgrade.trackString }
+            complete = complete and link ~= nil and levels[slot].level ~= nil
         end
     end
     if complete then
@@ -73,9 +76,8 @@ local function Facts(location)
         accountUntilEquip = C_Item.IsBoundToAccountUntilEquip(location),
         uncollected = hasAppearance and not C_TransmogCollection.PlayerHasTransmogByItemInfo(link),
         itemLevel = C_Item.GetCurrentItemLevel(location),
-        hasUpgradeInfo = upgrade ~= nil,
-        maxItemLevel = upgrade and upgrade.maxItemLevel,
         trackStringID = upgrade and upgrade.trackStringID,
+        trackString = upgrade and upgrade.trackString,
     }
 end
 
@@ -242,7 +244,8 @@ function LowLevelGear.Report()
     local levels = EquippedLevels()
     local worn = {}
     for _, slot in ipairs(Rules.EQUIPPED_SLOTS) do
-        worn[#worn + 1] = slot .. "=" .. tostring(levels[slot])
+        local piece = levels[slot]
+        worn[#worn + 1] = slot .. "=" .. (piece and (tostring(piece.level) .. "/" .. tostring(piece.track)) or "-")
     end
     ns.Print("low level gear " .. (ns.IsOn("lowLevelGear") and "on" or "off") .. ", Baganator corner active: "
         .. tostring(baganator and Baganator.API.IsCornerWidgetActive(CORNER_ID)) .. ", worn: " .. table.concat(worn, " "))
@@ -251,11 +254,10 @@ function LowLevelGear.Report()
             local location = ItemLocation:CreateFromBagAndSlot(bag, slot)
             local facts = Facts(location)
             if facts == nil or (facts.equipLoc and Rules.SLOTS[facts.equipLoc]) then
-                local upgrade = facts and C_Item.GetItemUpgradeInfo(C_Item.GetItemLink(location))
-                print(string.format("%s %s ilvl=%s max=%s track=%s/%s bound=%s acct=%s uncollected=%s set=%s -> %s",
+                print(string.format("%s %s ilvl=%s track=%s/%s bound=%s acct=%s uncollected=%s set=%s -> %s",
                     tostring(C_Item.GetItemLink(location)), tostring(facts and facts.equipLoc),
-                    tostring(facts and facts.itemLevel), tostring(facts and facts.maxItemLevel),
-                    tostring(upgrade and upgrade.trackString), tostring(facts and facts.trackStringID),
+                    tostring(facts and facts.itemLevel),
+                    tostring(facts and facts.trackString), tostring(facts and facts.trackStringID),
                     tostring(facts and facts.bound), tostring(facts and facts.accountUntilEquip),
                     tostring(facts and facts.uncollected), tostring(facts and facts.setID),
                     facts and tostring((Rules.Evaluate(facts, levels))) or "not loaded"))

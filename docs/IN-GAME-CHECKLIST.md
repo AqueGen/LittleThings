@@ -259,14 +259,14 @@ Switch on Battle res guard (Group content). It is off by default. Its page has a
 
 Switch on Low level gear (Character and loot). It is off by default.
 
-- [ ] Wearing a Mythic-track piece, carry a soulbound Champion or Heroic piece for the same slot whose track tops out at or below the worn level: the tooltip shows "LittleThings: low level gear (max N <= equipped M)" in grey, the numbers matching the upgrade track and the worn item.
-- [ ] A Heroic piece whose track max is above the worn item: no line, no marker.
+- [ ] `/lt gear`: the first line lists every worn slot as level/trackStringID; each bag gear line ends in `-> true` exactly where the rules below say so.
+- [ ] A soulbound Champion piece while wearing Hero in that slot: the tooltip shows "LittleThings: low level gear (Champion N, worn Hero M)" in grey. A Hero piece below the worn Hero level: marked too. A Hero piece at or above the worn level: not marked.
+- [ ] A Hero piece while wearing Champion in that slot: not marked.
 - [ ] An item with an appearance you have not collected: no line, no marker.
 - [ ] A tier set piece, a trinket, a weapon, an off-hand or shield, a Bind on Equip piece, a Warbound until equipped piece: none of them marked.
-- [ ] A ring is compared with the lower of the two worn rings. Take one ring off: no ring is marked.
+- [ ] A ring is compared with the worse of the two worn rings (lower track, then lower level). Take one ring off: no ring is marked.
 - [ ] A neck and a ring (no appearance) still get marked when below the worn one.
-- [ ] A soulbound Myth-track piece (the 1/6 cloak that read "max 0 <= equipped 334" before): no line, no marker.
-- [ ] Myth track pending: hover a Myth-track piece and note its upgrade trackStringID for the never-marked set.
+- [ ] A soulbound Myth-track piece (the Silken Voodoo Drape, Myth 1/6 at 318) is never marked, even below a worn Myth piece.
 - [ ] Equip a different item in a slot: markers and tooltip lines for that slot update without reopening the bags.
 - [ ] Disable Baganator, `/reload`: Blizzard's bags (separate and combined) show a small red cross in the top right of marked items; Blizzard's own junk coin at a merchant is unchanged. Switch the module off: the crosses go at once.
 - [ ] With Baganator: marked items show "Low" in the bottom left corner, under the equipment set mark; the item level still shows in the top left. Grey items keep Baganator's own junk coin. Icon Corners on the Icons tab of Baganator's settings lists "LittleThings: low level gear" in the bottom left corner. Equip a different item: "Low" updates without reopening the bags. Switch the module off: every "Low" goes.
