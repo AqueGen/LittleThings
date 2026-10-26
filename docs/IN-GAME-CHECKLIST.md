@@ -228,3 +228,18 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 - [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**
 - [ ] **`/console taintLog 1`, a full key: no LittleThings entries in `Logs/taint.log`.**
 - [ ] MRT's own Marks Bar is switched off by the owner (`/rt mb` toggle) so the two panels do not overlap.
+
+## 16. Battle res guard
+
+Switch on Battle res guard (Group content). It is off by default. Its page has an Ask before release as group with Tank, Healer and Damage, all on by default.
+
+- [ ] In a key with a battle res charge left and a druid, death knight, warlock or paladin alive, die: the Release button gets a gold frame. A click on it opens the window above the death popup with "Battle res available: N" and "Can res: Name"; Blizzard's popup does not release.
+- [ ] Release anyway releases and the window and frame go. Wait for res closes the window, you stay dead, and the frame stays on Release.
+- [ ] Get battle ressed while the window is open: the window and frame go with the death popup.
+- [ ] Switch off the role of your current spec, die: plain Release, no frame.
+- [ ] No battle res class alive in the group (or the only one offline), die: plain Release, no frame. The caster dies while you are dead: the frame goes within a moment.
+- [ ] Open world or a dungeon outside a key, die: plain Release, no frame.
+- [ ] On a raid boss while the encounter suppresses release: no frame while Release is greyed.
+- [ ] Dead in a key, run `/run local c=C_Spell.GetSpellCharges(20484) print(c and c.currentCharges, c and issecretvalue(c.currentCharges))` and note whether the count is secret; the window's number matches the game's charge count.
+- [ ] Switch the module off while dead: the frame and window go at once and Release works.
+- [ ] **`/console taintLog 1`, die and release through the window and through Blizzard's own button: no LittleThings entries in `Logs/taint.log`, BugSack empty.**
