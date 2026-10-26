@@ -237,9 +237,37 @@ function LowLevelGear.OnSwitch(enabled)
     end
 end
 
+function LowLevelGear.Report()
+    equipped = nil
+    local levels = EquippedLevels()
+    local worn = {}
+    for _, slot in ipairs(Rules.EQUIPPED_SLOTS) do
+        worn[#worn + 1] = slot .. "=" .. tostring(levels[slot])
+    end
+    ns.Print("low level gear " .. (ns.IsOn("lowLevelGear") and "on" or "off") .. ", Baganator corner active: "
+        .. tostring(baganator and Baganator.API.IsCornerWidgetActive(CORNER_ID)) .. ", worn: " .. table.concat(worn, " "))
+    for bag = Enum.BagIndex.Backpack, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
+        for slot = 1, C_Container.GetContainerNumSlots(bag) do
+            local location = ItemLocation:CreateFromBagAndSlot(bag, slot)
+            local facts = Facts(location)
+            if facts == nil or (facts.equipLoc and Rules.SLOTS[facts.equipLoc]) then
+                local upgrade = facts and C_Item.GetItemUpgradeInfo(C_Item.GetItemLink(location))
+                print(string.format("%s %s ilvl=%s max=%s track=%s/%s bound=%s acct=%s uncollected=%s set=%s -> %s",
+                    tostring(C_Item.GetItemLink(location)), tostring(facts and facts.equipLoc),
+                    tostring(facts and facts.itemLevel), tostring(facts and facts.maxItemLevel),
+                    tostring(upgrade and upgrade.trackString), tostring(facts and facts.trackStringID),
+                    tostring(facts and facts.bound), tostring(facts and facts.accountUntilEquip),
+                    tostring(facts and facts.uncollected), tostring(facts and facts.setID),
+                    facts and tostring((Rules.Evaluate(facts, levels))) or "not loaded"))
+            end
+        end
+    end
+end
+
 function LowLevelGear.Pages(page)
     page:Group("Baganator"):Note("With Baganator, the marker is a corner widget, " .. CORNER_LABEL .. ". It shows \"Low\" in the bottom left corner of the item icon, under the equipment set mark. Move it or turn it off under Icon Corners on the Icons tab of Baganator's settings.")
 end
 
+ns.LowLevelGear = LowLevelGear
 LowLevelGear.key = "lowLevelGear"
 ns.RegisterModule("LowLevelGear", LowLevelGear)
