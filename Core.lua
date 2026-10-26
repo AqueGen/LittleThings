@@ -17,6 +17,7 @@ ns.defaults = {
     openWorldCleanup = true,
     groupLeader = false,
     raidMarkers = false,
+    battleResGuard = false,
 
     format = true,
     snap = true,
@@ -40,6 +41,7 @@ ns.MODULES = {
     { key = "summarySite", parent = "groupFinder", label = "Summary site links", section = "Summary site", live = true, tooltip = "Links to the brag-sheet summary site (brag-sheet.aquegen.workers.dev). A Compare applicants button on your listing copies a compare page link: every Mythic+ applicant ranked by their logs and by what their class adds to the group, and the best group for your open slots. Player menus get a Summary page entry. Paste a link into the browser, or press Open link from clipboard on an open page. The site uses your own Warcraft Logs API key, saved on the site." },
     { key = "groupLeader", group = "Group content", label = "Group leader icons", live = true, tooltip = "A crown on the group leader and an assistant icon on raid assistants, on Blizzard's party and raid frames." },
     { key = "raidMarkers", group = "Group content", label = "Raid marker panel", live = true, tooltip = "A movable panel for target markers, world markers, ready check, pull countdown and role check, shown in a party and to the raid leader or assistants; the page has options for solo, party, raid and combat visibility. Two key bindings place world markers at the cursor." },
+    { key = "battleResGuard", group = "Group content", label = "Battle res guard", live = true, tooltip = "When you die in Mythic+ or on a raid boss while battle res charges are left and someone alive in the group can cast one, Release asks first. The page has a switch per role: tank, healer, damage." },
     { key = "damageMeter", group = "Combat", label = "Damage meter", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
     { key = "characterPanel", group = "Character and loot", label = "Character panel", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
     { key = "journalLoot", group = "Character and loot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
