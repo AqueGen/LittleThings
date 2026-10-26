@@ -7,7 +7,7 @@ local NAMES = { [VETERAN] = "Veteran", [CHAMPION] = "Champion", [HERO] = "Hero",
 
 local function item(fields)
   local base = { equipLoc = "INVTYPE_HEAD", bound = true, accountUntilEquip = false,
-    uncollected = false, itemLevel = 311, trackStringID = HERO }
+    uncollected = false, itemLevel = 311, trackStringID = CHAMPION }
   for k, v in pairs(fields or {}) do base[k] = v end
   base.trackString = NAMES[base.trackStringID]
   return base
@@ -36,15 +36,10 @@ describe("LowLevelGearRules.Evaluate", function()
     assert.is_true((Rules.Evaluate(item({ trackStringID = CHAMPION, itemLevel = 325 }), WORN)))
   end)
 
-  it("marks the same track below the worn level", function()
-    local low, reason = Rules.Evaluate(item({ itemLevel = 311 }), WORN)
-    assert.is_true(low)
-    assert.equals("Hero 311, worn Hero 321", reason)
-  end)
-
-  it("keeps the same track at or above the worn level", function()
-    assert.is_false((Rules.Evaluate(item({ itemLevel = 321 }), WORN)))
-    assert.is_false((Rules.Evaluate(item({ itemLevel = 324 }), WORN)))
+  it("keeps the same track at any level, it upgrades to the worn level", function()
+    assert.is_false((Rules.Evaluate(item({ trackStringID = HERO, itemLevel = 318 }), WORN)))
+    assert.is_false((Rules.Evaluate(item({ trackStringID = HERO, itemLevel = 321 }), WORN)))
+    assert.is_false((Rules.Evaluate(item({ trackStringID = HERO, itemLevel = 324 }), WORN)))
   end)
 
   it("keeps a higher track", function()
@@ -99,15 +94,15 @@ describe("LowLevelGearRules.Evaluate", function()
   end)
 
   it("compares a robe with the chest slot", function()
-    assert.is_true((Rules.Evaluate(item({ equipLoc = "INVTYPE_ROBE" }), { [5] = piece(321, HERO) })))
+    assert.is_true((Rules.Evaluate(item({ equipLoc = "INVTYPE_ROBE", trackStringID = CHAMPION }), { [5] = piece(321, HERO) })))
   end)
 
   it("compares a ring with the worse of the two rings", function()
     local rings = { [11] = piece(334, MYTH), [12] = piece(311, HERO) }
-    local low, reason = Rules.Evaluate(item({ equipLoc = "INVTYPE_FINGER", itemLevel = 305 }), rings)
+    local low, reason = Rules.Evaluate(item({ equipLoc = "INVTYPE_FINGER", trackStringID = CHAMPION, itemLevel = 305 }), rings)
     assert.is_true(low)
-    assert.equals("Hero 305, worn Hero 311", reason)
-    assert.is_false((Rules.Evaluate(item({ equipLoc = "INVTYPE_FINGER", itemLevel = 311 }), rings)))
+    assert.equals("Champion 305, worn Hero 311", reason)
+    assert.is_false((Rules.Evaluate(item({ equipLoc = "INVTYPE_FINGER", trackStringID = HERO, itemLevel = 305 }), rings)))
   end)
 
   it("never marks a ring when either ring slot is empty", function()
@@ -119,8 +114,8 @@ describe("LowLevelGearRules.Evaluate", function()
     local expected = { INVTYPE_HEAD = 1, INVTYPE_NECK = 2, INVTYPE_SHOULDER = 3, INVTYPE_CHEST = 5, INVTYPE_WAIST = 6,
       INVTYPE_LEGS = 7, INVTYPE_FEET = 8, INVTYPE_WRIST = 9, INVTYPE_HAND = 10, INVTYPE_CLOAK = 15 }
     for loc, slot in pairs(expected) do
-      assert.is_true((Rules.Evaluate(item({ equipLoc = loc }), { [slot] = piece(321, HERO) })), loc)
-      assert.is_false((Rules.Evaluate(item({ equipLoc = loc }), { [slot == 1 and 2 or 1] = piece(321, HERO) })), loc)
+      assert.is_true((Rules.Evaluate(item({ equipLoc = loc, trackStringID = CHAMPION }), { [slot] = piece(321, HERO) })), loc)
+      assert.is_false((Rules.Evaluate(item({ equipLoc = loc, trackStringID = CHAMPION }), { [slot == 1 and 2 or 1] = piece(321, HERO) })), loc)
     end
   end)
 end)

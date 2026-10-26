@@ -24,7 +24,6 @@ Rules.EQUIPPED_SLOTS = { 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 15 }
 -- maxItemLevel came back 0 for every item, so tracks are the only upgrade ceiling we have.
 -- An id missing here (Explorer, a new season) means the item is never marked.
 Rules.TRACK_RANK = { [971] = 1, [972] = 2, [973] = 3, [974] = 4, [978] = 5 }
-Rules.NEVER_TRACKS = { [978] = true }
 
 local function Worse(a, b)
     local rankA, rankB = Rules.TRACK_RANK[a.track], Rules.TRACK_RANK[b.track]
@@ -38,7 +37,7 @@ function Rules.Evaluate(item, equipped)
     local slots = SLOTS[item.equipLoc]
     local rank = Rules.TRACK_RANK[item.trackStringID]
     if not slots or not rank or not item.itemLevel or item.setID or not item.bound or item.accountUntilEquip
-        or item.uncollected or Rules.NEVER_TRACKS[item.trackStringID] then
+        or item.uncollected then
         return false
     end
 
@@ -51,8 +50,7 @@ function Rules.Evaluate(item, equipped)
         worn = worn and Worse(worn, piece) or piece
     end
 
-    local wornRank = Rules.TRACK_RANK[worn.track]
-    if rank > wornRank or (rank == wornRank and item.itemLevel >= worn.level) then
+    if rank >= Rules.TRACK_RANK[worn.track] then
         return false
     end
 

@@ -260,7 +260,7 @@ Switch on Battle res guard (Group content). It is off by default. Its page has a
 Switch on Low level gear (Character and loot). It is off by default.
 
 - [ ] `/lt gear`: the first line lists every worn slot as level/trackStringID; each bag gear line ends in `-> true` exactly where the rules below say so.
-- [ ] A soulbound Champion piece while wearing Hero in that slot: the tooltip shows "LittleThings: low level gear (Champion N, worn Hero M)" in grey. A Hero piece below the worn Hero level: marked too. A Hero piece at or above the worn level: not marked.
+- [ ] A soulbound Champion piece while wearing Hero in that slot: the tooltip shows "LittleThings: low level gear (Champion N, worn Hero M)" in grey. A Hero piece below the worn Hero level (Poison-Proof Stompers, Hero 5/6 318 against worn Hero 6/6 321): not marked.
 - [ ] A Hero piece while wearing Champion in that slot: not marked.
 - [ ] An item with an appearance you have not collected: no line, no marker.
 - [ ] A tier set piece, a trinket, a weapon, an off-hand or shield, a Bind on Equip piece, a Warbound until equipped piece: none of them marked.
