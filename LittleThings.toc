@@ -62,3 +62,5 @@ Modules/RaidMarkers/TankHelpers.lua
 Modules/RaidMarkers/RaidMarkers.lua
 Modules/BattleResGuard/BattleResRules.lua
 Modules/BattleResGuard/BattleResGuard.lua
+Modules/LowLevelGear/LowLevelGearRules.lua
+Modules/LowLevelGear/LowLevelGear.lua

@@ -18,6 +18,7 @@ ns.defaults = {
     groupLeader = false,
     raidMarkers = false,
     battleResGuard = false,
+    lowLevelGear = false,
 
     format = true,
     snap = true,
@@ -45,6 +46,7 @@ ns.MODULES = {
     { key = "damageMeter", group = "Combat", label = "Damage meter", tooltip = "Readable numbers, window snapping, idle transparency and a window page for Blizzard's built-in damage meter." },
     { key = "characterPanel", group = "Character and loot", label = "Character panel", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
     { key = "journalLoot", group = "Character and loot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
+    { key = "lowLevelGear", group = "Character and loot", label = "Low level gear", live = true, tooltip = "Marks gear in your bags on a lower upgrade track than what you wear in that slot. Never marks Myth-track items, uncollected appearances, tier pieces, trinkets, weapons or items not yet bound. A tooltip line under any bag addon, a red cross on Blizzard's bags, and \"Low\" in the bottom left icon corner in Baganator." },
     { key = "performance", group = "System", label = "Performance", live = true, tooltip = "A button that sets the game's graphics options for frame rate, showing every change before it is made, and one that puts your own settings back. Smoother garbage collection, and a button that collects it now." },
 }
 
@@ -492,8 +494,10 @@ local function HandleSlashCommand(input)
         ns.OpenSettings()
     elseif command == "cpu" then
         ns.Profiler.Toggle()
+    elseif command == "gear" then
+        ns.LowLevelGear.Report()
     elseif not meter then
-        ns.Print("commands: cpu. The damage meter module is off, its commands are not available")
+        ns.Print("commands: cpu, gear. The damage meter module is off, its commands are not available")
     elseif command == "probe" then
         ns.Probe()
     elseif command == "diag" then
@@ -504,7 +508,7 @@ local function HandleSlashCommand(input)
         ns.db[command] = not ns.db[command]
         ns.Print(command .. ": " .. tostring(ns.db[command]))
     else
-        ns.Print("commands: cpu, diag, probe, taint, format, snap")
+        ns.Print("commands: cpu, gear, diag, probe, taint, format, snap")
     end
 end
 

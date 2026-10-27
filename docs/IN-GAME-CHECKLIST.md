@@ -254,3 +254,21 @@ Switch on Battle res guard (Group content). It is off by default. Its page has a
 - [ ] Clear a switch as above, `/reload` while in combat: no panel until combat ends, then it shows. Enter combat with the panel open: Enable greys and comes back after combat.
 - [ ] Delete `WTF/Account/<account>/SavedVariables/LittleThings.lua` with the game closed (fresh install), log in: no panel.
 - [ ] BugSack stays empty throughout.
+
+## 18. Low level gear
+
+Switch on Low level gear (Character and loot). It is off by default.
+
+- [ ] `/lt gear`: the first line lists every worn slot as level/trackStringID; each bag gear line ends in `-> true` exactly where the rules below say so.
+- [ ] A soulbound Champion piece while wearing Hero in that slot: the tooltip shows "LittleThings: low level gear (Champion N, worn Hero M)" in grey. A Hero piece below the worn Hero level (Poison-Proof Stompers, Hero 5/6 318 against worn Hero 6/6 321): not marked.
+- [ ] A Hero piece while wearing Champion in that slot: not marked.
+- [ ] An item with an appearance you have not collected: no line, no marker.
+- [ ] A tier set piece, a trinket, a weapon, an off-hand or shield, a Bind on Equip piece, a Warbound until equipped piece: none of them marked.
+- [ ] A ring is compared with the worse of the two worn rings (lower track, then lower level). Take one ring off: no ring is marked.
+- [ ] A neck and a ring (no appearance) still get marked when below the worn one.
+- [ ] A soulbound Myth-track piece (the Silken Voodoo Drape, Myth 1/6 at 318) is never marked, even below a worn Myth piece.
+- [ ] Equip a different item in a slot: markers and tooltip lines for that slot update without reopening the bags.
+- [ ] Disable Baganator, `/reload`: Blizzard's bags (separate and combined) show a small red cross in the top right of marked items; Blizzard's own junk coin at a merchant is unchanged. Switch the module off: the crosses go at once.
+- [ ] With Baganator: marked items show "Low" in the bottom left corner, under the equipment set mark; the item level still shows in the top left. Grey items keep Baganator's own junk coin. Icon Corners on the Icons tab of Baganator's settings lists "LittleThings: low level gear" in the bottom left corner. Equip a different item: "Low" updates without reopening the bags. Switch the module off: every "Low" goes.
+- [ ] Hover items in the bank, in chat links and in the Adventure Guide: no line.
+- [ ] **`/console taintLog 1`, use and equip items from Blizzard's bags in combat: no LittleThings entries in `Logs/taint.log`, BugSack empty.**
