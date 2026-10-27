@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.18.0](https://github.com/AqueGen/LittleThings/compare/v0.17.0...v0.18.0) (2026-10-27)
+
+
+### Features
+
+* battle res guard asks before release while battle res is available ([#44](https://github.com/AqueGen/LittleThings/issues/44)) ([ecf2446](https://github.com/AqueGen/LittleThings/commit/ecf2446997e8a2ce6fdfbc15e9148bc47abe6c5f))
+* login panel lists modules added since the last login ([#45](https://github.com/AqueGen/LittleThings/issues/45)) ([a530910](https://github.com/AqueGen/LittleThings/commit/a53091046cca6907cffa200b507e6608da78df22))
+* mark low level gear in bags ([#47](https://github.com/AqueGen/LittleThings/issues/47)) ([49359cc](https://github.com/AqueGen/LittleThings/commit/49359cc05d05a322f58d09c3a13e7683d04c7f04))
+* save indicator and party frames when solo ([#48](https://github.com/AqueGen/LittleThings/issues/48)) ([796b457](https://github.com/AqueGen/LittleThings/commit/796b457a59adcde34754f6b07f0ed9e826bedccc))
+
+
+### Bug Fixes
+
+* save indicator sample row hides again when the settings window closes ([#50](https://github.com/AqueGen/LittleThings/issues/50)) ([bbfffc7](https://github.com/AqueGen/LittleThings/commit/bbfffc7a656c9705ec8d5cc03452c96f6b16b7d4))
+* save indicator sample row only while the module is on, toc notes list every new module ([#49](https://github.com/AqueGen/LittleThings/issues/49)) ([ad4b4b3](https://github.com/AqueGen/LittleThings/commit/ad4b4b30ab2a1826fd37169c037d1bf979b72c70))
+
 ## [0.17.0](https://github.com/AqueGen/LittleThings/compare/v0.16.1...v0.17.0) (2026-10-24)
 
 
