@@ -40,7 +40,7 @@ local pageFrame
 
 local function SyncPreview()
     if ns.SaveCenter then
-        ns.SaveCenter.SetPreview(pageFrame ~= nil and pageFrame:IsShown() and ns.IsOn("saveIndicator"))
+        ns.SaveCenter.SetPreview(pageFrame ~= nil and pageFrame:IsVisible() and ns.IsOn("saveIndicator"))
     end
 end
 
