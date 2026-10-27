@@ -66,7 +66,7 @@ Off by default. Blizzard's party and raid frames show nobody's rank, so this put
 
 ### Save indicator
 
-Off by default. A small row of icons below the centre of the screen for every save on you that cuts damage taken by 20% or more: your own and the externals cast on you, strongest first, with the seconds left inside the icon and the reduction under it. Sentinel's reduction falls with its stacks and turns orange under 20%. Blizzard's party frames already show most big saves in their centre icon but leave some out, Sentinel among them; those get a small icon in the corner of the frame of whoever has one. Blessing of Protection and Blessing of Spellwarding show as `phys` and `magic`, Life Cocoon as `shield`, after the saves that cut all damage. The page lists your class's saves and the externals other classes cast on you, in a compact grid, each with its own switch. Works solo, in groups and Mythic+; raids have their own switch. Drag the row while the settings page is open, or set X and Y.
+Off by default. A small row of icons below the centre of the screen for every save on you that cuts damage taken by 20% or more: your own and the externals cast on you, strongest first, with the seconds left inside the icon and the reduction under it. Sentinel's reduction falls with its stacks and turns orange under 20%. Blessing of Protection and Blessing of Spellwarding show as `phys` and `magic`, Life Cocoon as `shield`, after the saves that cut all damage. The page lists your class's saves and the externals other classes cast on you, in a compact grid, each with its own switch. Works solo, in groups and Mythic+; raids have their own switch. Drag the row while the settings page is open, or set X and Y.
 
 ### Party frames when solo
 

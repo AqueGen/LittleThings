@@ -78,16 +78,6 @@ function Rules.Row(data)
     return row
 end
 
-function Rules.AllIDs(data)
-    local ids = {}
-    for id, entry in pairs(data) do
-        if Counts(entry) then
-            ids[id] = true
-        end
-    end
-    return ids
-end
-
 function Rules.Enabled(data, off)
     local on = {}
     for id, entry in pairs(data) do
@@ -110,16 +100,6 @@ function Rules.Groups(data, class)
     return groups
 end
 
-function Rules.CornerIDs(data, isBig)
-    local ids = Rules.AllIDs(data)
-    for id in pairs(ids) do
-        if isBig(id) then
-            ids[id] = nil
-        end
-    end
-    return ids
-end
-
 function Rules.CenterOffset(cx, cy, ux, uy, scale)
     return math.floor(cx - ux / scale + 0.5), math.floor(cy - uy / scale + 0.5)
 end
@@ -140,12 +120,12 @@ end
 
 function Rules.Where(state)
     if state.instanceType == "pvp" or state.instanceType == "arena" then
-        return false, false
+        return false
     end
     if state.inRaid then
-        return state.raidOn == true, false
+        return state.raidOn == true
     end
-    return true, true
+    return true
 end
 
 if ns then ns.SaveRules = Rules end

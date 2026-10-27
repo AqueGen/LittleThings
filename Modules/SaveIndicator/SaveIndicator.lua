@@ -6,7 +6,7 @@ local SaveIndicator = {}
 ns.SaveIndicator = SaveIndicator
 
 local DEFAULTS = { x = 0, y = -140, scale = 1, locked = false,
-    raid = false, showTime = true, showDR = true, corners = true, off = {} }
+    raid = false, showTime = true, showDR = true, off = {} }
 
 local events
 
@@ -21,14 +21,9 @@ local function InitializeDb()
 end
 
 function SaveIndicator.Refresh()
-    local db = ns.db.saveIndicatorRow
-    local center, corners = false, false
-    if ns.IsOn("saveIndicator") then
-        center, corners = Rules.Where({ inGroup = IsInGroup(), inRaid = IsInRaid(),
-            instanceType = select(2, IsInInstance()), raidOn = db.raid })
-    end
+    local center = ns.IsOn("saveIndicator") and Rules.Where({ inGroup = IsInGroup(), inRaid = IsInRaid(),
+        instanceType = select(2, IsInInstance()), raidOn = ns.db.saveIndicatorRow.raid })
     if ns.SaveCenter then ns.SaveCenter.Apply(center) end
-    if ns.SaveCorners then ns.SaveCorners.Apply(corners and db.corners) end
 end
 
 function SaveIndicator.Enable()
@@ -75,9 +70,7 @@ function SaveIndicator.Pages(page)
 
     local where = page:Group("Where")
     where:Check(Option("raid", { label = "Also in raids",
-        tooltip = "Shows the centre row in raids too. Party frame icons stay party only." }, SaveIndicator.Refresh))
-    where:Check(Option("corners", { label = "Icons on party frames",
-        tooltip = "An icon in the corner of Blizzard's party frames on whoever has a save up that the frame's own centre icon leaves out, such as Sentinel." }, SaveIndicator.Refresh))
+        tooltip = "Shows the row in raids too." }, SaveIndicator.Refresh))
 
     local row = page:Group("Centre row")
     row:Check(Option("showTime", { label = "Time left", reload = true,
@@ -125,7 +118,7 @@ function SaveIndicator.Pages(page)
             local entry = ns.SaveData[id]
             specs[#specs + 1] = { label = ("|T%s:14|t %s |cff999999%s|r"):format(C_Spell.GetSpellTexture(id) or 134400, entry.name, Rules.Text(entry)),
                 name = entry.name, reload = true, combatLocked = true,
-                tooltip = "Shows this save in the centre row and on party frames.",
+                tooltip = "Shows this save in the row.",
                 get = function() return not ns.db.saveIndicatorRow.off[id] end,
                 set = function(value) ns.db.saveIndicatorRow.off[id] = (not value) or nil end }
         end
