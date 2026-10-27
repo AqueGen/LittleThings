@@ -69,3 +69,4 @@ Modules/SaveIndicator/SaveData.lua
 Modules/SaveIndicator/Center.lua
 Modules/SaveIndicator/Corners.lua
 Modules/SaveIndicator/SaveIndicator.lua
+Modules/PartySolo.lua
