@@ -2,6 +2,14 @@ local _, ns = ...
 
 local Rules = {}
 
+function Rules.Grid(count, columns, cellWidth, rowHeight)
+    local cells = {}
+    for i = 1, count do
+        cells[i] = { x = ((i - 1) % columns) * cellWidth, y = math.floor((i - 1) / columns) * rowHeight }
+    end
+    return cells, math.ceil(count / columns) * rowHeight
+end
+
 function Rules.Stack(items, gap)
     local offsets, y, any = {}, 0, false
     for index, item in ipairs(items) do

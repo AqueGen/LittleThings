@@ -23,7 +23,7 @@ local Data = {
     [1022] = { dr = 100, school = "phys", name = "Blessing of Protection", class = "PALADIN", external = true },
     [204018] = { dr = 100, school = "magic", name = "Blessing of Spellwarding", class = "PALADIN", external = true },
     [498] = { dr = 20, name = "Divine Protection", class = "PALADIN" },
-    [403876] = { dr = 20, name = "Divine Protection (Retribution)", class = "PALADIN" },
+    [403876] = { dr = 20, name = "Divine Protection (Ret)", class = "PALADIN" },
     [642] = { dr = 100, name = "Divine Shield", class = "PALADIN" },
     [86659] = { dr = 50, name = "Guardian of Ancient Kings", class = "PALADIN" },
     [389539] = { dr = 30, name = "Sentinel", perStack = 2, maxStacks = 15, class = "PALADIN" },

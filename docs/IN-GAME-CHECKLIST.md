@@ -281,7 +281,7 @@ Switch on Save indicator (Group content). It is off by default. Its page has Whe
 - [ ] Ardent Defender or Guardian of Ancient Kings: its own icon with `-30%` / `-50%`, stronger saves left of weaker ones, Sentinel left of a fixed 30% save.
 - [ ] Two externals of the same strength on you at once (two 40% saves): both icons show, nothing overlaps.
 - [ ] Blessing of Protection shows `phys`, Spellwarding `magic`, Life Cocoon `shield`, in blue, right of the percentage saves; Power Word: Barrier shows `-20%`.
-- [ ] The page lists Tracked saves in three groups with icons; untick one, /reload: it no longer shows in the row or on party frames.
+- [ ] The page's Tracked saves box shows Your class and Externals from other classes as a three-column grid with icons; untick one, /reload: it no longer shows in the row or on party frames.
 - [ ] One, two and three saves at once: the row stays centred on its X/Y point.
 - [ ] Settings page open: a gold outlined sample (Sentinel -24%, Pain Suppression -40%) shows; drag it, close the page: the row sits there, also after /reload. Lock position stops the drag, Scale resizes, Reset position puts it back.
 - [ ] Untick Time left or Damage reduction, /reload: the seconds or the reduction are gone.

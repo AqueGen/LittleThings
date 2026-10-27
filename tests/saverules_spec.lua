@@ -93,11 +93,11 @@ describe("Rules.Enabled", function()
 end)
 
 describe("Rules.Groups", function()
-  it("splits the table into your class, externals from others and other classes, by name", function()
+  it("lists your class and externals from other classes by name, and leaves other classes' own saves out", function()
     local g = Rules.Groups(MIXED, "PALADIN")
     assert.same({ 31850, 1022, 204018, 389539 }, g.yours)
     assert.same({ 116849, 33206 }, g.external)
-    assert.same({ 871 }, g.others)
+    assert.is_nil(g.others)
   end)
 end)
 

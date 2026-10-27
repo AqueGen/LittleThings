@@ -99,10 +99,10 @@ function Rules.Enabled(data, off)
 end
 
 function Rules.Groups(data, class)
-    local groups = { yours = {}, external = {}, others = {} }
+    local groups = { yours = {}, external = {} }
     for id, entry in pairs(data) do
-        local list = entry.class == class and groups.yours or entry.external and groups.external or groups.others
-        list[#list + 1] = id
+        local list = entry.class == class and groups.yours or entry.external and groups.external
+        if list then list[#list + 1] = id end
     end
     for _, list in pairs(groups) do
         table.sort(list, function(a, b) return data[a].name < data[b].name end)
