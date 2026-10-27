@@ -272,3 +272,27 @@ Switch on Low level gear (Character and loot). It is off by default.
 - [ ] With Baganator: marked items show "Low" in the bottom left corner, under the equipment set mark; the item level still shows in the top left. Grey items keep Baganator's own junk coin. Icon Corners on the Icons tab of Baganator's settings lists "LittleThings: low level gear" in the bottom left corner. Equip a different item: "Low" updates without reopening the bags. Switch the module off: every "Low" goes.
 - [ ] Hover items in the bank, in chat links and in the Adventure Guide: no line.
 - [ ] **`/console taintLog 1`, use and equip items from Blizzard's bags in combat: no LittleThings entries in `Logs/taint.log`, BugSack empty.**
+
+## 19. Save indicator
+
+Switch on Save indicator (Group content). It is off by default. Its page has Centre row (Time left, Damage reduction, Lock position, Scale, X, Y, Test, Center horizontally, Reset position) and Tracked saves.
+
+- [ ] Solo, Sentinel: an icon below the centre of the screen with seconds inside and `-30%` under it; the number falls by 2 per stack in combat and turns orange at `-18%`.
+- [ ] Ardent Defender or Guardian of Ancient Kings: its own icon with `-30%` / `-50%`, stronger saves left of weaker ones, Sentinel left of a fixed 30% save.
+- [ ] Two externals of the same strength on you at once (two 40% saves): both icons show, nothing overlaps.
+- [ ] Blessing of Protection shows `phys`, Spellwarding `magic`, Life Cocoon `shield`, in blue, right of the percentage saves; Power Word: Barrier shows `-20%`.
+- [ ] The page's Tracked saves box shows Your class and Externals from other classes as a three-column grid with icons; untick one, /reload: it no longer shows in the row.
+- [ ] One, two and three saves at once: the row stays centred on its X/Y point.
+- [ ] Settings page open: a gold outlined sample (Sentinel -24%, Pain Suppression -40%) shows; drag it, close the page: the row sits there, also after /reload. Lock position stops the drag, Scale resizes, Reset position puts it back.
+- [ ] Untick Time left or Damage reduction, /reload: the seconds or the reduction are gone.
+- [ ] Raid: the row shows. Battleground or arena: nothing; back out, it returns.
+- [ ] **`/console taintLog 1`, a full key: no LittleThings entries in `Logs/taint.log`, BugSack empty.**
+
+## 20. Party frames when solo
+
+Switch on Party frames when solo (Group content). It is off by default. Needs Use Raid-Style Party Frames in Edit Mode.
+
+- [ ] Solo: your own party frame shows. Join a group: Blizzard's frames as usual. Leave: your frame stays.
+- [ ] Leave a group in combat: the frame comes back after combat, no `ADDON_ACTION_BLOCKED`.
+- [ ] Switch off: the solo frame hides at once. Old-style party frames: nothing changes.
+- [ ] **After a fight with the frame up solo, BugSack empty, `Logs/taint.log` has no LittleThings entries.**

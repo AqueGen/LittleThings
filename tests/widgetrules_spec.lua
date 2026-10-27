@@ -2,6 +2,21 @@ package.path = "./UI/?.lua;" .. package.path
 
 local Rules = require("WidgetRules")
 
+describe("WidgetRules.Grid", function()
+  it("fills rows left to right and reports the height", function()
+    local cells, height = Rules.Grid(5, 3, 200, 18)
+    assert.same({ x = 0, y = 0 }, cells[1])
+    assert.same({ x = 400, y = 0 }, cells[3])
+    assert.same({ x = 200, y = 18 }, cells[5])
+    assert.equals(36, height)
+  end)
+  it("is empty with nothing to place", function()
+    local cells, height = Rules.Grid(0, 3, 200, 18)
+    assert.same({}, cells)
+    assert.equals(0, height)
+  end)
+end)
+
 describe("WidgetRules.Stack", function()
   it("stacks shown items with a gap and reports their height", function()
     local offsets, total = Rules.Stack({ { height = 20 }, { height = 30 } }, 5)

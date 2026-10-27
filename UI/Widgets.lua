@@ -102,6 +102,47 @@ function Group:Check(spec)
     self:Add(check, 24, Refresh, spec.visible)
 end
 
+function Group:CheckGrid(specs, columns, cellWidth)
+    local group = self
+    local ROW_H = 18
+    local holder = CreateFrame("Frame", nil, self.frame)
+    local cells, height = Rules.Grid(#specs, columns, cellWidth, ROW_H)
+    holder:SetSize(columns * cellWidth, math.max(height, 1))
+    local refreshers = {}
+    for i, spec in ipairs(specs) do
+        local check = CreateFrame("CheckButton", nil, holder, "MinimalCheckboxTemplate")
+        check:SetSize(16, 16)
+        check:SetPoint("TOPLEFT", holder, "TOPLEFT", cells[i].x, -cells[i].y)
+        check.text = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        check.text:SetPoint("LEFT", check, "RIGHT", 3, 0)
+        check.text:SetWidth(cellWidth - 24)
+        check.text:SetJustifyH("LEFT")
+        check.text:SetWordWrap(false)
+        check.text:SetText(spec.label)
+        check:SetHitRectInsets(0, -(cellWidth - 20), 0, 0)
+        refreshers[i] = function()
+            check:SetChecked(spec.get() and true or false)
+            local enabled = not Locked(spec)
+            check:SetEnabled(enabled)
+            check.text:SetTextColor(unpack(enabled and T.text or T.muted))
+        end
+        check:SetScript("OnClick", function(self)
+            if Locked(spec) then
+                refreshers[i]()
+                return
+            end
+            local on = self:GetChecked() and true or false
+            spec.set(on)
+            AskReload(spec, on and "on" or "off")
+            group.page:Refresh()
+        end)
+        Hover(check, spec)
+    end
+    self:Add(holder, math.max(height, 1), function()
+        for _, refresh in ipairs(refreshers) do refresh() end
+    end)
+end
+
 function Group:Slider(spec)
     local holder = CreateFrame("Frame", nil, self.frame)
     holder:SetSize(LABEL_W + CONTROL_W, 22)
