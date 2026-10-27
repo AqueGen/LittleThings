@@ -34,6 +34,21 @@ function Rules.Stacked(data)
     return list
 end
 
+function Rules.Row(data)
+    local row = {}
+    for _, s in ipairs(Rules.Stacked(data)) do
+        row[#row + 1] = { ids = { [s.id] = true }, dr = s.dr, perStack = s.perStack, maxStacks = s.maxStacks }
+    end
+    for _, b in ipairs(Rules.Buckets(data)) do
+        row[#row + 1] = { ids = b.ids, dr = b.dr }
+    end
+    table.sort(row, function(a, b)
+        if a.dr ~= b.dr then return a.dr > b.dr end
+        return a.perStack ~= nil and b.perStack == nil
+    end)
+    return row
+end
+
 function Rules.AllIDs(data)
     local ids = {}
     for id, entry in pairs(data) do

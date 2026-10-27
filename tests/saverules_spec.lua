@@ -33,6 +33,18 @@ describe("Rules.AllIDs", function()
   end)
 end)
 
+describe("Rules.Row", function()
+  it("orders the centre row by strength, Sentinel before the fixed 30 bucket", function()
+    local row = Rules.Row(DATA)
+    assert.same({ 100, 40, 30, 30, 20 }, { row[1].dr, row[2].dr, row[3].dr, row[4].dr, row[5].dr })
+    assert.same({ [389539] = true }, row[3].ids)
+    assert.equals(2, row[3].perStack)
+    assert.same({ [6940] = true }, row[4].ids)
+    assert.is_nil(row[4].perStack)
+    assert.is_nil(row[6])
+  end)
+end)
+
 describe("Rules.CornerIDs", function()
   it("drops saves Blizzard already flags as big defensive", function()
     local big = { [642] = true, [33206] = true }
