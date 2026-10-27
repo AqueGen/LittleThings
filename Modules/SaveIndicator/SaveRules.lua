@@ -119,13 +119,7 @@ function Rules.StackBreakpoints(perStack, maxStacks)
 end
 
 function Rules.Where(state)
-    if state.instanceType == "pvp" or state.instanceType == "arena" then
-        return false
-    end
-    if state.inRaid then
-        return state.raidOn == true
-    end
-    return true
+    return state.instanceType ~= "pvp" and state.instanceType ~= "arena"
 end
 
 if ns then ns.SaveRules = Rules end

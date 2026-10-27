@@ -6,7 +6,7 @@ local SaveIndicator = {}
 ns.SaveIndicator = SaveIndicator
 
 local DEFAULTS = { x = 0, y = -140, scale = 1, locked = false,
-    raid = false, showTime = true, showDR = true, off = {} }
+    showTime = true, showDR = true, off = {} }
 
 local events
 
@@ -21,8 +21,7 @@ local function InitializeDb()
 end
 
 function SaveIndicator.Refresh()
-    local center = ns.IsOn("saveIndicator") and Rules.Where({ inGroup = IsInGroup(), inRaid = IsInRaid(),
-        instanceType = select(2, IsInInstance()), raidOn = ns.db.saveIndicatorRow.raid })
+    local center = ns.IsOn("saveIndicator") and Rules.Where({ instanceType = select(2, IsInInstance()) })
     if ns.SaveCenter then ns.SaveCenter.Apply(center) end
 end
 
@@ -30,7 +29,6 @@ function SaveIndicator.Enable()
     InitializeDb()
     if not events then
         events = CreateFrame("Frame")
-        events:RegisterEvent("GROUP_ROSTER_UPDATE")
         events:RegisterEvent("PLAYER_ENTERING_WORLD")
         events:RegisterEvent("ZONE_CHANGED_NEW_AREA")
         events:SetScript("OnEvent", SaveIndicator.Refresh)
@@ -67,10 +65,6 @@ function SaveIndicator.Pages(page)
         page.frame:HookScript("OnShow", function() ns.SaveCenter.SetPreview(true) end)
         page.frame:HookScript("OnHide", function() ns.SaveCenter.SetPreview(false) end)
     end
-
-    local where = page:Group("Where")
-    where:Check(Option("raid", { label = "Also in raids",
-        tooltip = "Shows the row in raids too." }, SaveIndicator.Refresh))
 
     local row = page:Group("Centre row")
     row:Check(Option("showTime", { label = "Time left", reload = true,
