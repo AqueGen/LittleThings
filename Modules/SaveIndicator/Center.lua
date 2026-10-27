@@ -150,7 +150,7 @@ end
 local function BuildPreview()
     preview = CreateFrame("Frame", "LittleThingsSaveRowPreview", UIParent)
     preview:SetSize(STEP * #SAMPLES, ICON + LABEL)
-    preview:SetFrameStrata("FULLSCREEN_DIALOG")
+    preview:SetFrameStrata("HIGH")
     preview:SetMovable(true)
     preview:SetClampedToScreen(true)
     preview:EnableMouse(true)
