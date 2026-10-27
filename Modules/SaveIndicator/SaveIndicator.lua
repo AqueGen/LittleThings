@@ -92,6 +92,11 @@ function SaveIndicator.Pages(page)
         tooltip = "Pixels right of the screen centre; 0 is centred. Dragging the row sets it for you." }, Place))
     row:Slider(Option("y", { label = "Y", min = -600, max = 600,
         tooltip = "Pixels above the screen centre. Dragging the row sets it for you." }, Place))
+    row:Button({ label = "Test",
+        tooltip = "Shows a sample row (Sentinel -24%, Pain Suppression -40%) that stays after this window closes, so you can see it over the game. Press again to hide it.",
+        onClick = function()
+            if ns.SaveCenter then ns.SaveCenter.ToggleDemo() end
+        end })
     row:Button({ label = "Center horizontally", combatLocked = true,
         tooltip = "Puts the row in the middle of the screen, keeping its height.",
         onClick = function()

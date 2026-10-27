@@ -176,7 +176,10 @@ local function BuildPreview()
     end)
 end
 
-function Center.SetPreview(on)
+local pageOpen, demo = false, false
+
+local function ShowPreview()
+    local on = pageOpen or demo
     if on and not preview then
         BuildPreview()
     end
@@ -184,4 +187,15 @@ function Center.SetPreview(on)
         Point(preview)
         preview:SetShown(on)
     end
+end
+
+function Center.SetPreview(on)
+    pageOpen = on
+    ShowPreview()
+end
+
+function Center.ToggleDemo()
+    demo = not demo
+    ShowPreview()
+    return demo
 end
