@@ -81,6 +81,17 @@ local function Container(entry)
     return c
 end
 
+local function Recenter()
+    local first = containers[1]
+    if not first then return end
+    local widths = {}
+    for i, c in ipairs(containers) do widths[i] = c:GetWidth() end
+    local start = Rules.ChainStart(widths, issecretvalue)
+    if not start then return end
+    first:ClearAllPoints()
+    first:SetPoint("TOPLEFT", row, "TOP", start, 0)
+end
+
 local function Build()
     row = CreateFrame("Frame", "LittleThingsSaveRow", UIParent)
     row:SetSize(STEP * #SAMPLES, ICON + LABEL)
@@ -97,8 +108,10 @@ local function Build()
             end
             containers[#containers + 1] = c
             prev = c
+            pcall(c.HookScript, c, "OnSizeChanged", Recenter)
         end
     end
+    Recenter()
 end
 
 local function ApplyNow()

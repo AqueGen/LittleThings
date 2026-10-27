@@ -79,6 +79,20 @@ describe("Rules.CenterOffset", function()
   end)
 end)
 
+describe("Rules.ChainStart", function()
+  local SECRET = {}
+  local function isSecret(v) return v == SECRET end
+  it("starts the chain half its width left of the centre", function()
+    assert.equals(-19, Rules.ChainStart({ 1, 36, 1 }, isSecret))
+  end)
+  it("centres two icons on the anchor", function()
+    assert.equals(-36, Rules.ChainStart({ 36, 36 }, isSecret))
+  end)
+  it("gives up when a width is secret", function()
+    assert.is_nil(Rules.ChainStart({ 36, SECRET }, isSecret))
+  end)
+end)
+
 describe("Rules.Label", function()
   it("prints a fixed reduction", function()
     assert.equals("-40%", Rules.Label(40))
