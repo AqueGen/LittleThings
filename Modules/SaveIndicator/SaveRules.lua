@@ -69,6 +69,10 @@ function Rules.CornerIDs(data, isBig)
     return ids
 end
 
+function Rules.CenterOffset(cx, cy, ux, uy, scale)
+    return math.floor(cx - ux / scale + 0.5), math.floor(cy - uy / scale + 0.5)
+end
+
 function Rules.Label(dr)
     return string.format("-%d%%", dr)
 end

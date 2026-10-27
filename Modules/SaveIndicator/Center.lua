@@ -18,7 +18,7 @@ local wanted = false
 local function Point(frame)
     local db = ns.db.saveIndicatorRow
     frame:ClearAllPoints()
-    frame:SetPoint(db.point, UIParent, db.relativePoint, db.x, db.y)
+    frame:SetPoint("CENTER", UIParent, "CENTER", db.x, db.y)
     frame:SetScale(db.scale)
 end
 
@@ -168,9 +168,11 @@ local function BuildPreview()
     preview:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local db = ns.db.saveIndicatorRow
-        local point, _, relativePoint, x, y = self:GetPoint(1)
-        db.point, db.relativePoint, db.x, db.y = point, relativePoint, math.floor(x + 0.5), math.floor(y + 0.5)
+        local cx, cy = self:GetCenter()
+        local ux, uy = UIParent:GetCenter()
+        db.x, db.y = Rules.CenterOffset(cx, cy, ux, uy, db.scale)
         Center.Place()
+        if ns.Window and ns.Window.Refresh then ns.Window.Refresh() end
     end)
 end
 

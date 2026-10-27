@@ -5,14 +5,19 @@ local Rules = ns.SaveRules
 local SaveIndicator = {}
 ns.SaveIndicator = SaveIndicator
 
-local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = -140, scale = 1, locked = false,
+local DEFAULTS = { x = 0, y = -140, scale = 1, locked = false,
     raid = false, showTime = true, showDR = true, corners = true }
 
 local events
 
 local function InitializeDb()
-    ns.db.saveIndicatorRow = ns.db.saveIndicatorRow or {}
-    ns.ApplyDefaults(ns.db.saveIndicatorRow, DEFAULTS)
+    local db = ns.db.saveIndicatorRow or {}
+    ns.db.saveIndicatorRow = db
+    if db.point and db.point ~= "CENTER" then
+        db.x, db.y = DEFAULTS.x, DEFAULTS.y
+    end
+    db.point, db.relativePoint = nil, nil
+    ns.ApplyDefaults(db, DEFAULTS)
 end
 
 function SaveIndicator.Refresh()
@@ -83,12 +88,24 @@ function SaveIndicator.Pages(page)
         tooltip = "Drag the row while this page is open to place it, then lock it." }))
     row:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
         tooltip = "Size of the whole row." }, Place))
+    row:Slider(Option("x", { label = "X", min = -1000, max = 1000,
+        tooltip = "Pixels right of the screen centre; 0 is centred. Dragging the row sets it for you." }, Place))
+    row:Slider(Option("y", { label = "Y", min = -600, max = 600,
+        tooltip = "Pixels above the screen centre. Dragging the row sets it for you." }, Place))
+    row:Button({ label = "Center horizontally", combatLocked = true,
+        tooltip = "Puts the row in the middle of the screen, keeping its height.",
+        onClick = function()
+            ns.db.saveIndicatorRow.x = 0
+            Place()
+            ns.Window.Refresh()
+        end })
     row:Button({ label = "Reset position", combatLocked = true,
         tooltip = "Moves the row back below the centre of the screen.",
         onClick = function()
             local db = ns.db.saveIndicatorRow
-            db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
+            db.x, db.y = DEFAULTS.x, DEFAULTS.y
             Place()
+            ns.Window.Refresh()
         end })
 end
 
