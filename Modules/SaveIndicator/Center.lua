@@ -83,7 +83,7 @@ end
 
 local function Build()
     row = CreateFrame("Frame", "LittleThingsSaveRow", UIParent)
-    row:SetSize(STEP, ICON + LABEL)
+    row:SetSize(STEP * #SAMPLES, ICON + LABEL)
     row:SetFrameStrata("MEDIUM")
     Point(row)
     local prev
@@ -135,7 +135,7 @@ end
 
 function Center.Place()
     if preview then Point(preview) end
-    if row and not InCombatLockdown() then Point(row) end
+    if row then ns.SaveDefer(function() Point(row) end) end
 end
 
 local function BuildPreview()

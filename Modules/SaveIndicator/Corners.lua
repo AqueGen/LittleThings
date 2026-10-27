@@ -43,7 +43,9 @@ local function ContainerFor(frame)
     if c ~= nil then
         return c or nil
     end
-    ids = ids or Rules.CornerIDs(ns.SaveData, IsBig)
+    if not ids then
+        return nil
+    end
     local ok, made = pcall(CreateFrame, "AuraContainer", nil, frame, "CustomAuraContainerTemplate")
     if not ok or not made then
         containers[frame] = false
@@ -73,6 +75,7 @@ local function Sync(frame)
     end
     if show then
         c:SetUnit(unit)
+        c:UpdateAllAuras()
     end
     c:SetShown(show)
 end
@@ -94,6 +97,9 @@ end
 
 function Corners.Apply(on)
     wanted = on
+    if not ids and not InCombatLockdown() then
+        ids = Rules.CornerIDs(ns.SaveData, IsBig)
+    end
     if on and not hooked then
         hooked = true
         hooksecurefunc("CompactUnitFrame_SetUnit", OnSetUnit)

@@ -75,10 +75,10 @@ function SaveIndicator.Pages(page)
         tooltip = "An icon in the corner of Blizzard's party frames on whoever has a save up that the frame's own centre icon leaves out, such as Sentinel." }, SaveIndicator.Refresh))
 
     local row = page:Group("Centre row")
-    row:Check(Option("showTime", { label = "Time left",
-        tooltip = "Seconds left inside each icon. Takes effect after /reload." }))
-    row:Check(Option("showDR", { label = "Damage reduction",
-        tooltip = "The reduction under each icon, orange under 20%. Takes effect after /reload." }))
+    row:Check(Option("showTime", { label = "Time left", reload = true,
+        tooltip = "Seconds left inside each icon." }))
+    row:Check(Option("showDR", { label = "Damage reduction", reload = true,
+        tooltip = "The reduction under each icon, orange under 20%." }))
     row:Check(Option("locked", { label = "Lock position",
         tooltip = "Drag the row while this page is open to place it, then lock it." }))
     row:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
