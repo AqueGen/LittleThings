@@ -500,8 +500,10 @@ local function HandleSlashCommand(input)
         ns.Profiler.Toggle()
     elseif command == "gear" then
         ns.LowLevelGear.Report()
+    elseif command == "saves" then
+        ns.SaveCenter.Report()
     elseif not meter then
-        ns.Print("commands: cpu, gear. The damage meter module is off, its commands are not available")
+        ns.Print("commands: cpu, gear, saves. The damage meter module is off, its commands are not available")
     elseif command == "probe" then
         ns.Probe()
     elseif command == "diag" then

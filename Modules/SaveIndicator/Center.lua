@@ -151,6 +151,22 @@ function ns.SaveDefer(func)
     end
 end
 
+function Center.Report()
+    if not row then
+        ns.Print("save row not built yet")
+        return
+    end
+    local cx = row:GetCenter()
+    local parts = {}
+    for i, c in ipairs(containers) do
+        local w = c:GetWidth()
+        local left = c:GetLeft()
+        parts[#parts + 1] = issecretvalue(w) and (i .. ":secret")
+            or ("%d:%.1f@%d%s"):format(i, w, left and math.floor(left - cx + 0.5) or 0, c:IsShown() and "" or "h")
+    end
+    ns.Print(("save row: start %s, %s"):format(tostring(placedAt), table.concat(parts, " ")))
+end
+
 function Center.Apply(on)
     wanted = on
     ns.SaveDefer(ApplyNow)
