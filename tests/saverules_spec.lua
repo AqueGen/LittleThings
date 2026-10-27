@@ -45,6 +45,62 @@ describe("Rules.Row", function()
   end)
 end)
 
+local MIXED = {
+  [389539] = { dr = 30, name = "Sentinel", perStack = 2, maxStacks = 15, class = "PALADIN" },
+  [31850] = { dr = 30, name = "Ardent Defender", class = "PALADIN" },
+  [33206] = { dr = 40, name = "Pain Suppression", class = "PRIEST", external = true },
+  [1022] = { dr = 100, school = "phys", name = "Blessing of Protection", class = "PALADIN", external = true },
+  [204018] = { dr = 100, school = "magic", name = "Blessing of Spellwarding", class = "PALADIN", external = true },
+  [116849] = { shield = true, name = "Life Cocoon", class = "MONK", external = true },
+  [871] = { dr = 40, name = "Shield Wall", class = "WARRIOR" },
+}
+
+describe("Rules.Row with school-only saves and shields", function()
+  local row = Rules.Row(MIXED)
+  it("puts full reductions first, then physical, magic, then shields", function()
+    assert.same({ "-40%", "-30%", "-30%", "phys", "magic", "shield" },
+      { row[1].text, row[2].text, row[3].text, row[4].text, row[5].text, row[6].text })
+    assert.same({ [33206] = true, [871] = true }, row[1].ids)
+    assert.equals(2, row[2].perStack)
+    assert.same({ [116849] = true }, row[6].ids)
+    assert.is_nil(row[7])
+  end)
+  it("colours school-only saves and shields apart from reductions", function()
+    assert.equals(Rules.COLORS.normal, row[1].color)
+    assert.equals(Rules.COLORS.other, row[4].color)
+    assert.equals(Rules.COLORS.other, row[6].color)
+  end)
+  it("counts them for the party frame corners", function()
+    local ids = Rules.AllIDs(MIXED)
+    assert.is_true(ids[1022] and ids[204018] and ids[116849])
+  end)
+end)
+
+describe("Rules.Text", function()
+  it("names a save the way the row labels it", function()
+    assert.equals("-40%", Rules.Text(MIXED[871]))
+    assert.equals("phys", Rules.Text(MIXED[1022]))
+    assert.equals("shield", Rules.Text(MIXED[116849]))
+  end)
+end)
+
+describe("Rules.Enabled", function()
+  it("drops the saves switched off on the page", function()
+    local on = Rules.Enabled(MIXED, { [871] = true })
+    assert.is_nil(on[871])
+    assert.equals(MIXED[31850], on[31850])
+  end)
+end)
+
+describe("Rules.Groups", function()
+  it("splits the table into your class, externals from others and other classes, by name", function()
+    local g = Rules.Groups(MIXED, "PALADIN")
+    assert.same({ 31850, 1022, 204018, 389539 }, g.yours)
+    assert.same({ 116849, 33206 }, g.external)
+    assert.same({ 871 }, g.others)
+  end)
+end)
+
 describe("Rules.CornerIDs", function()
   it("drops saves Blizzard already flags as big defensive", function()
     local big = { [642] = true, [33206] = true }

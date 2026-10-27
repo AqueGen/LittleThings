@@ -280,6 +280,9 @@ Switch on Save indicator (Group content). It is off by default. Its page has Whe
 - [ ] Solo, Sentinel: an icon below the centre of the screen with seconds inside and `-30%` under it; the number falls by 2 per stack in combat and turns orange at `-18%`.
 - [ ] Ardent Defender or Guardian of Ancient Kings: its own icon with `-30%` / `-50%`, stronger saves left of weaker ones, Sentinel left of a fixed 30% save.
 - [ ] Two externals of the same strength on you at once (two 40% saves): both icons show, nothing overlaps.
+- [ ] Blessing of Protection shows `phys`, Spellwarding `magic`, Life Cocoon `shield`, in blue, right of the percentage saves; Power Word: Barrier shows `-20%`.
+- [ ] The page lists Tracked saves in three groups with icons; untick one, /reload: it no longer shows in the row or on party frames.
+- [ ] One, two and three saves at once: the row stays centred on its X/Y point.
 - [ ] Settings page open: a gold outlined sample (Sentinel -24%, Pain Suppression -40%) shows; drag it, close the page: the row sits there, also after /reload. Lock position stops the drag, Scale resizes, Reset position puts it back.
 - [ ] Untick Time left or Damage reduction, /reload: the seconds or the reduction are gone.
 - [ ] Party with Blizzard raid-style party frames, a paladin tank pops Sentinel: a small icon in the top right of that member's frame; Ardent Defender on the same member shows no corner icon (Blizzard's centre icon has it).

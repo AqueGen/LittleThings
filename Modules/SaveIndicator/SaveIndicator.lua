@@ -6,7 +6,7 @@ local SaveIndicator = {}
 ns.SaveIndicator = SaveIndicator
 
 local DEFAULTS = { x = 0, y = -140, scale = 1, locked = false,
-    raid = false, showTime = true, showDR = true, corners = true }
+    raid = false, showTime = true, showDR = true, corners = true, off = {} }
 
 local events
 
@@ -112,6 +112,23 @@ function SaveIndicator.Pages(page)
             Place()
             ns.Window.Refresh()
         end })
+
+    local tracked = Rules.Groups(ns.SaveData, select(2, UnitClass("player")))
+    for _, part in ipairs({
+        { key = "yours", title = "Tracked saves: your class" },
+        { key = "external", title = "Tracked saves: externals from other classes" },
+        { key = "others", title = "Tracked saves: other classes, on party frames" },
+    }) do
+        local group = page:Group(part.title)
+        for _, id in ipairs(tracked[part.key]) do
+            local entry = ns.SaveData[id]
+            group:Check({ label = ("|T%s:16|t %s  %s"):format(C_Spell.GetSpellTexture(id) or 134400, entry.name, Rules.Text(entry)),
+                default = true, reload = true, combatLocked = true,
+                tooltip = "Shows this save in the centre row and on party frames.",
+                get = function() return not ns.db.saveIndicatorRow.off[id] end,
+                set = function(value) ns.db.saveIndicatorRow.off[id] = (not value) or nil end })
+        end
+    end
 end
 
 SaveIndicator.key = "saveIndicator"

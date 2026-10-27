@@ -98,7 +98,7 @@ end
 function Corners.Apply(on)
     wanted = on
     if not ids and not InCombatLockdown() then
-        ids = Rules.CornerIDs(ns.SaveData, IsBig)
+        ids = Rules.CornerIDs(Rules.Enabled(ns.SaveData, ns.db.saveIndicatorRow.off), IsBig)
     end
     if on and not hooked then
         hooked = true

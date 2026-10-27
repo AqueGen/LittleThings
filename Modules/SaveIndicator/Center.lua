@@ -56,7 +56,7 @@ local function Initializer(entry)
             if formatter then
                 btn:SetApplicationCount(dr, { formatter = formatter })
             else
-                dr:SetText("|c" .. Rules.COLORS.normal .. Rules.Label(entry.dr) .. "|r")
+                dr:SetText("|c" .. entry.color .. entry.text .. "|r")
             end
         end
         if btn.SetHideTooltipInCombat then btn:SetHideTooltipInCombat(true) end
@@ -94,7 +94,7 @@ local function Build()
     host = CreateFrame("Frame", nil, row)
     host:SetPoint("TOP", row, "TOP", (STEP - ICON) / 2, 0)
     local prev
-    for _, entry in ipairs(Rules.Row(ns.SaveData)) do
+    for _, entry in ipairs(Rules.Row(Rules.Enabled(ns.SaveData, ns.db.saveIndicatorRow.off))) do
         local c = Container(entry)
         if c then
             if prev then
