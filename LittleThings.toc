@@ -65,4 +65,5 @@ Modules/BattleResGuard/BattleResGuard.lua
 Modules/LowLevelGear/LowLevelGearRules.lua
 Modules/LowLevelGear/LowLevelGear.lua
 Modules/SaveIndicator/SaveRules.lua
+Modules/SaveIndicator/SaveData.lua
 Modules/SaveIndicator/SaveIndicator.lua
