@@ -81,15 +81,26 @@ local function Container(entry)
     return c
 end
 
+local placedAt
 local function Recenter()
     local first = containers[1]
     if not first then return end
     local widths = {}
     for i, c in ipairs(containers) do widths[i] = c:GetWidth() end
     local start = Rules.ChainStart(widths, issecretvalue)
-    if not start then return end
+    if not start or start == placedAt then return end
+    placedAt = start
     first:ClearAllPoints()
     first:SetPoint("TOPLEFT", row, "TOP", start, 0)
+end
+
+local RECENTER_INTERVAL = 0.1
+local sinceRecenter = 0
+local function OnUpdate(_, elapsed)
+    sinceRecenter = sinceRecenter + elapsed
+    if sinceRecenter < RECENTER_INTERVAL then return end
+    sinceRecenter = 0
+    Recenter()
 end
 
 local function Build()
@@ -108,10 +119,9 @@ local function Build()
             end
             containers[#containers + 1] = c
             prev = c
-            pcall(c.HookScript, c, "OnSizeChanged", Recenter)
         end
     end
-    Recenter()
+    row:SetScript("OnUpdate", OnUpdate)
 end
 
 local function ApplyNow()
