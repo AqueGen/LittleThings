@@ -36,12 +36,21 @@ function SaveIndicator.Enable()
     SaveIndicator.Refresh()
 end
 
+local pageFrame
+
+local function SyncPreview()
+    if ns.SaveCenter then
+        ns.SaveCenter.SetPreview(pageFrame ~= nil and pageFrame:IsShown() and ns.IsOn("saveIndicator"))
+    end
+end
+
 function SaveIndicator.OnSwitch(enabled)
     if enabled then
         SaveIndicator.Enable()
     elseif events then
         SaveIndicator.Refresh()
     end
+    SyncPreview()
 end
 
 local function Option(key, spec, apply)
@@ -61,9 +70,10 @@ end
 
 function SaveIndicator.Pages(page)
     InitializeDb()
-    if page.frame and ns.SaveCenter then
-        page.frame:HookScript("OnShow", function() ns.SaveCenter.SetPreview(true) end)
-        page.frame:HookScript("OnHide", function() ns.SaveCenter.SetPreview(false) end)
+    if page.frame then
+        pageFrame = page.frame
+        page.frame:HookScript("OnShow", SyncPreview)
+        page.frame:HookScript("OnHide", SyncPreview)
     end
 
     local row = page:Group("Centre row")
