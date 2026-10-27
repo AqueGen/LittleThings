@@ -73,13 +73,18 @@ function Rules.CenterOffset(cx, cy, ux, uy, scale)
     return math.floor(cx - ux / scale + 0.5), math.floor(cy - uy / scale + 0.5)
 end
 
-function Rules.ChainStart(widths, isSecret)
-    local total = 0
+function Rules.ChainStart(widths, gap, isSecret)
+    local pos, left, right = 0, nil, nil
     for _, width in ipairs(widths) do
         if isSecret(width) then return nil end
-        total = total + width
+        if width > 1 then
+            left = left or pos
+            right = pos + width - gap
+        end
+        pos = pos + width
     end
-    return -total / 2
+    if not left then return nil end
+    return -(left + right) / 2
 end
 
 function Rules.Label(dr)

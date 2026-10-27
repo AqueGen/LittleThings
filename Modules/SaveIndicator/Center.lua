@@ -87,7 +87,7 @@ local function Recenter()
     if not first then return end
     local widths = {}
     for i, c in ipairs(containers) do widths[i] = c:GetWidth() end
-    local start = Rules.ChainStart(widths, issecretvalue)
+    local start = Rules.ChainStart(widths, STEP - ICON, issecretvalue)
     if not start or start == placedAt then return end
     placedAt = start
     first:ClearAllPoints()
