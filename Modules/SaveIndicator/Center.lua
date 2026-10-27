@@ -16,14 +16,14 @@ local containers = {}
 local wanted = false
 
 local function Point(frame)
-    local db = ns.db.saveIndicator
+    local db = ns.db.saveIndicatorRow
     frame:ClearAllPoints()
     frame:SetPoint(db.point, UIParent, db.relativePoint, db.x, db.y)
     frame:SetScale(db.scale)
 end
 
 local function Initializer(entry)
-    local db = ns.db.saveIndicator
+    local db = ns.db.saveIndicatorRow
     local formatter
     if entry.perStack then
         formatter = C_StringUtil.CreateNumericRuleFormatter()
@@ -161,13 +161,13 @@ local function BuildPreview()
         dr:SetText("|c" .. Rules.COLORS.normal .. Rules.Label(sample.dr) .. "|r")
     end
     preview:SetScript("OnDragStart", function(self)
-        if not ns.db.saveIndicator.locked and not InCombatLockdown() then
+        if not ns.db.saveIndicatorRow.locked and not InCombatLockdown() then
             self:StartMoving()
         end
     end)
     preview:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        local db = ns.db.saveIndicator
+        local db = ns.db.saveIndicatorRow
         local point, _, relativePoint, x, y = self:GetPoint(1)
         db.point, db.relativePoint, db.x, db.y = point, relativePoint, math.floor(x + 0.5), math.floor(y + 0.5)
         Center.Place()

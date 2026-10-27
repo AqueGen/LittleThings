@@ -11,12 +11,12 @@ local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = -140, 
 local events
 
 local function InitializeDb()
-    ns.db.saveIndicator = ns.db.saveIndicator or {}
-    ns.ApplyDefaults(ns.db.saveIndicator, DEFAULTS)
+    ns.db.saveIndicatorRow = ns.db.saveIndicatorRow or {}
+    ns.ApplyDefaults(ns.db.saveIndicatorRow, DEFAULTS)
 end
 
 function SaveIndicator.Refresh()
-    local db = ns.db.saveIndicator
+    local db = ns.db.saveIndicatorRow
     local center, corners = false, false
     if ns.IsOn("saveIndicator") then
         center, corners = Rules.Where({ inGroup = IsInGroup(), inRaid = IsInRaid(),
@@ -49,9 +49,9 @@ end
 local function Option(key, spec, apply)
     spec.default = DEFAULTS[key]
     spec.combatLocked = true
-    spec.get = function() return ns.db.saveIndicator[key] end
+    spec.get = function() return ns.db.saveIndicatorRow[key] end
     spec.set = function(value)
-        ns.db.saveIndicator[key] = value
+        ns.db.saveIndicatorRow[key] = value
         if apply then apply() end
     end
     return spec
@@ -86,7 +86,7 @@ function SaveIndicator.Pages(page)
     row:Button({ label = "Reset position", combatLocked = true,
         tooltip = "Moves the row back below the centre of the screen.",
         onClick = function()
-            local db = ns.db.saveIndicator
+            local db = ns.db.saveIndicatorRow
             db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
             Place()
         end })
