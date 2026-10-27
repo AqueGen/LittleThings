@@ -11,7 +11,7 @@ local STEP = ICON + 4
 local FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 local SAMPLES = { { id = 389539, dr = 24 }, { id = 33206, dr = 40 } }
 
-local row, preview
+local row, host, preview
 local containers = {}
 local wanted = false
 
@@ -64,7 +64,7 @@ local function Initializer(entry)
 end
 
 local function Container(entry)
-    local ok, c = pcall(CreateFrame, "AuraContainer", nil, row, "CustomAuraContainerTemplate")
+    local ok, c = pcall(CreateFrame, "AuraContainer", nil, host, "CustomAuraContainerTemplate")
     if not ok or not c then
         return nil
     end
@@ -81,26 +81,9 @@ local function Container(entry)
     return c
 end
 
-local placedAt
-local function Recenter()
-    local first = containers[1]
-    if not first then return end
-    local widths = {}
-    for i, c in ipairs(containers) do widths[i] = c:GetWidth() end
-    local start = Rules.ChainStart(widths, STEP - ICON, issecretvalue)
-    if not start or start == placedAt then return end
-    placedAt = start
-    first:ClearAllPoints()
-    first:SetPoint("TOPLEFT", row, "TOP", start, 0)
-end
-
-local RECENTER_INTERVAL = 0.1
-local sinceRecenter = 0
-local function OnUpdate(_, elapsed)
-    sinceRecenter = sinceRecenter + elapsed
-    if sinceRecenter < RECENTER_INTERVAL then return end
-    sinceRecenter = 0
-    Recenter()
+local function FitHost()
+    host:SetSize(0.001, 0.001)
+    host:ResizeToBoundsRect()
 end
 
 local function Build()
@@ -108,6 +91,8 @@ local function Build()
     row:SetSize(STEP * #SAMPLES, ICON + LABEL)
     row:SetFrameStrata("MEDIUM")
     Point(row)
+    host = CreateFrame("Frame", nil, row)
+    host:SetPoint("TOP", row, "TOP", (STEP - ICON) / 2, 0)
     local prev
     for _, entry in ipairs(Rules.Row(ns.SaveData)) do
         local c = Container(entry)
@@ -115,13 +100,14 @@ local function Build()
             if prev then
                 c:SetPoint("TOPLEFT", prev, "TOPRIGHT", 0, 0)
             else
-                c:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
+                c:SetPoint("TOPLEFT", host, "TOPLEFT", 0, 0)
             end
             containers[#containers + 1] = c
             prev = c
         end
     end
-    row:SetScript("OnUpdate", OnUpdate)
+    FitHost()
+    row:SetScript("OnUpdate", FitHost)
 end
 
 local function ApplyNow()
@@ -149,22 +135,6 @@ function ns.SaveDefer(func)
     else
         func()
     end
-end
-
-function Center.Report()
-    if not row then
-        ns.Print("save row not built yet")
-        return
-    end
-    local cx = row:GetCenter()
-    local parts = {}
-    for i, c in ipairs(containers) do
-        local w = c:GetWidth()
-        local left = c:GetLeft()
-        parts[#parts + 1] = issecretvalue(w) and (i .. ":secret")
-            or ("%d:%.1f@%d%s"):format(i, w, left and math.floor(left - cx + 0.5) or 0, c:IsShown() and "" or "h")
-    end
-    ns.Print(("save row: start %s, %s"):format(tostring(placedAt), table.concat(parts, " ")))
 end
 
 function Center.Apply(on)
