@@ -14,7 +14,6 @@ local SAMPLES = { { id = 389539, dr = 24 }, { id = 33206, dr = 40 } }
 local row, preview
 local containers = {}
 local wanted = false
-local pending = false
 
 local function Point(frame)
     local db = ns.db.saveIndicator
@@ -103,7 +102,6 @@ local function Build()
 end
 
 local function ApplyNow()
-    pending = false
     if wanted and not row then
         Build()
     end
@@ -112,15 +110,18 @@ local function ApplyNow()
     end
 end
 
+local deferred = {}
 local regen = CreateFrame("Frame")
 regen:SetScript("OnEvent", function()
     regen:UnregisterEvent("PLAYER_REGEN_ENABLED")
-    if pending then ApplyNow() end
+    local run = deferred
+    deferred = {}
+    for func in pairs(run) do func() end
 end)
 
-local function OutOfCombat(func)
+function ns.SaveDefer(func)
     if InCombatLockdown() then
-        pending = true
+        deferred[func] = true
         regen:RegisterEvent("PLAYER_REGEN_ENABLED")
     else
         func()
@@ -129,7 +130,7 @@ end
 
 function Center.Apply(on)
     wanted = on
-    OutOfCombat(ApplyNow)
+    ns.SaveDefer(ApplyNow)
 end
 
 function Center.Place()
