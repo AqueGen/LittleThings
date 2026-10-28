@@ -20,7 +20,7 @@ describe("Rules.Pick", function()
   end)
   it("goes back to the group after guild, channel, yell or emote", function()
     local group = { instance = false, raid = false, party = true }
-    for _, current in ipairs({ "GUILD", "OFFICER", "CHANNEL", "YELL", "EMOTE", "RAID_WARNING" }) do
+    for _, current in ipairs({ "GUILD", "GUILD_DISCORD", "OFFICER", "CHANNEL", "YELL", "EMOTE", "RAID_WARNING" }) do
       assert.equals("PARTY", Rules.Pick(current, group))
     end
   end)

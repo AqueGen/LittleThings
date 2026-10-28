@@ -5,7 +5,7 @@ local Rules = {}
 local REPLACE = {
     SAY = true, YELL = true, EMOTE = true,
     PARTY = true, RAID = true, RAID_WARNING = true, INSTANCE_CHAT = true,
-    GUILD = true, OFFICER = true, CHANNEL = true,
+    GUILD = true, GUILD_DISCORD = true, OFFICER = true, CHANNEL = true,
 }
 
 function Rules.Pick(current, group)
