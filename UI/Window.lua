@@ -8,8 +8,9 @@ local T = Widgets.THEME
 local Window = {}
 
 local DEFAULT_W, DEFAULT_H = 860, 560
--- MIN_H keeps the whole side menu above the footer
-local MIN_W, MIN_H = 620, 530
+-- MIN_W fits the widest fixed-width page (Meter windows, a 600-wide panel); MIN_H keeps the
+-- whole side menu above the footer
+local MIN_W, MIN_H = 790, 530
 local TITLE_H, MENU_W, ENTRY_H, HEADER_H, GAP, PAD = 28, 150, 20, 18, 4, 8
 local WINDOWS_KEY = "damageMeterWindows"
 local EXTRAS = { { key = WINDOWS_KEY, label = "Meter windows", after = "damageMeter" } }
