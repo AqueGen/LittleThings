@@ -36,7 +36,7 @@ Off by default. Two bars of icons next to the character panel: your specializati
 
 ### Group finder
 
-One switch at the top of the Group finder page, on by default. While on, each of the tools below has its own switch on that page (all on except Summary site links) and its options, in five sections: Applicants, Creating a group, Searching for a group, Player menus, Summary site.
+One switch at the top of the Group finder page, on by default. While on, each of the tools below has its own switch on that page (all on except Summary site links) and its options, in two sections: Applicants, and More (group keystones, sign-up roles, the Warcraft Logs link in player menus, summary site links).
 
 **Warcraft Logs link.** Right-click a player - in a unit frame, chat, the guild roster or the group finder - and copy their Warcraft Logs page, opened on the Mythic+ season rather than the raid tab. Off leaves every menu exactly as Blizzard built it. `/wcl name-realm` works either way.
 
