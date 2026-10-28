@@ -35,5 +35,11 @@ function Rules.Size(savedW, savedH, minW, minH, defaultW, defaultH)
     return math.max(savedW or defaultW, minW), math.max(savedH or defaultH, minH)
 end
 
+-- Window size while its grip is dragged: the start size plus how far the cursor moved right
+-- and down, kept between the minimum and the room left on screen
+function Rules.GripSize(w0, h0, dx, dy, minW, minH, maxW, maxH)
+    return math.max(minW, math.min(w0 + dx, maxW)), math.max(minH, math.min(h0 + dy, maxH))
+end
+
 if ns then ns.WidgetRules = Rules end
 return Rules

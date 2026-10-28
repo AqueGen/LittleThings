@@ -228,17 +228,30 @@ local function Build()
     grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
     grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
     grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
-    -- Sizing grows the frame away from its anchor: pin the top-left corner where it is first,
-    -- or a frame anchored at its centre jumps away from the cursor. Never larger than the screen.
-    grip:SetScript("OnMouseDown", function()
+    -- The grip sizes the window itself instead of StartSizing, which in CastAhead's identical
+    -- window now and then set a size of its own on the first frame and ran off under the cursor.
+    -- The top-left corner stays put; the size never passes the screen's right or bottom edge.
+    grip:SetScript("OnMouseDown", function(self, button)
+        if button ~= "LeftButton" then return end
         local left, top = frame:GetLeft(), frame:GetTop()
         frame:ClearAllPoints()
         frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
-        frame:SetResizeBounds(MIN_W, MIN_H, UIParent:GetWidth(), UIParent:GetHeight())
-        frame:StartSizing("BOTTOMRIGHT")
+        local scale = frame:GetEffectiveScale()
+        local x0, y0 = GetCursorPosition()
+        local w0, h0 = frame:GetSize()
+        local maxW = UIParent:GetWidth() * UIParent:GetEffectiveScale() / scale - left
+        self:SetScript("OnUpdate", function(grabbed)
+            if not IsMouseButtonDown("LeftButton") then
+                grabbed:GetScript("OnMouseUp")(grabbed)
+                return
+            end
+            local x, y = GetCursorPosition()
+            frame:SetSize(Rules.GripSize(w0, h0, (x - x0) / scale, (y0 - y) / scale, MIN_W, MIN_H, maxW, top))
+        end)
     end)
-    grip:SetScript("OnMouseUp", function()
-        frame:StopMovingOrSizing()
+    grip:SetScript("OnMouseUp", function(self)
+        if not self:GetScript("OnUpdate") then return end
+        self:SetScript("OnUpdate", nil)
         local s = Saved()
         s.width, s.height = frame:GetSize()
         SavePosition()

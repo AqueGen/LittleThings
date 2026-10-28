@@ -66,3 +66,17 @@ describe("WidgetRules.Size", function()
     assert.same({ 800, 480 }, { Rules.Size(600, 420, 800, 480, 860, 560) })
   end)
 end)
+
+describe("WidgetRules.GripSize", function()
+  it("grows the window by the cursor's move right and down", function()
+    assert.same({ 900, 610 }, { Rules.GripSize(800, 560, 100, 50, 620, 530, 1500, 900) })
+  end)
+
+  it("stops at the minimum when dragged past it", function()
+    assert.same({ 620, 530 }, { Rules.GripSize(800, 560, -400, -300, 620, 530, 1500, 900) })
+  end)
+
+  it("stops at the screen edge when dragged past it", function()
+    assert.same({ 1000, 800 }, { Rules.GripSize(800, 560, 2000, 2000, 620, 530, 1000, 800) })
+  end)
+end)
