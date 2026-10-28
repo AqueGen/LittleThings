@@ -8,7 +8,8 @@ local T = Widgets.THEME
 local Window = {}
 
 local DEFAULT_W, DEFAULT_H = 860, 560
-local MIN_W, MIN_H = 800, 480
+-- MIN_H keeps the whole side menu above the footer
+local MIN_W, MIN_H = 620, 530
 local TITLE_H, MENU_W, ENTRY_H, HEADER_H, GAP, PAD = 28, 150, 20, 18, 4, 8
 local WINDOWS_KEY = "damageMeterWindows"
 local EXTRAS = { { key = WINDOWS_KEY, label = "Meter windows", after = "damageMeter" } }
@@ -111,6 +112,7 @@ end
 
 local function Entry(item)
     local entry = Widgets.Button(menu, item.label, MENU_W - 2 * PAD)
+    entry:SetBackdropBorderColor(unpack(T.border))
     entry.label:ClearAllPoints()
     entry.label:SetPoint("LEFT", entry, "LEFT", PAD, 0)
     entry.bar = entry:CreateTexture(nil, "OVERLAY")
@@ -192,8 +194,8 @@ local function Build()
     name:SetTextColor(unpack(T.gold))
     name:SetText("LittleThings")
 
-    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", 2, 2)
+    local close = Widgets.Button(title, "X", 22)
+    close:SetPoint("RIGHT", title, "RIGHT", -(TITLE_H - 22) / 2, 0)
     close:SetScript("OnClick", function() frame:Hide() end)
 
     menu = CreateFrame("Frame", nil, frame, "BackdropTemplate")
@@ -214,7 +216,11 @@ local function Build()
     host = CreateFrame("Frame", nil, scroll)
     host:SetSize(1, 1)
     scroll:SetScrollChild(host)
-    scroll:SetScript("OnSizeChanged", function(_, width) host:SetWidth(width) end)
+    scroll:SetScript("OnSizeChanged", function(_, width)
+        host:SetWidth(width)
+        -- Notes rewrap to the new width, so the page has to re-stack
+        if current and pages[current] then pages[current]:Refresh() end
+    end)
 
     local grip = CreateFrame("Button", nil, frame)
     grip:SetSize(16, 16)
@@ -222,9 +228,30 @@ local function Build()
     grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
     grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
     grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
-    grip:SetScript("OnMouseDown", function() frame:StartSizing("BOTTOMRIGHT") end)
-    grip:SetScript("OnMouseUp", function()
-        frame:StopMovingOrSizing()
+    -- The grip sizes the window itself instead of StartSizing, which in CastAhead's identical
+    -- window now and then set a size of its own on the first frame and ran off under the cursor.
+    -- The top-left corner stays put; the size never passes the screen's right or bottom edge.
+    grip:SetScript("OnMouseDown", function(self, button)
+        if button ~= "LeftButton" then return end
+        local left, top = frame:GetLeft(), frame:GetTop()
+        frame:ClearAllPoints()
+        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+        local scale = frame:GetEffectiveScale()
+        local x0, y0 = GetCursorPosition()
+        local w0, h0 = frame:GetSize()
+        local maxW = UIParent:GetWidth() * UIParent:GetEffectiveScale() / scale - left
+        self:SetScript("OnUpdate", function(grabbed)
+            if not IsMouseButtonDown("LeftButton") then
+                grabbed:GetScript("OnMouseUp")(grabbed)
+                return
+            end
+            local x, y = GetCursorPosition()
+            frame:SetSize(Rules.GripSize(w0, h0, (x - x0) / scale, (y0 - y) / scale, MIN_W, MIN_H, maxW, top))
+        end)
+    end)
+    grip:SetScript("OnMouseUp", function(self)
+        if not self:GetScript("OnUpdate") then return end
+        self:SetScript("OnUpdate", nil)
         local s = Saved()
         s.width, s.height = frame:GetSize()
         SavePosition()
