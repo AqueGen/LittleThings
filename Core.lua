@@ -577,14 +577,6 @@ bootstrap:SetScript("OnEvent", function()
         ns.Print("Blizzard Damage Meter not found, the damage meter module was not installed.")
     end
 
-    for _, module in ipairs(moduleOrder) do
-        if module.Enable and IsEnabled(module) then
-            module.Enable()
-        end
-    end
-
-    StartSweeps()
-
     -- /dmc and /dmt are what the addon answered to under its earlier names,
     -- and muscle memory outlives a name change.
     SLASH_LITTLETHINGS1 = "/littlethings"
@@ -592,4 +584,12 @@ bootstrap:SetScript("OnEvent", function()
     SLASH_LITTLETHINGS3 = "/dmc"
     SLASH_LITTLETHINGS4 = "/dmt"
     SlashCmdList["LITTLETHINGS"] = HandleSlashCommand
+
+    for _, module in ipairs(moduleOrder) do
+        if module.Enable and IsEnabled(module) then
+            xpcall(module.Enable, function(err) geterrorhandler()(err) end)
+        end
+    end
+
+    StartSweeps()
 end)
