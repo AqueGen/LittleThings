@@ -8,7 +8,8 @@ local T = Widgets.THEME
 local Window = {}
 
 local DEFAULT_W, DEFAULT_H = 860, 560
-local MIN_W, MIN_H = 800, 480
+-- MIN_H keeps the whole side menu above the footer
+local MIN_W, MIN_H = 620, 530
 local TITLE_H, MENU_W, ENTRY_H, HEADER_H, GAP, PAD = 28, 150, 20, 18, 4, 8
 local WINDOWS_KEY = "damageMeterWindows"
 local EXTRAS = { { key = WINDOWS_KEY, label = "Meter windows", after = "damageMeter" } }
@@ -215,7 +216,11 @@ local function Build()
     host = CreateFrame("Frame", nil, scroll)
     host:SetSize(1, 1)
     scroll:SetScrollChild(host)
-    scroll:SetScript("OnSizeChanged", function(_, width) host:SetWidth(width) end)
+    scroll:SetScript("OnSizeChanged", function(_, width)
+        host:SetWidth(width)
+        -- Notes rewrap to the new width, so the page has to re-stack
+        if current and pages[current] then pages[current]:Refresh() end
+    end)
 
     local grip = CreateFrame("Button", nil, frame)
     grip:SetSize(16, 16)

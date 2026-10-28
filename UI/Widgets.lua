@@ -250,12 +250,18 @@ end
 
 function Group:Note(spec)
     if type(spec) == "string" then spec = { text = spec } end
-    local text = self.frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local box = self.frame
+    local text = box:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     text:SetWidth(NOTE_W)
     text:SetJustifyH("LEFT")
     text:SetTextColor(unpack(T.muted))
     text:SetText(spec.text)
-    self:Add(text, function() return text:GetStringHeight() end, nil, spec.visible)
+    -- Wraps to the box on a narrow window, never wider than a comfortable line
+    self:Add(text, function()
+        local room = (box:GetWidth() or 0) - 2 * PAD
+        text:SetWidth(room > 100 and math.min(NOTE_W, room) or NOTE_W)
+        return text:GetStringHeight()
+    end, nil, spec.visible)
 end
 
 function Group:Scoped(predicate)
