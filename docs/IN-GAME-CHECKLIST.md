@@ -296,3 +296,13 @@ Switch on Party frames when solo (Group content). It is off by default. Needs Us
 - [ ] Leave a group in combat: the frame comes back after combat, no `ADDON_ACTION_BLOCKED`.
 - [ ] Switch off: the solo frame hides at once. Old-style party frames: nothing changes.
 - [ ] **After a fight with the frame up solo, BugSack empty, `Logs/taint.log` has no LittleThings entries.**
+
+## 21. Group chat on Enter
+
+Switch on Group chat on Enter (Group content). It is off by default.
+
+- [ ] Solo: Enter opens Say. Party: Party. Raid: Raid. Dungeon Finder or Raid Finder group: Instance.
+- [ ] Send one message with /g, press Enter again: the box is back on Party.
+- [ ] R after a whisper: the box opens on the whisper. A whisper tab keeps its whisper.
+- [ ] Switch off: Enter remembers the last channel again, as Blizzard does.
+- [ ] **`/console taintLog 1`. In a key, during a boss pull and in a raid encounter, Enter and send a party or raid message: it arrives, no `ADDON_ACTION_BLOCKED`, BugSack empty, `Logs/taint.log` has no LittleThings entries.**
