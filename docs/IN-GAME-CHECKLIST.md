@@ -82,7 +82,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## Settings window
 
 - [ ] `/lt` opens the window; `/lt` again while open keeps it open on the same page. Esc and the X close it. Game > Options > AddOns > LittleThings shows a short page with Open LittleThings, which closes the game's options and opens the window. The damage meter gear menu's LittleThings settings opens the Damage meter page.
-- [ ] The menu shows Group content (Group finder, Group leader icons, Raid marker panel), Combat (Damage meter, Meter windows), Character and loot (Character panel, Journal loot), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
+- [ ] The menu shows Group finder (Group finder), Party and raid (Group leader icons, Party frames when solo, Raid marker panel, Group chat on Enter), Combat (Save indicator, Battle res guard, Damage meter, Meter windows), Character and loot (Character panel, Journal loot, Low level gear), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
 - [ ] Drag by the title moves the window, the corner grip resizes it, it never goes below 800x480 and never changes size by itself. Position and size are the same after /reload.
 - [ ] Every page's controls do what the old Blizzard pages did: damage meter behaviour, layer, the two Blizzard switches, the Meter windows rows; both character panel bars; journal loot icons and loot spec buttons; group finder sections with their own switches; Memory, Graphics and Addons buttons. Values changed elsewhere (filter panel, /lt format) show on the page when it is opened again.
 - [ ] Changing Mythic+ sort by, Sort Mythic+ applicants or Damage meter offers a reload, as before.
@@ -179,7 +179,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 15. Raid marker panel
 
-Switch on Raid marker panel (Group content). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Lock position, Scale, Vertical, Pull left/right seconds and Reset position, and a Placement order group (1st..8th). The panel also shows while this page is open, so it can be placed solo.
+Switch on Raid marker panel (Party and raid). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Lock position, Scale, Vertical, Pull left/right seconds and Reset position, and a Placement order group (1st..8th). The panel also shows while this page is open, so it can be placed solo.
 
 - [ ] No Lua error on login with the module on and off; switching it on and off live works.
 - [ ] Solo: open the Raid marker panel page - the panel appears; drag it, close the window - it hides and keeps the new spot after /reload.
@@ -231,7 +231,7 @@ Switch on Raid marker panel (Group content). It is off by default. Its page has 
 
 ## 16. Battle res guard
 
-Switch on Battle res guard (Group content). It is off by default. Its page has an Ask before release as group with Tank, Healer and Damage, all on by default.
+Switch on Battle res guard (Combat). It is off by default. Its page has an Ask before release as group with Tank, Healer and Damage, all on by default.
 
 - [ ] In a key with a battle res charge left and a druid, death knight, warlock or paladin alive, die: the Release button gets a gold frame. A click on it opens the window above the death popup with "Battle res available: N" and "Can res: Name"; Blizzard's popup does not release.
 - [ ] Release anyway releases and the window and frame go. Wait for res closes the window, you stay dead, and the frame stays on Release.
@@ -275,7 +275,7 @@ Switch on Low level gear (Character and loot). It is off by default.
 
 ## 19. Save indicator
 
-Switch on Save indicator (Group content). It is off by default. Its page has Centre row (Time left, Damage reduction, Lock position, Scale, X, Y, Test, Center horizontally, Reset position) and Tracked saves.
+Switch on Save indicator (Combat). It is off by default. Its page has Centre row (Time left, Damage reduction, Lock position, Scale, X, Y, Test, Center horizontally, Reset position) and Tracked saves.
 
 - [ ] Solo, Sentinel: an icon below the centre of the screen with seconds inside and `-30%` under it; the number falls by 2 per stack in combat and turns orange at `-18%`.
 - [ ] Ardent Defender or Guardian of Ancient Kings: its own icon with `-30%` / `-50%`, stronger saves left of weaker ones, Sentinel left of a fixed 30% save.
@@ -290,7 +290,7 @@ Switch on Save indicator (Group content). It is off by default. Its page has Cen
 
 ## 20. Party frames when solo
 
-Switch on Party frames when solo (Group content). It is off by default. Needs Use Raid-Style Party Frames in Edit Mode.
+Switch on Party frames when solo (Party and raid). It is off by default. Needs Use Raid-Style Party Frames in Edit Mode.
 
 - [ ] Solo: your own party frame shows. Join a group: Blizzard's frames as usual. Leave: your frame stays.
 - [ ] Leave a group in combat: the frame comes back after combat, no `ADDON_ACTION_BLOCKED`.
@@ -299,7 +299,7 @@ Switch on Party frames when solo (Group content). It is off by default. Needs Us
 
 ## 21. Group chat on Enter
 
-Switch on Group chat on Enter (Group content). It is off by default.
+Switch on Group chat on Enter (Party and raid). It is off by default.
 
 - [ ] Solo: Enter opens Say. Party: Party. Raid: Raid. Dungeon Finder or Raid Finder group: Instance.
 - [ ] Send one message with /g, press Enter again: the box is back on Party.
