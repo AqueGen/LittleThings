@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.1](https://github.com/AqueGen/LittleThings/compare/v0.19.0...v0.19.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* a module that fails to start no longer takes /lt and the other modules down ([#55](https://github.com/AqueGen/LittleThings/issues/55)) ([c7de306](https://github.com/AqueGen/LittleThings/commit/c7de3066440e9f4b4f3a196326a7ae5e00d96110))
+* group chat on Enter keeps party or instance chat when you are in both groups ([#57](https://github.com/AqueGen/LittleThings/issues/57)) ([4c64d7c](https://github.com/AqueGen/LittleThings/commit/4c64d7ce4e9282bcaf196afa6111b7c120cd378c))
+
 ## [0.19.0](https://github.com/AqueGen/LittleThings/compare/v0.18.0...v0.19.0) (2026-10-28)
 
 
