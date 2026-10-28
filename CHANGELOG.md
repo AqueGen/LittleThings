@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/AqueGen/LittleThings/compare/v0.20.0...v0.21.0) (2026-10-28)
+
+
+### Features
+
+* **loglink:** point summary links at the hub Key Scout page ([#61](https://github.com/AqueGen/LittleThings/issues/61)) ([b85fc23](https://github.com/AqueGen/LittleThings/commit/b85fc23c49fe79fbc0ddf5f2356b02eedeb04558))
+
 ## [0.20.0](https://github.com/AqueGen/LittleThings/compare/v0.19.1...v0.20.0) (2026-10-28)
 
 
