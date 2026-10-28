@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.20.0](https://github.com/AqueGen/LittleThings/compare/v0.19.1...v0.20.0) (2026-10-28)
+
+
+### Features
+
+* apply the shared window style to the settings window ([#58](https://github.com/AqueGen/LittleThings/issues/58)) ([4beb9e1](https://github.com/AqueGen/LittleThings/commit/4beb9e1bcca7891522a5f9f5433f2ec2fed2208b))
+
+
+### Bug Fixes
+
+* notes wrap on a page's first view, minimum width fits every page ([#60](https://github.com/AqueGen/LittleThings/issues/60)) ([3afaee9](https://github.com/AqueGen/LittleThings/commit/3afaee92efac60f2131e5eba0b78c69f34a2b0d2))
+
 ## [0.19.1](https://github.com/AqueGen/LittleThings/compare/v0.19.0...v0.19.1) (2026-10-28)
 
 
