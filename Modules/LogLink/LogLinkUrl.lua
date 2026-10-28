@@ -47,7 +47,7 @@ function Link.For(name, realm, regionID, zone)
   return url .. "?zone=" .. tostring(zone or Link.ZONE)
 end
 
-Link.HUB = "https://brag-sheet.aquegen.workers.dev"
+Link.HUB = "https://aquegen-hub.vercel.app/scout"
 
 function Link.Hub(name, realm, regionID)
   local path, problem = parts(name, realm, regionID)

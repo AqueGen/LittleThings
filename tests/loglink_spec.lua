@@ -115,7 +115,7 @@ describe("Realms.Lower", function()
 end)
 
 describe("Link.Hub", function()
-  local BASE = "https://brag-sheet.aquegen.workers.dev"
+  local BASE = "https://aquegen-hub.vercel.app/scout"
 
   it("builds the summary page address from the same slug and name", function()
     assert.equals(BASE .. "/eu/tarren-mill/cutlers", Link.Hub("Cutlers", "Tarren Mill", EU))

@@ -175,7 +175,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 - [ ] Fresh install or a profile that never had it: Group finder page shows Summary site links unticked; no Compare applicants button on a Mythic+ listing and no Summary page entry in player menus.
 - [ ] Tick it: the button appears on a Mythic+ listing at once, and right-clicking a player shows Summary page under LittleThings. No Set address button anywhere.
-- [ ] Press Compare applicants: the popup holds a full https://brag-sheet.aquegen.workers.dev/compare?... link; pasted into the browser it starts checking the first batch (with a saved WCL key), and Open link from clipboard on an open compare page loads it too.
+- [ ] Press Compare applicants: the popup holds a full https://aquegen-hub.vercel.app/scout/compare?... link; pasted into the browser it starts checking the first batch (with a saved WCL key), and Open link from clipboard on an open compare page loads it too.
 
 ## 15. Raid marker panel
 

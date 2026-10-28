@@ -3,7 +3,7 @@ package.path = "./Modules/LogLink/?.lua;./Modules/Applicants/?.lua;" .. package.
 local CompareUrl = require("CompareUrl")
 
 local EU = 3
-local BASE = "https://brag-sheet.aquegen.workers.dev"
+local BASE = "https://aquegen-hub.vercel.app/scout"
 local ME = { name = "Borshbringer", realm = "Tarren Mill", class = "PALADIN", role = "TANK" }
 local MINE = { name = "Borshbringer", realm = "Tarren Mill", class = "PALADIN", role = "TANK", app = 1 }
 
