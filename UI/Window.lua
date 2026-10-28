@@ -111,6 +111,7 @@ end
 
 local function Entry(item)
     local entry = Widgets.Button(menu, item.label, MENU_W - 2 * PAD)
+    entry:SetBackdropBorderColor(unpack(T.border))
     entry.label:ClearAllPoints()
     entry.label:SetPoint("LEFT", entry, "LEFT", PAD, 0)
     entry.bar = entry:CreateTexture(nil, "OVERLAY")
@@ -192,8 +193,8 @@ local function Build()
     name:SetTextColor(unpack(T.gold))
     name:SetText("LittleThings")
 
-    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", 2, 2)
+    local close = Widgets.Button(title, "X", 22)
+    close:SetPoint("RIGHT", title, "RIGHT", -(TITLE_H - 22) / 2, 0)
     close:SetScript("OnClick", function() frame:Hide() end)
 
     menu = CreateFrame("Frame", nil, frame, "BackdropTemplate")

@@ -5,12 +5,13 @@ local Rules = ns.WidgetRules
 local Widgets = {}
 
 Widgets.THEME = {
-    bg = { 0.063, 0.075, 0.09, 0.97 },
+    bg = { 0.063, 0.075, 0.09, 0.99 },
     panel = { 0.082, 0.098, 0.125, 1 },
     border = { 0.235, 0.251, 0.282, 1 },
+    control = { 0.36, 0.38, 0.43, 1 },
     gold = { 1, 0.82, 0 },
     text = { 0.9, 0.9, 0.9 },
-    muted = { 0.545, 0.576, 0.627 },
+    muted = { 0.66, 0.68, 0.72 },
     selected = { 0.165, 0.192, 0.251, 1 },
 }
 Widgets.FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 }
@@ -55,7 +56,7 @@ function Widgets.Button(parent, text, width)
     button:SetSize(width, 22)
     button:SetBackdrop(Widgets.FLAT)
     button:SetBackdropColor(unpack(T.panel))
-    button:SetBackdropBorderColor(unpack(T.border))
+    button:SetBackdropBorderColor(unpack(T.control))
     button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     button.label:SetPoint("CENTER")
     button.label:SetTextColor(unpack(T.text))
