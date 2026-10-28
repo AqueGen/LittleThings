@@ -8,8 +8,11 @@ local REPLACE = {
     GUILD = true, GUILD_DISCORD = true, OFFICER = true, CHANNEL = true,
 }
 
+local GROUP_CHANNEL = { PARTY = true, RAID = true, INSTANCE_CHAT = true }
+
 function Rules.Pick(current, group)
     if not REPLACE[current] then return nil end
+    if group.instance and group.party and GROUP_CHANNEL[current] then return nil end
     local wanted = "SAY"
     if group.instance then
         wanted = "INSTANCE_CHAT"
