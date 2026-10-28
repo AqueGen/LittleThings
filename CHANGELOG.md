@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.19.0](https://github.com/AqueGen/LittleThings/compare/v0.18.0...v0.19.0) (2026-10-28)
+
+
+### Features
+
+* group chat on Enter ([#51](https://github.com/AqueGen/LittleThings/issues/51)) ([2b110fa](https://github.com/AqueGen/LittleThings/commit/2b110fa895ee668cde8c8db0073b82c0cbe13901))
+* settings menu grouped by what each module does ([#53](https://github.com/AqueGen/LittleThings/issues/53)) ([0d185b5](https://github.com/AqueGen/LittleThings/commit/0d185b56f4771ad26bf32e255faf8d0b24eee098))
+
+
+### Bug Fixes
+
+* group chat on Enter also leaves Guild Discord for the group ([#54](https://github.com/AqueGen/LittleThings/issues/54)) ([44ae394](https://github.com/AqueGen/LittleThings/commit/44ae3949777936652445974c68595bc51902362a))
+
 ## [0.18.0](https://github.com/AqueGen/LittleThings/compare/v0.17.0...v0.18.0) (2026-10-27)
 
 
