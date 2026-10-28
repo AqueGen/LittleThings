@@ -303,6 +303,7 @@ Switch on Group chat on Enter (Party and raid). It is off by default.
 
 - [ ] Solo: Enter opens Say. Party: Party. Raid: Raid. Dungeon Finder or Raid Finder group: Instance.
 - [ ] Send one message with /g, press Enter again: the box is back on Party.
+- [ ] Premade party queued into a battleground or Dungeon Finder: send /p, press Enter: the box stays on Party; send /i, press Enter: it stays on Instance. After /g, Enter opens Instance.
 - [ ] R after a whisper: the box opens on the whisper. A whisper tab keeps its whisper.
 - [ ] Switch off: Enter remembers the last channel again, as Blizzard does.
 - [ ] **`/console taintLog 1`. In a key, during a boss pull and in a raid encounter, Enter and send a party or raid message: it arrives, no `ADDON_ACTION_BLOCKED`, BugSack empty, `Logs/taint.log` has no LittleThings entries.**

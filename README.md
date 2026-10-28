@@ -74,7 +74,7 @@ Off by default. Keeps Blizzard's party frame up while you are not in a group, wi
 
 ### Group chat on Enter
 
-Off by default. Enter opens chat in your group's channel every time, even if your last message went to guild or a channel: instance chat (/i) in a Dungeon Finder, Raid Finder or battleground group, raid in a raid, party in a party, say when you are alone. Whispers and replies (R) are left as they are, and typing a command such as /g still switches that message.
+Off by default. Enter opens chat in your group's channel every time, even if your last message went to guild or a channel: instance chat (/i) in a Dungeon Finder, Raid Finder or battleground group, raid in a raid, party in a party, say when you are alone. With your own party inside a finder or battleground group, party, raid or instance chat stays on the one you used last. Whispers and replies (R) are left as they are, and typing a command such as /g still switches that message.
 
 ### Raid marker panel
 

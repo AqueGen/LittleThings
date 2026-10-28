@@ -6,8 +6,17 @@ describe("Rules.Pick", function()
   it("picks instance chat in a finder group", function()
     assert.equals("INSTANCE_CHAT", Rules.Pick("SAY", { instance = true, raid = false, party = false }))
   end)
-  it("prefers instance chat when a home party is also in a finder group", function()
-    assert.equals("INSTANCE_CHAT", Rules.Pick("PARTY", { instance = true, raid = false, party = true }))
+  it("keeps the group channel the player chose while in both a home party and a finder group", function()
+    local group = { instance = true, raid = false, party = true }
+    for _, current in ipairs({ "PARTY", "RAID", "INSTANCE_CHAT" }) do
+      assert.is_nil(Rules.Pick(current, group))
+    end
+  end)
+  it("still leaves say, guild and channels for instance chat in both groups", function()
+    local group = { instance = true, raid = true, party = true }
+    for _, current in ipairs({ "SAY", "GUILD", "CHANNEL" }) do
+      assert.equals("INSTANCE_CHAT", Rules.Pick(current, group))
+    end
   end)
   it("picks raid in a home raid", function()
     assert.equals("RAID", Rules.Pick("SAY", { instance = false, raid = true, party = true }))
