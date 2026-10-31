@@ -11,6 +11,11 @@ function Rules.Grid(count, columns, cellWidth, rowHeight)
     return cells, math.ceil(count / columns) * rowHeight
 end
 
+function Rules.Columns(columns, cellWidth, room)
+    if room <= 0 then return columns end
+    return math.max(1, math.min(columns, math.floor(room / cellWidth)))
+end
+
 function Rules.Stack(items, gap)
     local offsets, y, any = {}, 0, false
     for index, item in ipairs(items) do

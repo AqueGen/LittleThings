@@ -94,13 +94,22 @@ end
 function Group:CheckGrid(specs, columns, cellWidth)
     local group = self
     local ROW_H = 18
-    local holder = CreateFrame("Frame", nil, self.frame)
-    local cells, height = Rules.Grid(#specs, columns, cellWidth, ROW_H)
-    holder:SetSize(columns * cellWidth, math.max(height, 1))
-    local refreshers = {}
+    local box = self.frame
+    local holder = CreateFrame("Frame", nil, box)
+    local checks, refreshers = {}, {}
+    local function Place()
+        local fit = Rules.Columns(columns, cellWidth, (box:GetWidth() or 0) - 2 * PAD)
+        local cells, height = Rules.Grid(#specs, fit, cellWidth, ROW_H)
+        for i, check in ipairs(checks) do
+            check:ClearAllPoints()
+            check:SetPoint("TOPLEFT", holder, "TOPLEFT", cells[i].x, -cells[i].y)
+        end
+        holder:SetSize(fit * cellWidth, math.max(height, 1))
+        return math.max(height, 1)
+    end
     for i, spec in ipairs(specs) do
         local check = UI.Checkbox(holder, 16)
-        check:SetPoint("TOPLEFT", holder, "TOPLEFT", cells[i].x, -cells[i].y)
+        checks[i] = check
         check.text = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         check.text:SetPoint("LEFT", check, "RIGHT", 3, 0)
         check.text:SetWidth(cellWidth - 24)
@@ -126,7 +135,8 @@ function Group:CheckGrid(specs, columns, cellWidth)
         end)
         Hover(check, spec)
     end
-    self:Add(holder, math.max(height, 1), function()
+    Place()
+    self:Add(holder, Place, function()
         for _, refresh in ipairs(refreshers) do refresh() end
     end)
 end
@@ -283,12 +293,6 @@ function Page:Group(title)
     return group
 end
 
-function Page:Embed(frame, height)
-    frame:SetParent(self.frame)
-    frame:Show()
-    self.groups[#self.groups + 1] = { frame = frame, height = height, embedded = true, visible = self.visible }
-end
-
 local function Height(item)
     return type(item.height) == "function" and item.height() or item.height
 end
@@ -316,10 +320,7 @@ function Page:Refresh()
     for index, group in ipairs(self.groups) do
         local shown = not group.visible or group.visible()
         group.frame:SetShown(shown)
-        local height = group.embedded and Height(group) or nil
-        if shown and not group.embedded then
-            height = LayoutGroup(group)
-        end
+        local height = shown and LayoutGroup(group) or nil
         group.frame:SetHeight(height or 1)
         blocks[index] = { height = height or 0, shown = shown }
     end
@@ -328,9 +329,7 @@ function Page:Refresh()
         if offsets[index] then
             group.frame:ClearAllPoints()
             group.frame:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 0, -offsets[index])
-            if not group.embedded then
-                group.frame:SetPoint("RIGHT", self.frame, "RIGHT", -PAD, 0)
-            end
+            group.frame:SetPoint("RIGHT", self.frame, "RIGHT", -PAD, 0)
         end
     end
     self.frame:SetHeight(math.max(total, 1))

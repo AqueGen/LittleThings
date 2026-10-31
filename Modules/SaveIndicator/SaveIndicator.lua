@@ -61,6 +61,7 @@ local function Option(key, spec, apply)
     spec.set = function(value)
         ns.db.saveIndicatorRow[key] = value
         if apply then apply() end
+        ns.SaveRowPreview.Refresh()
     end
     return spec
 end
@@ -132,4 +133,5 @@ function SaveIndicator.Pages(page)
 end
 
 SaveIndicator.key = "saveIndicator"
+SaveIndicator.Preview = ns.SaveRowPreview
 ns.RegisterModule("SaveIndicator", SaveIndicator)

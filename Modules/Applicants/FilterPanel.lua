@@ -4,6 +4,8 @@ local addonName, ns = ...
 local Rules = ns.FilterRules
 local Data = ns.ApplicantData
 local Filter = ns.ApplicantFilter
+local UI = LibStub("LibVelvet-1.0")
+local T = UI.T
 
 local WIDTH = 214
 local PAD = 10
@@ -46,6 +48,7 @@ end
 local function Heading(row, text)
     local fs = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     fs:SetPoint("TOPLEFT", PAD, 0)
+    fs:SetTextColor(unpack(T.title))
     fs:SetText(text)
 end
 
@@ -113,11 +116,13 @@ local function BuildClasses()
 end
 
 local function Check(row, label, y, get, set)
-    local check = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-    check:SetSize(24, 24)
-    check:SetPoint("TOPLEFT", PAD, y)
-    check.text:SetText(label)
-    check.text:SetFontObject("GameFontHighlightSmall")
+    local check = UI.Checkbox(row, 20)
+    check:SetPoint("TOPLEFT", PAD + 2, y - 2)
+    check.label = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    check.label:SetPoint("LEFT", check, "RIGHT", 4, 0)
+    check.label:SetTextColor(unpack(T.text))
+    check.label:SetText(label)
+    check:SetHitRectInsets(0, -(check.label:GetStringWidth() + 6), 0, 0)
     check:SetScript("OnClick", function(self)
         set(self:GetChecked() and true or false)
         panel:Sync()
@@ -143,10 +148,8 @@ local function Box(row, key, label)
     local fs = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     fs:SetPoint("TOPLEFT", PAD, -4)
     fs:SetText(label)
-    local box = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
-    box:SetSize(54, 18)
-    box:SetPoint("TOPRIGHT", -PAD - 4, 0)
-    box:SetAutoFocus(false)
+    local box = UI.Input(row, 54, 20)
+    box:SetPoint("TOPRIGHT", -PAD - 4, 1)
     box:SetNumeric(true)
     box:SetMaxLetters(4)
     box:SetScript("OnTextChanged", function(self, userInput)
@@ -154,7 +157,6 @@ local function Box(row, key, label)
         S()[key] = Rules.ParseNumber(self:GetText())
         Filter.Changed()
     end)
-    box:SetScript("OnEnterPressed", EditBox_ClearFocus)
     boxes[key] = box
 end
 
@@ -246,7 +248,9 @@ local function Sync()
     end
     Layout()
 
-    panel.reset:SetEnabled(not Rules.IsDefault(s))
+    local changed = not Rules.IsDefault(s)
+    panel.reset:SetEnabled(changed)
+    panel.reset.label:SetTextColor(unpack(changed and T.text or T.muted))
     if state.paused then
         panel.status:SetText("Filter paused")
     elseif state.count > 0 then
@@ -297,22 +301,22 @@ end
 
 local function Build()
     local viewer = LFGListFrame.ApplicationViewer
-    panel = CreateFrame("Frame", nil, viewer, "TooltipBackdropTemplate")
+    panel = CreateFrame("Frame", nil, viewer, "BackdropTemplate")
     panel:SetWidth(WIDTH)
+    panel:SetBackdrop(UI.FLAT)
+    panel:SetBackdropColor(unpack(T.panel))
+    panel:SetBackdropBorderColor(unpack(T.border))
     panel:SetClampedToScreen(true)
     panel:EnableMouse(true)
     panel:SetMovable(true)
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", panel.StartMoving)
     panel:SetScript("OnDragStop", KeepDraggedPosition)
-    local background = panel:CreateTexture(nil, "BACKGROUND", nil, -8)
-    background:SetPoint("TOPLEFT", 3, -3)
-    background:SetPoint("BOTTOMRIGHT", -3, 3)
-    background:SetColorTexture(0.04, 0.04, 0.06, 0.96)
     panel.Sync = Sync
 
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", PAD, -PAD)
+    title:SetTextColor(unpack(T.title))
     title:SetText("Applicant filter")
 
     BuildClasses()
@@ -323,13 +327,12 @@ local function Build()
     BuildList()
 
     local footer = Row(22)
-    panel.reset = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
-    panel.reset:SetSize(70, 22)
+    panel.reset = UI.Button(footer, RESET, 70)
     panel.reset:SetPoint("TOPLEFT", PAD, 0)
-    panel.reset:SetText(RESET)
     panel.reset:SetScript("OnClick", ResetAll)
 
     panel.status = footer:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    panel.status:SetTextColor(unpack(T.text))
     panel.status:SetPoint("LEFT", panel.reset, "RIGHT", 8, 0)
 
     Filter.panel = panel
