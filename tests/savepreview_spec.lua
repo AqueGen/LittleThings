@@ -124,6 +124,10 @@ describe("save indicator preview", function()
         assert.is_nil(pane.off)
     end)
 
+    it("asks for the same column as the raid marker page, two grid columns wide", function()
+        assert.equals(476, ns.SaveIndicator.Preview.columnMin)
+    end)
+
     it("draws nothing while the pane is hidden", function()
         options()
         pane.visible = false

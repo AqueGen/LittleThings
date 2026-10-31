@@ -2121,6 +2121,10 @@ describe("RaidMarkers preview", function()
     assert.is_nil(pane.off)
   end)
 
+  it("asks for the column every preview page shares", function()
+    assert.equals(476, addon.module.Preview.columnMin)
+  end)
+
   it("draws nothing while the pane is hidden", function()
     addon.module.Preview.Attach(pane)
     pane.visible = false

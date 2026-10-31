@@ -4,7 +4,7 @@ local addonName, ns = ...
 local Rules = ns.MarkerRules
 local Shared = ns.RaidMarkerPanel
 
-local Preview = { columnMin = 430 }
+local Preview = { columnMin = 476 }
 ns.RaidMarkerPreview = Preview
 
 local CAPTION = "Preview: the panel in a party, a skull on your target, two world markers down"

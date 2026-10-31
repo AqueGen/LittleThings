@@ -94,13 +94,22 @@ end
 function Group:CheckGrid(specs, columns, cellWidth)
     local group = self
     local ROW_H = 18
-    local holder = CreateFrame("Frame", nil, self.frame)
-    local cells, height = Rules.Grid(#specs, columns, cellWidth, ROW_H)
-    holder:SetSize(columns * cellWidth, math.max(height, 1))
-    local refreshers = {}
+    local box = self.frame
+    local holder = CreateFrame("Frame", nil, box)
+    local checks, refreshers = {}, {}
+    local function Place()
+        local fit = Rules.Columns(columns, cellWidth, (box:GetWidth() or 0) - 2 * PAD)
+        local cells, height = Rules.Grid(#specs, fit, cellWidth, ROW_H)
+        for i, check in ipairs(checks) do
+            check:ClearAllPoints()
+            check:SetPoint("TOPLEFT", holder, "TOPLEFT", cells[i].x, -cells[i].y)
+        end
+        holder:SetSize(fit * cellWidth, math.max(height, 1))
+        return math.max(height, 1)
+    end
     for i, spec in ipairs(specs) do
         local check = UI.Checkbox(holder, 16)
-        check:SetPoint("TOPLEFT", holder, "TOPLEFT", cells[i].x, -cells[i].y)
+        checks[i] = check
         check.text = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         check.text:SetPoint("LEFT", check, "RIGHT", 3, 0)
         check.text:SetWidth(cellWidth - 24)
@@ -126,7 +135,8 @@ function Group:CheckGrid(specs, columns, cellWidth)
         end)
         Hover(check, spec)
     end
-    self:Add(holder, math.max(height, 1), function()
+    Place()
+    self:Add(holder, Place, function()
         for _, refresh in ipairs(refreshers) do refresh() end
     end)
 end

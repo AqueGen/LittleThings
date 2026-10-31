@@ -77,7 +77,7 @@ describe("settings window preview zone", function()
         for script in xml:gmatch('<Script file="([^"]+)"/>') do dofile(dir .. script) end
 
         local preview = {
-            columnMin = 430,
+            columnMin = 476,
             Attach = function(p)
                 pane = p
                 attached = attached + 1
@@ -144,6 +144,25 @@ describe("settings window preview zone", function()
         local before = refreshed
         ns.Window.Refresh()
         assert.equals(before + 1, refreshed)
+    end)
+
+    it("reflows a check grid to the group width instead of overflowing it", function()
+        local page = ns.Widgets.NewPage(newFrame())
+        local group = page:Group("Tracked saves")
+        local specs = {}
+        for i = 1, 6 do
+            specs[i] = { label = "Save " .. i, get = function() return true end, set = function() end }
+        end
+        group:CheckGrid(specs, 3, 220)
+        local holder = group.items[1].frame
+        group.frame.width = 464
+        page:Refresh()
+        assert.equals(440, holder.width)
+        assert.equals(54, holder.height)
+        group.frame.width = 684
+        page:Refresh()
+        assert.equals(660, holder.width)
+        assert.equals(36, holder.height)
     end)
 
     it("does not refresh a preview while its page is not open", function()

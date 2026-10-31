@@ -1,7 +1,7 @@
 -- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 local addonName, ns = ...
 
-local Preview = { columnMin = 700 }
+local Preview = { columnMin = 476 }
 ns.SaveRowPreview = Preview
 
 local CAPTION = "Preview: Sentinel and Pain Suppression on you"
