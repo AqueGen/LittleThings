@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 package.path = "./Modules/LogLink/?.lua;./Modules/Applicants/?.lua;" .. package.path
 
 local CompareUrl = require("CompareUrl")

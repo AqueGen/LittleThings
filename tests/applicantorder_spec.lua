@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 package.path = "./Modules/Applicants/?.lua;" .. package.path
 
 local Order = require("ApplicantOrder")

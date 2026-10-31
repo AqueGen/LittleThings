@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 local function newNs()
   local ns = { db = {}, modules = {} }
   function ns.RegisterModule(name, module) ns.modules[name] = module end

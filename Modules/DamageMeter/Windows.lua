@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 local addonName, ns = ...
 
 -- The registry of Blizzard's meter windows: which exist, in order, and the
