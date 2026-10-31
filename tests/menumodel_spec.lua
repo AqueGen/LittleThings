@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 package.path = "./UI/?.lua;" .. package.path
 
 local MenuModel = require("MenuModel")

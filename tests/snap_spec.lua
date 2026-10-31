@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 local ns = {}
 
 -- Snap.lua registers itself at file scope; the real one lives in Core.lua,

@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 local ns = {}
 
 ns.RegisterModule = function() end

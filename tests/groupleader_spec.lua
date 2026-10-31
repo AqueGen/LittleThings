@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 local SECRET = setmetatable({}, { __tostring = function() return "secret" end })
 
 local function new_texture()

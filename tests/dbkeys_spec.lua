@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 local function read(path)
   local f = assert(io.open(path, "r"))
   local text = f:read("*a")
