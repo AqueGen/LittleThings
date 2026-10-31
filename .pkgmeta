@@ -6,8 +6,9 @@ manual-changelog:
   filename: RELEASE_NOTES.md
   markup-type: markdown
 
-# No externals: the addon deliberately has no library dependencies. Everything
-# it needs is Blizzard's own damage meter and stock frame templates.
+# No externals. The only library is LibVelvet-1.0, our own settings-window look,
+# kept as a copy in Libs/ (refreshed with Velvet's tools/sync.ps1), not fetched at
+# package time.
 
 ignore:
   - README.md
