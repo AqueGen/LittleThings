@@ -5,6 +5,7 @@ local Widgets = ns.Widgets
 local MenuModel = ns.MenuModel
 local Rules = ns.WidgetRules
 local T = Widgets.THEME
+local UI = LibStub("LibVelvet-1.0")
 
 local Window = {}
 
@@ -105,23 +106,12 @@ end
 
 local function Paint()
     for key, entry in pairs(entries) do
-        local on = key == current
-        entry:SetBackdropColor(unpack(on and T.selected or T.panel))
-        entry.label:SetTextColor(unpack(on and T.gold or (entry.enabled and T.text or T.muted)))
-        entry.bar:SetShown(on)
+        UI.PaintNav(entry, key == current and "selected" or (entry.enabled and "normal" or "muted"))
     end
 end
 
 local function Entry(item)
-    local entry = Widgets.Button(menu, item.label, MENU_W - 2 * PAD)
-    entry:SetBackdropBorderColor(unpack(T.border))
-    entry.label:ClearAllPoints()
-    entry.label:SetPoint("LEFT", entry, "LEFT", PAD, 0)
-    entry.bar = entry:CreateTexture(nil, "OVERLAY")
-    entry.bar:SetPoint("TOPLEFT")
-    entry.bar:SetPoint("BOTTOMLEFT")
-    entry.bar:SetWidth(2)
-    entry.bar:SetColorTexture(unpack(T.gold))
+    local entry = UI.NavEntry(menu, item.label, MENU_W - 2 * PAD, ENTRY_H)
     entry:SetScript("OnClick", function() Window.Show(item.key) end)
     entries[item.key] = entry
     return entry
@@ -133,7 +123,7 @@ local function LayoutMenu()
         local header = headers[group.title]
         if not header then
             header = menu:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-            header:SetTextColor(unpack(T.gold))
+            header:SetTextColor(unpack(UI.HEADER))
             header:SetText(group.title)
             headers[group.title] = header
         end

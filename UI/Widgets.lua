@@ -2,23 +2,24 @@
 local addonName, ns = ...
 
 local Rules = ns.WidgetRules
+local UI = LibStub("LibVelvet-1.0")
 
 local Widgets = {}
 
 Widgets.THEME = {
-    bg = { 0.063, 0.075, 0.09, 0.99 },
-    panel = { 0.082, 0.098, 0.125, 1 },
-    border = { 0.235, 0.251, 0.282, 1 },
-    control = { 0.36, 0.38, 0.43, 1 },
-    gold = { 1, 0.82, 0 },
-    text = { 0.9, 0.9, 0.9 },
-    muted = { 0.66, 0.68, 0.72 },
-    selected = { 0.165, 0.192, 0.251, 1 },
+    bg = UI.T.bg,
+    panel = UI.T.panel,
+    border = UI.T.border,
+    control = UI.T.control,
+    gold = UI.T.gold,
+    text = UI.T.text,
+    muted = UI.T.muted,
+    selected = UI.T.selected,
 }
-Widgets.FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 }
+Widgets.FLAT = UI.FLAT
 
 local T = Widgets.THEME
-local PAD, GAP, TITLE_H = 10, 6, 26
+local PAD, GAP, TITLE_H = UI.PAD, UI.GAP, 32
 local LABEL_W, CONTROL_W, NOTE_W = 170, 220, 540
 
 local function Locked(spec)
@@ -53,20 +54,7 @@ local function AskReload(spec, valueText)
 end
 
 function Widgets.Button(parent, text, width)
-    local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    button:SetSize(width, 22)
-    button:SetBackdrop(Widgets.FLAT)
-    button:SetBackdropColor(unpack(T.panel))
-    button:SetBackdropBorderColor(unpack(T.control))
-    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    button.label:SetPoint("CENTER")
-    button.label:SetTextColor(unpack(T.text))
-    button:SetFontString(button.label)
-    button:SetText(text)
-    local hover = button:CreateTexture(nil, "HIGHLIGHT")
-    hover:SetAllPoints()
-    hover:SetColorTexture(1, 1, 1, 0.06)
-    return button
+    return UI.Button(parent, text, width)
 end
 
 local Group = {}
@@ -78,8 +66,7 @@ end
 
 function Group:Check(spec)
     local group = self
-    local check = CreateFrame("CheckButton", nil, self.frame, "MinimalCheckboxTemplate")
-    check:SetSize(22, 22)
+    local check = UI.Checkbox(self.frame, 22)
     check.text = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     check.text:SetPoint("LEFT", check, "RIGHT", 4, 0)
     check.text:SetText(spec.label)
@@ -112,8 +99,7 @@ function Group:CheckGrid(specs, columns, cellWidth)
     holder:SetSize(columns * cellWidth, math.max(height, 1))
     local refreshers = {}
     for i, spec in ipairs(specs) do
-        local check = CreateFrame("CheckButton", nil, holder, "MinimalCheckboxTemplate")
-        check:SetSize(16, 16)
+        local check = UI.Checkbox(holder, 16)
         check:SetPoint("TOPLEFT", holder, "TOPLEFT", cells[i].x, -cells[i].y)
         check.text = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         check.text:SetPoint("LEFT", check, "RIGHT", 3, 0)
@@ -154,33 +140,26 @@ function Group:Slider(spec)
     label:SetPoint("LEFT")
     label:SetWidth(LABEL_W - 8)
     label:SetJustifyH("LEFT")
-    local slider = CreateFrame("Frame", nil, holder, "MinimalSliderWithSteppersTemplate")
+    local slider = UI.Slider(holder, CONTROL_W)
     slider:SetPoint("LEFT", holder, "LEFT", LABEL_W, 0)
-    slider:SetSize(CONTROL_W, 19)
-    local step, format = spec.step or 1, spec.format or "%d"
-    local suppress = false
+    local format = spec.format or "%d"
     local function Caption(value)
         label:SetText(spec.label .. ": " .. format:format(value))
     end
-    HookHover(slider.Slider, spec)
-    slider:Init(spec.get(), spec.min, spec.max, (spec.max - spec.min) / step, {})
+    HookHover(slider.widget, spec)
+    slider:Setup(spec.min, spec.max, spec.step or 1)
     local function SetShown(value)
-        suppress = true
-        slider:SetValue(value)
-        suppress = false
-        Caption(value)
+        slider:SetValue(value, true)
+        Caption(slider:GetValue())
     end
-    slider:RegisterCallback(MinimalSliderWithSteppersMixin.Event.OnValueChanged, function(_, value)
-        if suppress then return end
+    slider.onChange = function(value)
         if Locked(spec) then
             SetShown(spec.get())
             return
         end
-        value = spec.min + math.floor((value - spec.min) / step + 0.5) * step
-        value = tonumber(("%.4f"):format(value))
         spec.set(value)
         Caption(value)
-    end, holder)
+    end
     self:Add(holder, 24, function()
         SetShown(spec.get())
         local locked = Locked(spec)
@@ -292,16 +271,13 @@ end
 
 function Page:Group(title)
     local box = CreateFrame("Frame", nil, self.frame, "BackdropTemplate")
-    box:SetBackdrop(Widgets.FLAT)
-    box:SetBackdropColor(unpack(T.panel))
-    box:SetBackdropBorderColor(unpack(T.border))
     -- Anchored from the start so notes measure the box's width on the page's first layout
     box:SetPoint("TOPLEFT")
     box:SetPoint("RIGHT", self.frame, "RIGHT", -PAD, 0)
     box.title = box:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     box.title:SetPoint("TOPLEFT", PAD, -8)
-    box.title:SetTextColor(unpack(T.gold))
     box.title:SetText(title or "")
+    UI.PaintGroup(box, title and title ~= "" and box.title or nil)
     local group = setmetatable({ page = self, frame = box, items = {}, visible = self.visible }, Group)
     self.groups[#self.groups + 1] = group
     return group

@@ -13,6 +13,7 @@
 ## SavedVariablesPerCharacter: LittleThingsCharDB, DamageMeterCompanionCharDB, DamageMeterTweaksCharDB
 ## X-Category: Miscellaneous
 
+Libs\LibVelvet-1.0\lib.xml
 Core.lua
 UI/WidgetRules.lua
 UI/MenuModel.lua
