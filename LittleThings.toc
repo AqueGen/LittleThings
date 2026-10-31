@@ -60,6 +60,7 @@ Modules/RaidMarkers/Panel.lua
 Modules/RaidMarkers/Markers.lua
 Modules/RaidMarkers/GroupButtons.lua
 Modules/RaidMarkers/TankHelpers.lua
+Modules/RaidMarkers/PanelPreview.lua
 Modules/RaidMarkers/RaidMarkers.lua
 Modules/BattleResGuard/BattleResRules.lua
 Modules/BattleResGuard/BattleResGuard.lua

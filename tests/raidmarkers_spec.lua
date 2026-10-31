@@ -54,7 +54,7 @@ PROTECTED.StatusBar = PROTECTED.Frame
 local ALLOWED = {
   Frame = { "SetScript", "RegisterEvent", "Show", "Hide", "IsShown", "SetPoint", "ClearAllPoints", "SetSize", "SetScale",
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
-    "CreateTexture", "CreateFontString", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
+    "CreateTexture", "CreateMaskTexture", "CreateFontString", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
     "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateMaskTexture", "CreateFontString", "SetHighlightTexture",
     "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
@@ -214,6 +214,7 @@ local function load(state, db)
     Widgets = { FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 } },
     IconButtons = { ROLE_ATLAS = { HEALER = "UI-LFG-RoleIcon-Healer-Micro-GroupFinder" } },
     RegisterModule = function(_, m) module = m end,
+    IsOn = function() return not state.off end,
     ApplyDefaults = function(target, defaults)
       for k, v in pairs(defaults) do
         if target[k] == nil then target[k] = v end
@@ -382,7 +383,13 @@ local function load(state, db)
     return found
   end
 
-  return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance,
+  local function all()
+    local copy = {}
+    for i, f in ipairs(frames) do copy[i] = f end
+    return copy
+  end
+
+  return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance, all = all,
     groupButtons = groupButtons, blocked = frames.blocked, tick = tick, eventFrame = eventFrame, children = children,
     mover = function() return named("LittleThingsRaidMarkersMover") end,
     manaBar = function()
@@ -1998,5 +2005,126 @@ describe("RaidMarkers", function()
       addon.fire("READY_CHECK")
       assert.equals("Ready 1/2", addon.button("Ready check").label.text)
     end)
+  end)
+end)
+
+describe("RaidMarkers preview", function()
+  local state, addon, pane
+
+  local function fakePane()
+    local p = { visible = true, stage = {} }
+    function p:IsVisible() return self.visible end
+    function p:SetCaption(text) self.caption = text end
+    function p:SetOff(text) self.off = text end
+    function p:Fit(content, w, h) self.fit = { content, w, h } end
+    return p
+  end
+
+  local function options()
+    local byLabel = {}
+    local group = {}
+    for _, kind in ipairs({ "Check", "Slider", "Button", "Dropdown" }) do
+      group[kind] = function(_, spec) byLabel[spec.label] = spec end
+    end
+    local frame = { HookScript = noop }
+    addon.module.Pages({ Group = function() return group end, frame = frame })
+    return byLabel
+  end
+
+  local function previewPanel()
+    return addon.children(addon.children(pane.stage)[1])[1]
+  end
+
+  before_each(function()
+    state = { combat = false, group = false, raid = false, leader = false, assistant = false, calls = {} }
+    addon = load(state)
+    addon.module.Enable()
+    pane = fakePane()
+  end)
+
+  it("draws a second panel from non-secure, unnamed frames without touching the live one", function()
+    local live = addon.panel()
+    local liveCalls = {}
+    for _, f in ipairs(addon.all()) do
+      local copy = {}
+      for k, v in pairs(f.calls) do copy[k] = v end
+      liveCalls[f] = copy
+    end
+    addon.module.Preview.Attach(pane)
+    addon.module.Preview.Refresh()
+    for f, copy in pairs(liveCalls) do assert.same(copy, f.calls) end
+    local panel = previewPanel()
+    assert.is_truthy(panel)
+    assert.are_not.equal(live, panel)
+    local function walk(f, seen)
+      for _, child in ipairs(addon.children(f)) do
+        assert.is_nil(child.name)
+        assert.is_falsy(child.template and child.template:find("Secure"))
+        assert.are_not.equal("Button", child.kind)
+        seen[#seen + 1] = child
+        walk(child, seen)
+      end
+      return seen
+    end
+    assert.is_true(#walk(addon.children(pane.stage)[1], {}) > 20)
+    assert.is_truthy(pane.caption)
+    assert.is_nil(pane.off)
+    assert.equals(addon.children(pane.stage)[1], pane.fit[1])
+  end)
+
+  it("follows the layout, scale and helper settings", function()
+    local byLabel = options()
+    addon.module.Preview.Attach(pane)
+    addon.module.Preview.Refresh()
+    local panel = previewPanel()
+    assert.is_true(panel.width > panel.height)
+    byLabel["Vertical"].set(true)
+    assert.is_true(panel.height > panel.width)
+    byLabel["Scale"].set(1.5)
+    assert.equals(1.5, panel.scale)
+    assert.same({ panel.width * 1.5, panel.height * 1.5 }, { pane.fit[2], pane.fit[3] })
+    byLabel["Healer mana"].set(true)
+    byLabel["Mana text"].set("value")
+    local bar
+    for _, f in ipairs(addon.children(panel)) do
+      if f.kind == "StatusBar" then bar = f end
+    end
+    assert.is_true(bar.shown)
+    local text = addon.children(bar)
+    local formatted
+    for _, f in ipairs(text) do
+      if f.kind == "FontString" then formatted = f.formatted end
+    end
+    assert.same({ "%s %s", "|cPRIESTHealer|r", "short 180000" }, formatted)
+  end)
+
+  it("follows a setting changed in combat without touching the live panel", function()
+    local byLabel = options()
+    addon.module.Preview.Attach(pane)
+    addon.module.Preview.Refresh()
+    local live = addon.panel()
+    local sized = live.calls.SetSize
+    state.combat = true
+    byLabel["Vertical"].set(true)
+    local panel = previewPanel()
+    assert.is_true(panel.height > panel.width)
+    assert.equals(sized, live.calls.SetSize)
+  end)
+
+  it("greys out with a visible line while the module is off", function()
+    addon.module.Preview.Attach(pane)
+    state.off = true
+    addon.module.Preview.Refresh()
+    assert.is_truthy(pane.off)
+    state.off = false
+    addon.module.Preview.Refresh()
+    assert.is_nil(pane.off)
+  end)
+
+  it("draws nothing while the pane is hidden", function()
+    addon.module.Preview.Attach(pane)
+    pane.visible = false
+    addon.module.Preview.Refresh()
+    assert.equals(0, #addon.children(addon.children(pane.stage)[1]))
   end)
 end)
