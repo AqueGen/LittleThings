@@ -15,7 +15,7 @@ end
 local function PaintFill(self)
     local span = self.max - self.min
     local share = span > 0 and (self.value - self.min) / span or 0
-    self.fill:SetWidth(math.max(share * self.track:GetWidth(), 0.001))
+    self.fill:SetWidth(math.max(share * self.trackW, 0.001))
 end
 
 local function SetValue(self, value, silent)
@@ -73,6 +73,7 @@ function lib.Slider(parent, width)
     self.up = Stepper(self, "+", "RIGHT", 1)
 
     local inner = width - 2 * (STEPPER_W + STEPPER_GAP)
+    self.trackW = inner
     local widget = CreateFrame("Slider", nil, self)
     widget:SetSize(inner, 22)
     widget:SetPoint("LEFT", STEPPER_W + STEPPER_GAP, 0)
