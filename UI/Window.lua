@@ -9,16 +9,18 @@ local UI = LibStub("LibVelvet-1.0")
 
 local Window = {}
 
-local DEFAULT_W, DEFAULT_H = 860, 560
+local DEFAULT_W, DEFAULT_H = 1000, 560
 -- MIN_W fits the widest fixed-width page (Meter windows, a 600-wide panel); MIN_H keeps the
 -- whole side menu above the footer
 local MIN_W, MIN_H = 790, 530
 local TITLE_H, MENU_W, ENTRY_H, HEADER_H, GAP, PAD = 28, 150, 20, 18, 4, 8
+local SCROLLBAR, BOTTOM = 30, PAD + 12
+local ZONE_MIN, ZONE_MAX, BAND_H = 260, 380, 150
 local WINDOWS_KEY = "damageMeterWindows"
 local EXTRAS = { { key = WINDOWS_KEY, label = "Meter windows", after = "damageMeter" } }
 
 local frame, menu, scroll, host
-local pages, builders, entries, headers = {}, {}, {}, {}
+local pages, builders, entries, headers, panes = {}, {}, {}, {}, {}
 local current
 
 local function Saved()
@@ -142,6 +144,57 @@ local function LayoutMenu()
     Paint()
 end
 
+local function PreviewFor(key)
+    for _, module in ipairs(ns.ModulesFor(key)) do
+        if module.Preview then return module.Preview end
+    end
+end
+
+local function PaneFor(preview)
+    if not panes[preview] then
+        local pane = UI.PreviewPane(frame)
+        pane:Hide()
+        preview.Attach(pane)
+        panes[preview] = pane
+    end
+    return panes[preview]
+end
+
+local function Layout()
+    local preview = PreviewFor(current)
+    for owner, pane in pairs(panes) do
+        if owner ~= preview then pane:Hide() end
+    end
+    scroll:ClearAllPoints()
+    if not preview then
+        scroll:SetPoint("TOPLEFT", menu, "TOPRIGHT", PAD, -PAD)
+        scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -SCROLLBAR, BOTTOM)
+        return
+    end
+    local pane = PaneFor(preview)
+    local slots = UI.PreviewLayout(frame:GetWidth() - MENU_W - 2 * PAD - SCROLLBAR, preview.columnMin, ZONE_MIN, ZONE_MAX)
+    pane:ClearAllPoints()
+    if slots.mode == "side" then
+        scroll:SetPoint("TOPLEFT", menu, "TOPRIGHT", PAD, -PAD)
+        scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -(PAD + slots.zoneW + UI.GAP + SCROLLBAR), BOTTOM)
+        pane:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -(TITLE_H + PAD))
+        pane:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -PAD, BOTTOM)
+        pane:SetWidth(slots.zoneW)
+    else
+        scroll:SetPoint("TOPLEFT", menu, "TOPRIGHT", PAD, -(PAD + BAND_H + UI.GAP))
+        scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -SCROLLBAR, BOTTOM)
+        pane:SetPoint("TOPLEFT", menu, "TOPRIGHT", PAD, -PAD)
+        pane:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -(TITLE_H + PAD))
+        pane:SetHeight(BAND_H)
+    end
+    pane:Show()
+end
+
+local function RefreshPreview()
+    local preview = PreviewFor(current)
+    if preview then preview.Refresh() end
+end
+
 local function SavePosition()
     local point, _, relativePoint, x, y = frame:GetPoint(1)
     local saved = Saved()
@@ -203,8 +256,6 @@ local function Build()
     signature:SetText("|cFF0057B7Made|r |cFFFFD700in Ukraine|r")
 
     scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", menu, "TOPRIGHT", PAD, -PAD)
-    scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, PAD + 12)
     host = CreateFrame("Frame", nil, scroll)
     host:SetSize(1, 1)
     scroll:SetScrollChild(host)
@@ -212,6 +263,9 @@ local function Build()
         host:SetWidth(width)
         -- Notes rewrap to the new width, so the page has to re-stack
         if current and pages[current] then pages[current]:Refresh() end
+    end)
+    frame:HookScript("OnSizeChanged", function()
+        if current then Layout() end
     end)
 
     local grip = CreateFrame("Button", nil, frame)
@@ -265,6 +319,7 @@ function Window.Refresh()
     if not frame or not frame:IsShown() then return end
     LayoutMenu()
     if current and pages[current] then pages[current]:Refresh() end
+    RefreshPreview()
 end
 
 function Window.Show(key)
@@ -274,12 +329,14 @@ function Window.Show(key)
         pages[current].frame:Hide()
     end
     current = key
+    Layout()
     local page = pages[key] or BuildPage(key)
     page.frame:Show()
     frame:Show()
     LayoutMenu()
     page:Refresh()
     scroll:SetVerticalScroll(0)
+    RefreshPreview()
 end
 
 function Window.Toggle()
