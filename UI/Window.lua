@@ -10,7 +10,7 @@ local UI = LibStub("LibVelvet-1.0")
 local Window = {}
 
 local DEFAULT_W, DEFAULT_H = 1000, 560
--- MIN_W fits the widest fixed-width page (Meter windows, a 600-wide panel); MIN_H keeps the
+-- MIN_W fits the widest fixed-width row (Meter windows, 520-wide lines); MIN_H keeps the
 -- whole side menu above the footer
 local MIN_W, MIN_H = 790, 530
 local TITLE_H, MENU_W, ENTRY_H, HEADER_H, GAP, PAD = 28, 150, 20, 18, 4, 8

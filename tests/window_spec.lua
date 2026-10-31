@@ -1,51 +1,6 @@
 -- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
-local function newFrame(parent)
-    local f = { parentFrame = parent, points = {}, scripts = {}, shown = true, width = 0, height = 0 }
-    function f:SetPoint(...) self.points[#self.points + 1] = { ... } end
-    function f:ClearAllPoints() self.points = {} end
-    function f:SetSize(w, h) self.width, self.height = w, h end
-    function f:SetWidth(w) self.width = w end
-    function f:SetHeight(h) self.height = h end
-    function f:GetWidth() return self.width end
-    function f:GetHeight() return self.height end
-    function f:GetSize() return self.width, self.height end
-    function f:Show() self.shown = true end
-    function f:Hide()
-        local was = self.shown
-        self.shown = false
-        if was and self.scripts.OnHide then self.scripts.OnHide(self) end
-    end
-    function f:SetShown(on) if on then self:Show() else self:Hide() end end
-    function f:IsShown() return self.shown end
-    function f:IsVisible() return self.shown and (not self.parentFrame or self.parentFrame:IsVisible()) end
-    function f:GetParent() return self.parentFrame end
-    function f:SetScript(event, fn) self.scripts[event] = fn end
-    function f:GetScript(event) return self.scripts[event] end
-    function f:HookScript(event, fn)
-        local prev = self.scripts[event]
-        self.scripts[event] = function(...)
-            if prev then prev(...) end
-            fn(...)
-        end
-    end
-    function f:CreateFontString() return newFrame(self) end
-    function f:CreateTexture() return newFrame(self) end
-    function f:SetParent(p) self.parentFrame = p end
-    return setmetatable(f, {
-        __index = function(_, k)
-            if type(k) ~= "string" or not k:match("^%u") then return nil end
-            if k:match("^Create") then return function(self) return newFrame(self) end end
-            if k:match("^Get") then return function() return 0 end end
-            return function() end
-        end,
-    })
-end
-
-local function point(f, name)
-    for _, p in ipairs(f.points) do
-        if p[1] == name then return p end
-    end
-end
+local Frames = dofile("tests/frames.lua")
+local newFrame, point = Frames.new, Frames.point
 
 describe("settings window preview zone", function()
     local ns, settings, scroll, pane, attached, refreshed
@@ -59,7 +14,6 @@ describe("settings window preview zone", function()
         _G.strmatch = string.match
         _G.GameTooltip_Hide = function() end
         _G.InCombatLockdown = function() return false end
-        _G.CreateColor = function(...) return { ... } end
         _G.geterrorhandler = function() return error end
         _G.CreateFrame = function(_, name, parent, template)
             local f = newFrame(parent)
@@ -70,11 +24,7 @@ describe("settings window preview zone", function()
             if template == "UIPanelScrollFrameTemplate" then scroll = f end
             return f
         end
-        local dir = "Libs/LibVelvet-1.0/"
-        local file = assert(io.open(dir .. "lib.xml", "rb"))
-        local xml = file:read("*a")
-        file:close()
-        for script in xml:gmatch('<Script file="([^"]+)"/>') do dofile(dir .. script) end
+        Frames.loadVelvet()
 
         local preview = {
             columnMin = 476,

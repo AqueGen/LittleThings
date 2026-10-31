@@ -293,12 +293,6 @@ function Page:Group(title)
     return group
 end
 
-function Page:Embed(frame, height)
-    frame:SetParent(self.frame)
-    frame:Show()
-    self.groups[#self.groups + 1] = { frame = frame, height = height, embedded = true, visible = self.visible }
-end
-
 local function Height(item)
     return type(item.height) == "function" and item.height() or item.height
 end
@@ -326,10 +320,7 @@ function Page:Refresh()
     for index, group in ipairs(self.groups) do
         local shown = not group.visible or group.visible()
         group.frame:SetShown(shown)
-        local height = group.embedded and Height(group) or nil
-        if shown and not group.embedded then
-            height = LayoutGroup(group)
-        end
+        local height = shown and LayoutGroup(group) or nil
         group.frame:SetHeight(height or 1)
         blocks[index] = { height = height or 0, shown = shown }
     end
@@ -338,9 +329,7 @@ function Page:Refresh()
         if offsets[index] then
             group.frame:ClearAllPoints()
             group.frame:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 0, -offsets[index])
-            if not group.embedded then
-                group.frame:SetPoint("RIGHT", self.frame, "RIGHT", -PAD, 0)
-            end
+            group.frame:SetPoint("RIGHT", self.frame, "RIGHT", -PAD, 0)
         end
     end
     self.frame:SetHeight(math.max(total, 1))
