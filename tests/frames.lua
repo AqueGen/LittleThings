@@ -55,6 +55,34 @@ function Frames.new(parent)
     })
 end
 
+function Frames.tracker()
+    local tracker = { templates = {}, all = {} }
+    local function new(kind, parent, template, name)
+        local f = Frames.new(parent)
+        f.kind, f.template, f.name, f.children = kind, template, name, {}
+        if parent and parent.children then parent.children[#parent.children + 1] = f end
+        tracker.all[#tracker.all + 1] = f
+        if template then tracker.templates[#tracker.templates + 1] = template end
+        function f:CreateFontString() return new("FontString", self) end
+        function f:CreateTexture() return new("Texture", self) end
+        return f
+    end
+    tracker.CreateFrame = function(kind, name, parent, template) return new(kind, parent, template, name) end
+    function tracker.text(text)
+        for _, f in ipairs(tracker.all) do
+            if f.kind == "FontString" and f.text == text then return f end
+        end
+    end
+    function tracker.find(kind)
+        local found = {}
+        for _, f in ipairs(tracker.all) do
+            if f.kind == kind then found[#found + 1] = f end
+        end
+        return found
+    end
+    return tracker
+end
+
 function Frames.loadVelvet()
     _G.strmatch = string.match
     _G.CreateColor = function(...) return { ... } end
