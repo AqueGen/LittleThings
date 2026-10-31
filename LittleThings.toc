@@ -69,6 +69,7 @@ Modules/LowLevelGear/LowLevelGear.lua
 Modules/SaveIndicator/SaveRules.lua
 Modules/SaveIndicator/SaveData.lua
 Modules/SaveIndicator/Center.lua
+Modules/SaveIndicator/RowPreview.lua
 Modules/SaveIndicator/SaveIndicator.lua
 Modules/PartySolo.lua
 Modules/GroupChat/ChatRules.lua
