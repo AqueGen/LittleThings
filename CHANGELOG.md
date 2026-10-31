@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.0](https://github.com/AqueGen/LittleThings/compare/v0.21.0...v0.22.0) (2026-10-31)
+
+
+### Features
+
+* let the What's new window be dragged ([#63](https://github.com/AqueGen/LittleThings/issues/63)) ([33e4afa](https://github.com/AqueGen/LittleThings/commit/33e4afa6ba8f48e3415ad6edc27f1b57ee20549b))
+* softer settings look via LibVelvet ([#66](https://github.com/AqueGen/LittleThings/issues/66)) ([b368a8e](https://github.com/AqueGen/LittleThings/commit/b368a8e2e31a4e62449750c66347dfca6054f15a))
+
 ## [0.21.0](https://github.com/AqueGen/LittleThings/compare/v0.20.0...v0.21.0) (2026-10-28)
 
 
