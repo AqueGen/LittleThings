@@ -2,25 +2,18 @@
 local addonName, ns = ...
 
 local Rules = ns.LowLevelGearRules
+local BagMarks = ns.BagMarks
 local T = ns.Widgets.THEME
 
 local LowLevelGear = {}
 
 local CORNER_LABEL = "LittleThings: low level gear"
 local CORNER_ID = "littlethings_low_level"
-local CORNER_TEXT = "Low"
-local CORNER_COLOR = { 1, 0.35, 0.1 }
 local LINE = "LittleThings: low level gear (%s)"
-local MARKER_ATLAS = "common-icon-redx"
-local MARKER_SIZE = 14
-local REFRESH_DELAY = 0.5
 
-local markers = setmetatable({}, { __mode = "k" })
 local equipped
 local incomplete = false
-local refreshQueued = false
 local installed = false
-local baganator = false
 
 local function EquippedLevels()
     if equipped then
@@ -117,93 +110,28 @@ local function OnTooltip(tooltip, data)
     end
 end
 
-local function PaintFrame(frame)
-    for _, button in frame:EnumerateValidItems() do
-        local low = Judge(button:GetBagID(), button:GetID()) == true
-        local marker = markers[button]
-        if low and not marker then
-            marker = button:CreateTexture(nil, "OVERLAY", nil, 7)
-            marker:SetAtlas(MARKER_ATLAS)
-            marker:SetSize(MARKER_SIZE, MARKER_SIZE)
-            marker:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, -2)
-            markers[button] = marker
-        end
-        if marker then
-            marker:SetShown(low)
-        end
-    end
-end
-
-local function ContainerFrames()
-    local frames = { ContainerFrameCombinedBags }
-    for i = 1, NUM_CONTAINER_FRAMES do
-        frames[#frames + 1] = _G["ContainerFrame" .. i]
-    end
-    return frames
-end
-
-local function Refresh()
-    refreshQueued = false
-    incomplete = false
-    for _, frame in ipairs(ContainerFrames()) do
-        if frame:IsShown() then
-            PaintFrame(frame)
-        end
-    end
-    if baganator then
-        Baganator.API.RequestItemButtonsRefresh()
-    end
-end
-
-local function QueueRefresh()
-    if not refreshQueued then
-        refreshQueued = true
-        C_Timer.After(REFRESH_DELAY, Refresh)
-    end
-end
-
 local function OnEvent(_, event)
     if not ns.IsOn("lowLevelGear") then
         return
     end
     if event == "GET_ITEM_INFO_RECEIVED" then
         if incomplete then
-            QueueRefresh()
+            incomplete = false
+            BagMarks.QueueRefresh()
         end
         return
     end
     if event ~= "TRANSMOG_COLLECTION_UPDATED" then
         equipped = nil
     end
-    QueueRefresh()
+    BagMarks.QueueRefresh()
 end
 
-local function CornerInit(itemButton)
-    local text = itemButton:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
-    text:SetText(CORNER_TEXT)
-    text:SetTextColor(unpack(CORNER_COLOR))
-    text.sizeFont = true
-    return text
-end
-
-local function CornerUpdate(_, details)
-    local location = details.itemLocation
-    if not (location and location.bagID and location.slotIndex) then
-        return false
-    end
-    return Judge(location.bagID, location.slotIndex)
-end
-
--- Enable runs at PLAYER_LOGIN, after every addon that is not load-on-demand,
--- so Baganator is either loaded by now or not installed.
-local function RegisterBaganator()
-    if baganator or not (Baganator and Baganator.API and Baganator.API.RegisterCornerWidget) then
-        return
-    end
-    baganator = true
-    Baganator.API.RegisterCornerWidget(CORNER_LABEL, CORNER_ID, CornerUpdate, CornerInit,
-        { corner = "bottom_left", priority = 2 })
-end
+local mark = {
+    Judge = Judge,
+    atlas = "common-icon-redx",
+    corner = { label = CORNER_LABEL, id = CORNER_ID, text = "Low", color = { 1, 0.35, 0.1 }, priority = 2 },
+}
 
 local function Install()
     if installed then
@@ -212,10 +140,6 @@ local function Install()
     installed = true
 
     TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, OnTooltip)
-
-    for _, frame in ipairs(ContainerFrames()) do
-        ns.HookInstance(frame, "UpdateItems", PaintFrame)
-    end
 
     local events = CreateFrame("Frame")
     events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
@@ -227,16 +151,15 @@ end
 
 function LowLevelGear.Enable()
     Install()
-    RegisterBaganator()
     equipped = nil
-    Refresh()
+    BagMarks.Enable(mark)
 end
 
 function LowLevelGear.OnSwitch(enabled)
     if enabled then
         LowLevelGear.Enable()
     elseif installed then
-        Refresh()
+        BagMarks.Refresh()
     end
 end
 
@@ -249,7 +172,7 @@ function LowLevelGear.Report()
         worn[#worn + 1] = slot .. "=" .. (piece and (tostring(piece.level) .. "/" .. tostring(piece.track)) or "-")
     end
     ns.Print("low level gear " .. (ns.IsOn("lowLevelGear") and "on" or "off") .. ", Baganator corner active: "
-        .. tostring(baganator and Baganator.API.IsCornerWidgetActive(CORNER_ID)) .. ", worn: " .. table.concat(worn, " "))
+        .. tostring(BagMarks.CornerActive(CORNER_ID)) .. ", worn: " .. table.concat(worn, " "))
     for bag = Enum.BagIndex.Backpack, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
             local location = ItemLocation:CreateFromBagAndSlot(bag, slot)

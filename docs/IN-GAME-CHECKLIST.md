@@ -82,7 +82,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 ## Settings window
 
 - [ ] `/lt` opens the window; `/lt` again while open keeps it open on the same page. Esc and the X close it. Game > Options > AddOns > LittleThings shows a short page with Open LittleThings, which closes the game's options and opens the window. The damage meter gear menu's LittleThings settings opens the Damage meter page.
-- [ ] The menu shows Group finder (Group finder), Party and raid (Group leader icons, Party frames when solo, Raid marker panel, Group chat on Enter), Combat (Save indicator, Battle res guard, Damage meter, Meter windows), Character and loot (Character panel, Journal loot, Low level gear), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
+- [ ] The menu shows Group finder (Group finder), Party and raid (Group leader icons, Party frames when solo, Raid marker panel, Group chat on Enter), Combat (Save indicator, Battle res guard, Damage meter, Meter windows), Character and loot (Character panel, Journal loot, Low level gear, Warband gear), System (Performance). Switched-off modules are grey but open their page, which shows only the switch and the description; Meter windows instead shows a note asking to switch the Damage meter module on.
 - [ ] Drag by the title moves the window, the corner grip resizes it, it never goes below 790x530 and never changes size by itself; the grip stays under the cursor. Position and size are the same after /reload.
 - [ ] Every page's controls do what the old Blizzard pages did: damage meter behaviour, layer, the two Blizzard switches, the Meter windows rows; both character panel bars; journal loot icons and loot spec buttons; group finder sections with their own switches; Memory, Graphics and Addons buttons. Values changed elsewhere (filter panel, /lt format) show on the page when it is opened again.
 - [ ] Changing Mythic+ sort by, Sort Mythic+ applicants or Damage meter offers a reload, as before.
@@ -272,6 +272,15 @@ Switch on Low level gear (Character and loot). It is off by default.
 - [ ] With Baganator: marked items show "Low" in the bottom left corner, under the equipment set mark; the item level still shows in the top left. Grey items keep Baganator's own junk coin. Icon Corners on the Icons tab of Baganator's settings lists "LittleThings: low level gear" in the bottom left corner. Equip a different item: "Low" updates without reopening the bags. Switch the module off: every "Low" goes.
 - [ ] Hover items in the bank, in chat links and in the Adventure Guide: no line.
 - [ ] **`/console taintLog 1`, use and equip items from Blizzard's bags in combat: no LittleThings entries in `Logs/taint.log`, BugSack empty.**
+
+### Warband gear
+
+Switch on Warband gear (Character and loot). It is off by default.
+
+- [ ] With Baganator: a Warbound until equipped armor piece or weapon (Pyrewalker's Doublet) shows "WB" in the bottom left corner. Soulbound gear, Bind on Equip gear and non-gear warbound items (reagents, consumables) show nothing. Icon Corners lists "LittleThings: warband gear".
+- [ ] Low level gear on too: no item shows both "Low" and "WB". Switch Warband gear off: every "WB" goes, "Low" stays.
+- [ ] Disable Baganator, `/reload`: Blizzard's bags show the warband icon in the top right of the same items; Low level gear still shows its red cross. Switch Warband gear off: the icons go at once.
+- [ ] Equip a marked item: it binds and leaves the bag; nothing errors.
 
 ## 19. Save indicator
 

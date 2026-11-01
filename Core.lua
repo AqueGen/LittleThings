@@ -23,6 +23,7 @@ ns.defaults = {
     raidMarkers = false,
     battleResGuard = false,
     lowLevelGear = false,
+    warbandGear = false,
 
     format = true,
     snap = true,
@@ -54,6 +55,7 @@ ns.MODULES = {
     { key = "characterPanel", group = "Character and loot", label = "Character panel", live = true, tooltip = "One-click specialization and loot specialization icons next to the character panel." },
     { key = "journalLoot", group = "Character and loot", label = "Journal loot", live = true, tooltip = "Icons on every loot row of the Adventure Guide showing which specializations the item drops for." },
     { key = "lowLevelGear", group = "Character and loot", label = "Low level gear", live = true, tooltip = "Marks gear in your bags on a lower upgrade track than what you wear in that slot. Never marks Myth-track items, uncollected appearances, tier pieces, trinkets, weapons or items not yet bound. A tooltip line under any bag addon, a red cross on Blizzard's bags, and \"Low\" in the bottom left icon corner in Baganator." },
+    { key = "warbandGear", group = "Character and loot", label = "Warband gear", live = true, tooltip = "Marks gear in your bags that is Warbound until equipped, so it can go to another character before it binds. A warband icon on Blizzard's bags, and \"WB\" in the bottom left icon corner in Baganator." },
     { key = "performance", group = "System", label = "Performance", live = true, tooltip = "A button that sets the game's graphics options for frame rate, showing every change before it is made, and one that puts your own settings back. Smoother garbage collection, and a button that collects it now." },
 }
 
