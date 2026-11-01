@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.22.0](https://github.com/AqueGen/LittleThings/compare/v0.21.0...v0.22.0) (2026-11-01)
+
+
+### Features
+
+* let the What's new window be dragged ([#63](https://github.com/AqueGen/LittleThings/issues/63)) ([33e4afa](https://github.com/AqueGen/LittleThings/commit/33e4afa6ba8f48e3415ad6edc27f1b57ee20549b))
+* live previews beside the settings column ([#67](https://github.com/AqueGen/LittleThings/issues/67)) ([1dc2bd6](https://github.com/AqueGen/LittleThings/commit/1dc2bd69cfe5f52f58d4f6a0761074d10d8d8ca0))
+* mark Warbound until equipped gear in bags ([#68](https://github.com/AqueGen/LittleThings/issues/68)) ([1c3ffd1](https://github.com/AqueGen/LittleThings/commit/1c3ffd1c6d5b618f264b5e9fa5ed2413c9c2b685))
+* softer settings look via LibVelvet ([#66](https://github.com/AqueGen/LittleThings/issues/66)) ([b368a8e](https://github.com/AqueGen/LittleThings/commit/b368a8e2e31a4e62449750c66347dfca6054f15a))
+
 ## [0.21.0](https://github.com/AqueGen/LittleThings/compare/v0.20.0...v0.21.0) (2026-10-28)
 
 
