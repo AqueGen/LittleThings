@@ -52,7 +52,7 @@ local function Build()
     end
     Shared.BuildFrame()
     local header = Shared.BuildBindings()
-    Shared.row1, Shared.row2, Shared.block = Shared.NewRow(), Shared.NewRow(), Shared.NewRow()
+    Shared.row1, Shared.row2, Shared.block = Shared.NewRow(Shared.panel), Shared.NewRow(Shared.panel), Shared.NewRow(Shared.panel)
     Shared.BuildTargetButtons()
     Shared.BuildGroupButtons()
     Shared.BuildHelpers()
@@ -152,6 +152,7 @@ local function Option(key, spec, apply)
         if apply and Shared.panel then
             Shared.ApplyOutOfCombat(apply)
         end
+        ns.RaidMarkerPreview.Refresh()
     end
     return spec
 end
@@ -227,9 +228,11 @@ function RaidMarkers.Pages(page)
                 if Shared.panel then
                     Shared.ApplyOutOfCombat(Shared.ApplyOrder)
                 end
+                ns.RaidMarkerPreview.Refresh()
             end })
     end
 end
 
 RaidMarkers.key = "raidMarkers"
+RaidMarkers.Preview = ns.RaidMarkerPreview
 ns.RegisterModule("RaidMarkers", RaidMarkers)

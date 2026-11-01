@@ -34,13 +34,23 @@ function Shared.Ring(button, on)
     button:SetBackdropBorderColor(color[1], color[2], color[3], color[4])
 end
 
-function Shared.NewButton(row, template, width, name)
-    local button = CreateFrame("Button", name, row, template and template .. ",BackdropTemplate" or "BackdropTemplate")
+function Shared.Skin(button, width)
     button:SetSize(width, SIZE)
     button.span = width
     button:SetBackdrop(FLAT)
     button:SetBackdropColor(0, 0, 0, 0.5)
     Shared.Ring(button, false)
+end
+
+function Shared.PaintPanel(panel)
+    panel:SetBackdrop(FLAT)
+    panel:SetBackdropColor(0, 0, 0, 0.6)
+    panel:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+end
+
+function Shared.NewButton(row, template, width, name)
+    local button = CreateFrame("Button", name, row, template and template .. ",BackdropTemplate" or "BackdropTemplate")
+    Shared.Skin(button, width)
     button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
     row.buttons[#row.buttons + 1] = button
     return button
@@ -87,8 +97,8 @@ function Shared.SecureButton(row, width, title, attributes, name)
     return button
 end
 
-function Shared.NewRow()
-    local row = CreateFrame("Frame", nil, Shared.panel)
+function Shared.NewRow(parent)
+    local row = CreateFrame("Frame", nil, parent)
     row.buttons = {}
     return row
 end
@@ -113,14 +123,14 @@ local function BarHeight()
     return ns.db.raidMarkerPanel.manaText == "none" and BAR_HEIGHT or TEXT_BAR_HEIGHT
 end
 
-local function PlaceBar(width)
+local function PlaceBar(v, width)
     local indent = Shared.ICON + GAP
-    Shared.manaBar:SetPoint("TOPLEFT", Shared.block, "BOTTOMLEFT", indent, -GAP)
-    Shared.manaBar:SetSize(width - indent, BarHeight())
+    v.manaBar:SetPoint("TOPLEFT", v.block, "BOTTOMLEFT", indent, -GAP)
+    v.manaBar:SetSize(width - indent, BarHeight())
 end
 
-local function LayoutHorizontal()
-    local row1, row2, block, groupButtons = Shared.row1, Shared.row2, Shared.block, Shared.groupButtons
+local function LayoutHorizontal(v)
+    local row1, row2, block, groupButtons = v.row1, v.row2, v.block, v.groupButtons
     local width = LayoutRow(row1)
     LayoutRow(row2)
     local cell = block.cell
@@ -133,29 +143,29 @@ local function LayoutHorizontal()
     block:SetPoint("TOPLEFT", row1, "TOPRIGHT", GAP, 0)
     local db = ns.db.raidMarkerPanel
     if db.healerMana then
-        PlaceBar(bw)
+        PlaceBar(v, bw)
         bh = bh + GAP + BarHeight()
     end
     if db.groupDown then
-        Shared.downText:SetPoint("LEFT", block, "RIGHT", GAP, 0)
-        bw = bw + GAP + Shared.downText.cell
+        v.downText:SetPoint("LEFT", block, "RIGHT", GAP, 0)
+        bw = bw + GAP + v.downText.cell
     end
-    Shared.panel:SetSize(width + GAP + bw + 2 * PAD, math.max(2 * SIZE + GAP, bh) + 2 * PAD)
+    v.panel:SetSize(width + GAP + bw + 2 * PAD, math.max(2 * SIZE + GAP, bh) + 2 * PAD)
 end
 
-local function LayoutVertical()
-    local row1, row2, block, groupButtons = Shared.row1, Shared.row2, Shared.block, Shared.groupButtons
-    local clearTarget, worldButtons = Shared.clearTarget, Shared.worldButtons
+local function LayoutVertical(v)
+    local row1, row2, block, groupButtons = v.row1, v.row2, v.block, v.groupButtons
+    local clearTarget, worldButtons = v.clearTarget, v.worldButtons
     local width = math.max(2 * SIZE + GAP, block.cell, clearTarget.cell + GAP + SIZE)
     local inset = math.floor((width - 2 * SIZE - GAP) / 2)
     local step = SIZE + GAP
-    for t, button in ipairs(Shared.targetButtons) do
+    for t, button in ipairs(v.targetButtons) do
         Cell(button, row1, inset, -(t - 1) * step, SIZE)
         Cell(worldButtons[WORLD_FOR_TARGET[t]], row2, inset + step, -(t - 1) * step, SIZE)
     end
     Cell(clearTarget, row1, 0, -8 * step, width - step)
-    Cell(Shared.clearWorld, row2, width - SIZE, -8 * step, SIZE)
-    Cell(Shared.modeButton, row2, 0, -9 * step, width)
+    Cell(v.clearWorld, row2, width - SIZE, -8 * step, SIZE)
+    Cell(v.modeButton, row2, 0, -9 * step, width)
     local height = 10 * step - GAP
     row1:SetSize(width, height)
     row2:SetSize(width, height)
@@ -168,31 +178,36 @@ local function LayoutVertical()
     local db = ns.db.raidMarkerPanel
     local below, extra = block, 0
     if db.healerMana then
-        PlaceBar(width)
-        below, extra = Shared.manaBar, GAP + BarHeight()
+        PlaceBar(v, width)
+        below, extra = v.manaBar, GAP + BarHeight()
     end
     if db.groupDown then
-        Shared.downText:SetPoint("TOP", below, "BOTTOM", 0, -GAP)
+        v.downText:SetPoint("TOP", below, "BOTTOM", 0, -GAP)
         extra = extra + GAP + DOWN_HEIGHT
     end
-    Shared.panel:SetSize(width + 2 * PAD, height + GAP + 3 * step - GAP + extra + 2 * PAD)
+    v.panel:SetSize(width + 2 * PAD, height + GAP + 3 * step - GAP + extra + 2 * PAD)
+end
+
+function Shared.Arrange(v)
+    local db = ns.db.raidMarkerPanel
+    v.row1:ClearAllPoints()
+    v.row1:SetPoint("TOPLEFT", v.panel, "TOPLEFT", PAD, -PAD)
+    v.row2:ClearAllPoints()
+    v.block:ClearAllPoints()
+    v.manaBar:ClearAllPoints()
+    v.downText:ClearAllPoints()
+    v.manaBar:SetShown(db.healerMana)
+    v.manaText:SetShown(db.manaText ~= "none")
+    v.downText:SetShown(db.groupDown)
+    if db.vertical then
+        LayoutVertical(v)
+    else
+        LayoutHorizontal(v)
+    end
 end
 
 function Shared.Layout()
-    Shared.row1:ClearAllPoints()
-    Shared.row1:SetPoint("TOPLEFT", Shared.panel, "TOPLEFT", PAD, -PAD)
-    Shared.row2:ClearAllPoints()
-    Shared.block:ClearAllPoints()
-    Shared.manaBar:ClearAllPoints()
-    Shared.downText:ClearAllPoints()
-    Shared.manaBar:SetShown(ns.db.raidMarkerPanel.healerMana)
-    Shared.manaText:SetShown(ns.db.raidMarkerPanel.manaText ~= "none")
-    Shared.downText:SetShown(ns.db.raidMarkerPanel.groupDown)
-    if ns.db.raidMarkerPanel.vertical then
-        LayoutVertical()
-    else
-        LayoutHorizontal()
-    end
+    Shared.Arrange(Shared)
     Shared.RefreshHelpers()
 end
 
@@ -275,9 +290,7 @@ function Shared.BuildFrame()
     panel:Hide()
     panel:SetClampedToScreen(true)
     panel:SetDontSavePosition(true)
-    panel:SetBackdrop(FLAT)
-    panel:SetBackdropColor(0, 0, 0, 0.6)
-    panel:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+    Shared.PaintPanel(panel)
 
     local mover = CreateFrame("Frame", "LittleThingsRaidMarkersMover", UIParent)
     Shared.mover = mover

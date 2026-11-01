@@ -7,6 +7,7 @@ local Shared = ns.RaidMarkerPanel
 local CELL_MIN, CELL_PAD = 64, Shared.CELL_PAD
 local READY_COLORS = { waiting = { 1, 0.82, 0 }, notready = { 1, 0.2, 0.2 }, ready = { 0.2, 1, 0.2 } }
 local WHITE, GREY = { 1, 1, 1 }, Shared.GREY
+local GROUP_CELLS = { { "ready", "Ready" }, { "pull", "Pull" }, { "role", "Role" } }
 
 Shared.groupButtons = {}
 
@@ -42,9 +43,20 @@ function Shared.PaintGroupButtons()
     end
 end
 
-local function GroupButton(key, text, action, title, lines, onClick)
-    local button = Shared.NewButton(Shared.block, nil, CELL_MIN)
-    button.label = Shared.Label(button, text)
+function Shared.GroupCells(block, make)
+    local cells = {}
+    for _, cell in ipairs(GROUP_CELLS) do
+        local button = make(block, CELL_MIN)
+        button.label = Shared.Label(button, cell[2])
+        cells[cell[1]] = button
+    end
+    cells.ready.label:SetText("Ready 20/20")
+    block.cell = math.max(CELL_MIN, math.ceil(cells.ready.label:GetStringWidth()) + CELL_PAD)
+    cells.ready.label:SetText("Ready")
+    return cells
+end
+
+local function GroupButton(button, key, action, title, lines, onClick)
     button.action, button.title, button.lines = action, title, lines
     button:SetScript("OnEnter", Shared.ShowTip)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -133,12 +145,11 @@ function Shared.RestrictionChanged()
 end
 
 function Shared.BuildGroupButtons()
-    local ready = GroupButton("ready", "Ready", "ready", "Ready check", nil, function()
+    local cells = Shared.GroupCells(Shared.block, function(row, width) return Shared.NewButton(row, nil, width) end)
+    GroupButton(cells.ready, "ready", "ready", "Ready check", nil, function()
         C_PartyInfo.DoReadyCheck()
     end)
-    ready.label:SetText("Ready 20/20")
-    Shared.block.cell = math.max(CELL_MIN, math.ceil(ready.label:GetStringWidth()) + CELL_PAD)
-    local pull = GroupButton("pull", "Pull", "pull", "Pull countdown", function()
+    local pull = GroupButton(cells.pull, "pull", "pull", "Pull countdown", function()
         local db = ns.db.raidMarkerPanel
         return {
             "Left click: start " .. Rules.PullSeconds(db, "LeftButton") .. " s",
@@ -153,7 +164,7 @@ function Shared.BuildGroupButtons()
         end
     end)
     pull:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    GroupButton("role", "Role", "role", "Role check", nil, function()
+    GroupButton(cells.role, "role", "role", "Role check", nil, function()
         InitiateRolePoll()
     end)
     Shared.PaintGroupButtons()

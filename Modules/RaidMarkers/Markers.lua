@@ -57,6 +57,10 @@ function Shared.RefreshTarget()
     end
 end
 
+function Shared.ModeColor(count, allowed, on)
+    return (count == 0 or not allowed) and GREY or on and GOLD or IDLE
+end
+
 function Shared.PaintMode()
     local modeButton = Shared.modeButton
     local count = bindNext:GetAttribute("lt-count") or 0
@@ -67,7 +71,7 @@ function Shared.PaintMode()
     end
     local upcoming = on and bindNext:GetAttribute("lt-order" .. index)
     local allowed = modeButton:GetAttribute("lt-allowed")
-    local color = (count == 0 or not allowed) and GREY or on and GOLD or IDLE
+    local color = Shared.ModeColor(count, allowed, on)
     modeButton.reason = not allowed and "Needs lead or assist" or count == 0 and "Placement order is empty" or nil
     modeButton.label:SetText(on and (index .. "/" .. count) or "Place")
     modeButton.label:SetTextColor(color[1], color[2], color[3])
@@ -142,39 +146,54 @@ function Shared.BuildBindings()
     return header
 end
 
-function Shared.BuildTargetButtons()
-    local row1 = Shared.row1
+function Shared.TargetCells(row, make)
+    local cells = {}
     for i = 1, 8 do
-        local button = Shared.SecureButton(row1, SIZE, MarkerTitle(_G["RAID_TARGET_" .. i] or ("Target marker " .. i)),
+        local button = make(row, SIZE, MarkerTitle(_G["RAID_TARGET_" .. i] or ("Target marker " .. i)),
             { type = "raidtarget", marker = i, action1 = "set", action2 = "clear", unit = "target" })
         local icon = button:CreateTexture(nil, "ARTWORK")
         icon:SetPoint("TOPLEFT", 2, -2)
         icon:SetPoint("BOTTOMRIGHT", -2, 2)
         icon:SetTexture(TARGET_ICONS)
         SetRaidTargetIconTexture(icon, i)
-        Shared.targetButtons[i] = button
+        cells[i] = button
     end
-    local clearTarget = Shared.SecureButton(row1, CLEAR_WIDTH, "Clear all target markers", { type = "raidtarget", action = "clear-all" })
-    Shared.clearTarget = clearTarget
+    local clearTarget = make(row, CLEAR_WIDTH, "Clear all target markers", { type = "raidtarget", action = "clear-all" })
     clearTarget.label = Shared.Label(clearTarget, "Clear all")
     clearTarget.cell = math.ceil(clearTarget.label:GetStringWidth()) + CELL_PAD
+    return cells, clearTarget
 end
 
-function Shared.BuildWorldButtons(header)
-    local row2 = Shared.row2
+function Shared.BuildTargetButtons()
+    Shared.targetButtons, Shared.clearTarget = Shared.TargetCells(Shared.row1, Shared.SecureButton)
+end
+
+function Shared.WorldCells(row, make)
+    local cells = {}
     for i, color in ipairs(WORLD_COLORS) do
-        local button = Shared.SecureButton(row2, SIZE, MarkerTitle(_G["WORLD_MARKER" .. i] or ("World marker " .. i)),
+        local button = make(row, SIZE, MarkerTitle(_G["WORLD_MARKER" .. i] or ("World marker " .. i)),
             { type = "worldmarker", marker = i, action1 = "set", action2 = "clear" })
         Circle(button, "ARTWORK", DOT, color[1] / 255, color[2] / 255, color[3] / 255)
         button.nextRing = Circle(button, "BACKGROUND", DOT + 6, 1, 1, 1)
         button.nextGap = Circle(button, "BORDER", DOT + 2, 0, 0, 0)
-        Shared.worldButtons[i] = button
+        cells[i] = button
     end
-    local modeButton = Shared.SecureButton(row2, MODE_WIDTH, "Placement mode: left click on the ground places the next world marker. Right click or Esc to stop.",
+    local modeButton = make(row, MODE_WIDTH, "Placement mode: left click on the ground places the next world marker. Right click or Esc to stop.",
         {}, "LittleThingsWorldMarkerMode")
-    Shared.modeButton = modeButton
-    modeButton:RegisterForClicks("AnyDown")
     modeButton.label = Shared.Label(modeButton, "Place")
+    local clearWorld = make(row, SIZE, "Clear all world markers", { type = "worldmarker", action = "clear" })
+    local clearIcon = clearWorld:CreateTexture(nil, "ARTWORK")
+    clearIcon:SetSize(DOT, DOT)
+    clearIcon:SetPoint("CENTER")
+    clearIcon:SetAtlas(CLEAR_ICON)
+    return cells, modeButton, clearWorld
+end
+
+function Shared.BuildWorldButtons(header)
+    local modeButton, clearWorld
+    Shared.worldButtons, modeButton, clearWorld = Shared.WorldCells(Shared.row2, Shared.SecureButton)
+    Shared.modeButton, Shared.clearWorld = modeButton, clearWorld
+    modeButton:RegisterForClicks("AnyDown")
     modeButton.lines = function()
         return { "Left-clicks on the world do not target or turn the camera while it is on." }
     end
@@ -182,14 +201,8 @@ function Shared.BuildWorldButtons(header)
     header:WrapScript(modeButton, "OnClick", MODE_BODY)
     header:WrapScript(modeButton, "OnHide", HIDE_BODY)
 
-    local clearWorld = Shared.SecureButton(row2, SIZE, "Clear all world markers", { type = "worldmarker", action = "clear" })
-    Shared.clearWorld = clearWorld
     SecureHandlerSetFrameRef(clearWorld, "next", bindNext)
     header:WrapScript(clearWorld, "OnClick", CLEAR_BODY)
-    local clearIcon = clearWorld:CreateTexture(nil, "ARTWORK")
-    clearIcon:SetSize(DOT, DOT)
-    clearIcon:SetPoint("CENTER")
-    clearIcon:SetAtlas(CLEAR_ICON)
 
     modeButton:SetScript("OnAttributeChanged", Shared.PaintMode)
     bindNext:SetScript("OnAttributeChanged", Shared.PaintMode)

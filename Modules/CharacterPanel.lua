@@ -28,11 +28,11 @@ local function Edge(frame, point, axis)
     return point:find("TOP") and frame:GetTop() or frame:GetBottom()
 end
 
-local function Anchor(bar)
+local function Anchor(bar, relative)
     local db = bar.db
     local points = CORNERS[db.corner] or CORNERS.bottomleft
     bar:ClearAllPoints()
-    bar:SetPoint(points[1], CharacterFrame, points[2], db.x, db.y)
+    bar:SetPoint(points[1], relative or CharacterFrame, points[2], db.x, db.y)
 end
 
 -- After a drag the bar sits wherever the mouse left it; the saved offsets
@@ -96,10 +96,9 @@ local function Layout(bar, count)
     end
 end
 
-local function Refresh()
+local function Fill(spec, loot)
     local numSpecs = C_SpecializationInfo.GetNumSpecializationsForClassID(select(3, UnitClass("player")))
     local current = C_SpecializationInfo.GetSpecialization()
-    local spec = bars.specBar
 
     for i = 1, numSpecs do
         local _, name, _, icon = C_SpecializationInfo.GetSpecializationInfo(i)
@@ -111,7 +110,11 @@ local function Refresh()
     end
 
     Layout(spec, numSpecs)
-    Layout(bars.lootBar, Buttons.FillLootSpecs(bars.lootBar, true))
+    Layout(loot, Buttons.FillLootSpecs(loot, true))
+end
+
+local function Refresh()
+    Fill(bars.specBar, bars.lootBar)
 end
 
 local function RefreshIfShown()
@@ -128,6 +131,7 @@ local function Bar(bar, key, spec, onChange)
         if bars[bar.key] then
             onChange(bars[bar.key])
         end
+        CharacterPanel.Preview.Refresh()
     end
     return spec
 end
@@ -181,6 +185,74 @@ function CharacterPanel.Pages(page)
         group:Slider(Bar(bar, "size", { label = "Icon size", min = 16, max = 48,
             tooltip = "Icon size in pixels." }, RefreshIfShown))
     end
+end
+
+local Preview = { columnMin = 476 }
+CharacterPanel.Preview = Preview
+
+local CAPTION = "Preview: your specializations and loot specialization around the character panel"
+local OFF = "The character panel bars are off. Turn them on above to use them in game."
+local SHEET_W, SHEET_H = 338, 424
+
+local pane, host, sheet
+local previewBars = {}
+
+local function Box(bar, w, h)
+    local points = CORNERS[bar.db.corner] or CORNERS.bottomleft
+    local x = (points[2]:find("RIGHT") and w or 0) + bar.db.x
+    local y = (points[2]:find("TOP") and h or 0) + bar.db.y
+    local bw, bh = bar:GetSize()
+    local left = points[1]:find("RIGHT") and x - bw or x
+    local bottom = points[1]:find("TOP") and y - bh or y
+    return left, bottom, left + bw, bottom + bh
+end
+
+local function BuildPreview()
+    sheet = CreateFrame("Frame", nil, host, "BackdropTemplate")
+    sheet:SetBackdrop(ns.Widgets.FLAT)
+    sheet:SetBackdropColor(0.05, 0.05, 0.06, 0.9)
+    sheet:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+    local name = sheet:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    name:SetPoint("CENTER")
+    name:SetTextColor(unpack(ns.Widgets.THEME.muted))
+    name:SetText("Character panel")
+    for _, spec in ipairs(BARS) do
+        local bar = CreateFrame("Frame", nil, sheet)
+        bar.key, bar.buttons = spec.key, {}
+        bar.label = bar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        bar.label:SetText(spec.label)
+        previewBars[spec.key] = bar
+    end
+end
+
+function Preview.Attach(target)
+    pane = target
+    host = CreateFrame("Frame", nil, pane.stage)
+    pane:SetCaption(CAPTION)
+end
+
+function Preview.Refresh()
+    if not pane or not pane:IsVisible() then return end
+    InitializeDb()
+    if not sheet then BuildPreview() end
+    local w, h = CharacterFrame:GetSize()
+    if not w or w <= 0 then w, h = SHEET_W, SHEET_H end
+    sheet:SetSize(w, h)
+    for key, bar in pairs(previewBars) do bar.db = ns.db[key] end
+    Fill(previewBars.specBar, previewBars.lootBar)
+    local minX, minY, maxX, maxY = 0, 0, w, h
+    for _, bar in pairs(previewBars) do
+        for _, button in pairs(bar.buttons) do button:EnableMouse(false) end
+        Anchor(bar, sheet)
+        local left, bottom, right, top = Box(bar, w, h)
+        minX, minY = math.min(minX, left), math.min(minY, bottom)
+        maxX, maxY = math.max(maxX, right), math.max(maxY, top)
+    end
+    sheet:ClearAllPoints()
+    sheet:SetPoint("BOTTOMLEFT", host, "BOTTOMLEFT", -minX, -minY)
+    host:SetSize(maxX - minX, maxY - minY)
+    pane:SetOff(not ns.IsOn("characterPanel") and OFF or nil)
+    pane:Fit(host, maxX - minX, maxY - minY)
 end
 
 local function CreateBar(spec)

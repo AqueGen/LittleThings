@@ -99,86 +99,95 @@ function Config.Enable()
     active = true
 end
 
-local windowPanel
+local UI = LibStub("LibVelvet-1.0")
+local T = ns.Widgets.THEME
+local LINE_H = 22
 
--- Forward declared: the row controls below refresh the panel after an edit.
+local windowPage
+local rows = {}
+
 local RefreshWindowPanel
+
+local function Text(parent, width, muted)
+    local text = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    text:SetJustifyH("LEFT")
+    if width then text:SetWidth(width) end
+    text:SetTextColor(unpack(muted and T.muted or T.text))
+    return text
+end
+
+local function Input(parent, width, letters, onEnter)
+    local box = UI.Input(parent, width, 20)
+    box:SetNumeric(true)
+    box:SetMaxLetters(letters)
+    box:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+        RefreshWindowPanel()
+    end)
+    box:SetScript("OnEnterPressed", function(self)
+        onEnter(self)
+        self:ClearFocus()
+        RefreshWindowPanel()
+    end)
+    return box
+end
 
 -- Setting the size here deliberately goes through SetSize on the window, so it
 -- trips the OnSizeChanged hook and propagates to anything matched to it,
 -- exactly as a mouse resize would. The refresh afterwards shows the clamped
 -- value rather than what was typed - silently ignoring an out-of-range request
 -- would be worse than correcting it in front of the user.
-local function CreateSizeBox(row, index, dimension)
-    local box = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
-    box:SetAutoFocus(false)
-    box:SetNumeric(true)
-    box:SetMaxLetters(4)
-    box:SetSize(44, 20)
-
-    box:SetScript("OnEscapePressed", function(self)
-        self:ClearFocus()
-        RefreshWindowPanel()
-    end)
-
-    box:SetScript("OnEnterPressed", function(self)
-        if InCombatLockdown() then
-            self:ClearFocus()
-            RefreshWindowPanel()
-            return
-        end
-
+local function SizeBox(parent, index, dimension)
+    return Input(parent, 44, 4, function(self)
+        if InCombatLockdown() then return end
         local window = ns.Windows.Get(index)
         local value = tonumber(self:GetText())
-
         if window and value then
             local width = (dimension == "width") and value or window:GetWidth()
             local height = (dimension == "height") and value or window:GetHeight()
-
-            -- Windows.SetSize does the lock check and, for the primary window,
-            -- the Edit Mode routing - so this box does not need to know which
-            -- kind of window it is editing.
             if ns.Windows.SetSize(index, width, height) then
                 ns.RequestReload("size")
             end
         end
-
-        self:ClearFocus()
-        RefreshWindowPanel()
     end)
-
-    return box
 end
 
 -- Windows.Indices only lists a Blizzard window once it has been shown; the
--- panel lists all three slots so a hidden one still has a row saying how to
+-- page lists all three slots so a hidden one still has a box saying how to
 -- bring it back. RefreshRow already handles a nil window.
 local function PanelIndices()
     local present = {}
-
     for index = 1, ns.Windows.BLIZZARD_WINDOW_COUNT do
         present[index] = true
     end
-
     return ns.Windows.SortedIndices(present)
 end
 
+local function Check(parent, text, onClick)
+    local check = UI.Checkbox(parent, 16)
+    check.label = Text(check)
+    check.label:SetPoint("LEFT", check, "RIGHT", 4, 0)
+    check.label:SetText(text)
+    check:SetHitRectInsets(0, -(check.label:GetStringWidth() + 6), 0, 0)
+    check:SetScript("OnClick", onClick)
+    return check
+end
+
+local function Paint(control, enabled)
+    control:SetEnabled(enabled)
+    control.label:SetTextColor(unpack(enabled and T.text or T.muted))
+end
+
 local function CreateRow(parent, index)
-    local row = CreateFrame("Frame", nil, parent)
-    row:SetSize(560, 60)
+    local row = {}
 
-    row.Title = row:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    row.Title:SetPoint("TOPLEFT")
-
-    row.Size = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    row.Size:SetPoint("TOPLEFT", row.Title, "BOTTOMLEFT", 0, -8)
-    row.Size:SetWidth(70)
-    row.Size:SetJustifyH("LEFT")
-
-    row.Width = CreateSizeBox(row, index, "width")
+    row.sizeLine = CreateFrame("Frame", nil, parent)
+    row.sizeLine:SetSize(520, LINE_H)
+    row.Size = Text(row.sizeLine, 70)
+    row.Size:SetPoint("LEFT")
+    row.Width = SizeBox(row.sizeLine, index, "width")
     row.Width:SetPoint("LEFT", row.Size, "RIGHT", 12, 0)
-
-    row.Height = CreateSizeBox(row, index, "height")
+    row.Height = SizeBox(row.sizeLine, index, "height")
     row.Height:SetPoint("LEFT", row.Width, "RIGHT", 8, 0)
 
     -- Shown, not offered: locking from our stack writes the window's isLocked,
@@ -186,45 +195,27 @@ local function CreateRow(parent, index)
     -- onUpdateReasons, and every combat start trips over that in
     -- ClearSessionTimer (DamageMeterSessionWindow.lua:232, 267, 930) until a
     -- reload. The gear menu's own Lock window is clean.
-    row.Locked = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    row.Locked = Text(row.sizeLine, 50)
     row.Locked:SetPoint("LEFT", row.Height, "RIGHT", 16, 0)
-    row.Locked:SetWidth(50)
-    row.Locked:SetJustifyH("LEFT")
-
-    row.Note = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    row.Note = Text(row.sizeLine, nil, true)
     row.Note:SetPoint("LEFT", row.Locked, "RIGHT", 16, 0)
 
-    row.Link = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    row.Link:SetPoint("TOPLEFT", row.Size, "BOTTOMLEFT", 0, -8)
-
-    row.GapLabel = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    row.linkLine = CreateFrame("Frame", nil, parent)
+    row.linkLine:SetSize(520, LINE_H)
+    row.Link = Text(row.linkLine, 160)
+    row.Link:SetPoint("LEFT")
+    row.GapLabel = Text(row.linkLine, nil, true)
     row.GapLabel:SetPoint("LEFT", row.Link, "RIGHT", 12, 0)
     row.GapLabel:SetText("gap")
-
-    row.Gap = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
-    row.Gap:SetAutoFocus(false)
-    row.Gap:SetNumeric(true)
-    row.Gap:SetMaxLetters(3)
-    row.Gap:SetSize(36, 20)
-    row.Gap:SetPoint("LEFT", row.GapLabel, "RIGHT", 8, 0)
-
-    row.Gap:SetScript("OnEscapePressed", function(self)
-        self:ClearFocus()
-        RefreshWindowPanel()
-    end)
-
-    row.Gap:SetScript("OnEnterPressed", function(self)
+    row.Gap = Input(row.linkLine, 36, 3, function(self)
         local link = ns.charDb.links[index]
         local value = tonumber(self:GetText())
-
         if link and value then
             link.gap = value
             ns.Snap.ApplyLink(index)
         end
-
-        self:ClearFocus()
-        RefreshWindowPanel()
     end)
+    row.Gap:SetPoint("LEFT", row.GapLabel, "RIGHT", 8, 0)
 
     -- The axis the windows are joined across follows through anchors and is
     -- clean; the other one is a one-off copy that needs a reload.
@@ -233,42 +224,29 @@ local function CreateRow(parent, index)
         if not link then
             return
         end
-
         link[flag] = checked
         ns.Snap.ApplyLink(index)
-
         if checked and ns.Snap.CopyCrossSize(index) then
             ns.RequestReload("size")
         end
-
         RefreshWindowPanel()
     end
 
-    -- UICheckButtonTemplate already ships the caption font string as Text,
-    -- anchored to the right of the box, so it only needs its text set.
-    row.MatchWidth = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
+    row.MatchWidth = Check(row.linkLine, "match width", function(self) SetMatch("matchWidth", self:GetChecked()) end)
     row.MatchWidth:SetPoint("LEFT", row.Gap, "RIGHT", 16, 0)
-    row.MatchWidth.Text:SetText("match width")
-    row.MatchWidth:SetScript("OnClick", function(self) SetMatch("matchWidth", self:GetChecked()) end)
+    row.MatchHeight = Check(row.linkLine, "match height", function(self) SetMatch("matchHeight", self:GetChecked()) end)
+    row.MatchHeight:SetPoint("LEFT", row.MatchWidth.label, "RIGHT", 16, 0)
 
-    row.MatchHeight = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-    row.MatchHeight:SetPoint("LEFT", row.MatchWidth.Text, "RIGHT", 20, 0)
-    row.MatchHeight.Text:SetText("match height")
-    row.MatchHeight:SetScript("OnClick", function(self) SetMatch("matchHeight", self:GetChecked()) end)
-
-    row.Detach = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    row.Detach:SetSize(80, 22)
-    row.Detach:SetPoint("LEFT", row.MatchHeight.Text, "RIGHT", 20, 0)
-    row.Detach:SetText("Detach")
+    row.buttonLine = CreateFrame("Frame", nil, parent)
+    row.buttonLine:SetSize(170, LINE_H)
+    row.Detach = ns.Widgets.Button(row.buttonLine, "Detach", 80)
+    row.Detach:SetPoint("LEFT")
     row.Detach:SetScript("OnClick", function()
         ns.Snap.ClearLink(index)
         RefreshWindowPanel()
     end)
-
-    row.Remove = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    row.Remove:SetSize(80, 22)
+    row.Remove = ns.Widgets.Button(row.buttonLine, "Hide", 80)
     row.Remove:SetPoint("LEFT", row.Detach, "RIGHT", 8, 0)
-    row.Remove:SetText("Hide")
     row.Remove:SetScript("OnClick", function()
         ns.Windows.Hide(index)
         RefreshWindowPanel()
@@ -292,8 +270,6 @@ local function RefreshRow(row, index)
     local shown = window ~= nil and window:IsShown()
     local fighting = InCombatLockdown()
 
-    row.Title:SetText(isPrimary and "Window 1 (primary)" or ("Window " .. index))
-
     if shown then
         row.Size:SetText(("%d x %d"):format(window:GetWidth(), window:GetHeight()))
     else
@@ -301,13 +277,10 @@ local function RefreshRow(row, index)
     end
 
     -- Window 1 gets the size boxes too: Windows.SetSize routes it through
-    -- Edit Mode. A locked window keeps them, greyed out, so the panel says
+    -- Edit Mode. A locked window keeps them, greyed out, so the page says
     -- why the edit is refused instead of swallowing it.
     local resizable = shown and (index == 1 or window:CanMoveOrResize())
-
-    row.Width:SetShown(true)
     row.Width:SetEnabled(resizable and not fighting)
-    row.Height:SetShown(true)
     row.Height:SetEnabled(resizable and not fighting)
 
     -- Never overwrite a box the user is typing in; the throttled refresh below
@@ -316,7 +289,6 @@ local function RefreshRow(row, index)
     if not row.Width:HasFocus() then
         row.Width:SetText(shown and math.floor(window:GetWidth() + 0.5) or "")
     end
-
     if not row.Height:HasFocus() then
         row.Height:SetText(shown and math.floor(window:GetHeight() + 0.5) or "")
     end
@@ -338,41 +310,30 @@ local function RefreshRow(row, index)
         row.Link:SetText("not attached")
     end
     row.Gap:SetEnabled(link ~= nil and not isPrimary)
-
     if not row.Gap:HasFocus() then
         row.Gap:SetText(link and (link.gap or 0) or "")
     end
 
     row.MatchWidth:SetChecked(link and link.matchWidth or false)
-    row.MatchWidth:SetEnabled(link ~= nil and not isPrimary and not fighting)
+    Paint(row.MatchWidth, link ~= nil and not isPrimary and not fighting)
     row.MatchHeight:SetChecked(link and link.matchHeight or false)
-    row.MatchHeight:SetEnabled(link ~= nil and not isPrimary and not fighting)
-    row.Detach:SetEnabled(link ~= nil and not isPrimary)
+    Paint(row.MatchHeight, link ~= nil and not isPrimary and not fighting)
+    Paint(row.Detach, link ~= nil and not isPrimary)
 
     -- Hiding is the only direction that is clean from addon code; see Windows.Hide.
-    row.Remove:SetEnabled(not isPrimary and shown)
+    Paint(row.Remove, not isPrimary and shown)
 end
 
 function RefreshWindowPanel()
-    if not windowPanel or not windowPanel:IsShown() then
+    if not windowPage or not windowPage:IsShown() then
         return
     end
-
-    local present = {}
-
-    for position, index in ipairs(PanelIndices()) do
-        present[index] = true
-        RefreshRow(windowPanel:AcquireRow(index, position), index)
-    end
-
-    for index, row in pairs(windowPanel.rows) do
-        if not present[index] then
-            row:Hide()
-        end
+    for index, row in pairs(rows) do
+        RefreshRow(row, index)
     end
 end
 
--- The panel deliberately offers no way to attach a window: snapping is a drag
+-- The page deliberately offers no way to attach a window: snapping is a drag
 -- gesture, and a control duplicating it would be a second way to do the same
 -- thing. The page shows the link, its gap, its match flags and a Detach button.
 function Config.Pages(page)
@@ -385,48 +346,31 @@ local function BuildWindowsPage(page)
         return
     end
 
-    windowPanel = CreateFrame("Frame")
-    windowPanel:SetSize(600, 280)
+    page:Group("Meter windows"):Note("The size boxes, and match height on stacked windows (match width on side-by-side ones) go through Blizzard's code and need a /reload afterwards - the addon offers one. Until then the meter can log errors in combat. Sizes stay as set after the reload. Dragging, snapping, the gap and the other match are always safe.")
 
-    windowPanel.ReloadNote = windowPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    windowPanel.ReloadNote:SetPoint("TOPLEFT", 20, -16)
-    windowPanel.ReloadNote:SetWidth(560)
-    windowPanel.ReloadNote:SetJustifyH("LEFT")
-    windowPanel.ReloadNote:SetText("The size boxes, and match height on stacked windows (match width on side-by-side ones) go through Blizzard's code and need a /reload afterwards - the addon offers one. Until then the meter can log errors in combat. Sizes stay as set after the reload. Dragging, snapping, the gap and the other match are always safe.")
-
-    -- Rows are pooled by window index.
-    windowPanel.rows = {}
-
-    function windowPanel:AcquireRow(index, position)
-        local row = self.rows[index]
-
-        if not row then
-            row = CreateRow(self, index)
-            self.rows[index] = row
-        end
-
-        row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -60 - (position - 1) * 70)
-        row:Show()
-
-        return row
+    for _, index in ipairs(PanelIndices()) do
+        local group = page:Group(index == 1 and "Window 1 (primary)" or ("Window " .. index))
+        local row = CreateRow(group.frame, index)
+        rows[index] = row
+        group:Add(row.sizeLine, LINE_H, function() RefreshRow(row, index) end)
+        group:Add(row.linkLine, LINE_H)
+        group:Add(row.buttonLine, LINE_H)
     end
 
-    windowPanel:SetScript("OnShow", RefreshWindowPanel)
+    windowPage = page.frame
+    windowPage:HookScript("OnShow", RefreshWindowPanel)
 
-    -- Everything shown here can change from outside the panel: the keybinds,
+    -- Everything shown here can change from outside the page: the keybinds,
     -- Blizzard's own Hide, a mouse resize. Polling twice a second is cheaper
     -- than hooking all of them.
-    windowPanel:SetScript("OnUpdate", function(self, elapsed)
-        self.sinceRefresh = (self.sinceRefresh or 0) + elapsed
-
-        if self.sinceRefresh >= 0.5 then
-            self.sinceRefresh = 0
+    local sinceRefresh = 0
+    windowPage:HookScript("OnUpdate", function(_, elapsed)
+        sinceRefresh = sinceRefresh + elapsed
+        if sinceRefresh >= 0.5 then
+            sinceRefresh = 0
             RefreshWindowPanel()
         end
     end)
-
-    page:Embed(windowPanel, 280)
 end
 
 ns.Window.Register("damageMeterWindows", BuildWindowsPage)

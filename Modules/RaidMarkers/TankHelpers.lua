@@ -23,6 +23,30 @@ local function HealerName(unit)
     return color and color:WrapTextInColorCode(name) or name
 end
 
+function Shared.SetManaText(manaText, mode, name, power, percent)
+    if mode == "value" then
+        if name then
+            manaText:SetFormattedText("%s %s", name, AbbreviateNumbers(power))
+        else
+            manaText:SetText(AbbreviateNumbers(power))
+        end
+    elseif mode == "percent" then
+        if name then
+            manaText:SetFormattedText("%s %d%%", name, percent)
+        else
+            manaText:SetFormattedText("%d%%", percent)
+        end
+    elseif mode == "both" then
+        if name then
+            manaText:SetFormattedText("%s %s  %d%%", name, AbbreviateNumbers(power), percent)
+        else
+            manaText:SetFormattedText("%s  %d%%", AbbreviateNumbers(power), percent)
+        end
+    else
+        manaText:SetText("")
+    end
+end
+
 function Shared.RefreshHelpers()
     local manaBar, manaText, downText = Shared.manaBar, Shared.manaText, Shared.downText
     local db = ns.db.raidMarkerPanel
@@ -43,29 +67,8 @@ function Shared.RefreshHelpers()
         manaBar:SetValue(power)
         local mode = db.manaText
         local name = mode ~= "none" and HealerName(healer)
-        if mode == "value" then
-            if name then
-                manaText:SetFormattedText("%s %s", name, AbbreviateNumbers(power))
-            else
-                manaText:SetText(AbbreviateNumbers(power))
-            end
-        elseif mode == "percent" then
-            local percent = UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve)
-            if name then
-                manaText:SetFormattedText("%s %d%%", name, percent)
-            else
-                manaText:SetFormattedText("%d%%", percent)
-            end
-        elseif mode == "both" then
-            local percent = UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve)
-            if name then
-                manaText:SetFormattedText("%s %s  %d%%", name, AbbreviateNumbers(power), percent)
-            else
-                manaText:SetFormattedText("%s  %d%%", AbbreviateNumbers(power), percent)
-            end
-        else
-            manaText:SetText("")
-        end
+        local percent = (mode == "percent" or mode == "both") and UnitPowerPercent(healer, Enum.PowerType.Mana, false, manaCurve)
+        Shared.SetManaText(manaText, mode, name, power, percent)
     end
     manaBar:SetAlpha(healer and 1 or 0)
     local down = 0
@@ -86,10 +89,8 @@ function Shared.RefreshHelpers()
     downText:SetAlpha(down > 0 and 1 or 0)
 end
 
-function Shared.BuildHelpers()
-    local panel = Shared.panel
+function Shared.HelperParts(panel)
     local manaBar = CreateFrame("StatusBar", nil, panel)
-    Shared.manaBar = manaBar
     manaBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
     manaBar:SetStatusBarColor(MANA[1], MANA[2], MANA[3])
     local manaBack = manaBar:CreateTexture(nil, "BACKGROUND")
@@ -100,8 +101,22 @@ function Shared.BuildHelpers()
     icon:SetAtlas(ns.IconButtons.ROLE_ATLAS.HEALER)
     icon:SetSize(Shared.ICON, Shared.ICON)
     icon:SetPoint("RIGHT", manaBar, "LEFT", -Shared.GAP, 0)
-    Shared.manaText = manaBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    Shared.manaText:SetPoint("CENTER")
+    local manaText = manaBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    manaText:SetPoint("CENTER")
+
+    local downText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    downText:SetTextColor(RED[1], RED[2], RED[3])
+    downText:SetText(Rules.DownLabel(5))
+    downText.cell = math.ceil(downText:GetStringWidth())
+    downText:SetText("")
+    downText:SetAlpha(0)
+    return manaBar, manaText, downText
+end
+
+function Shared.BuildHelpers()
+    local manaBar
+    manaBar, Shared.manaText, Shared.downText = Shared.HelperParts(Shared.panel)
+    Shared.manaBar = manaBar
     manaCurve = C_CurveUtil.CreateCurve()
     manaCurve:SetType(Enum.LuaCurveType.Linear)
     manaCurve:AddPoint(0, 0)
@@ -122,12 +137,4 @@ function Shared.BuildHelpers()
         end
     end)
     manaBar:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-    local downText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    Shared.downText = downText
-    downText:SetTextColor(RED[1], RED[2], RED[3])
-    downText:SetText(Rules.DownLabel(5))
-    downText.cell = math.ceil(downText:GetStringWidth())
-    downText:SetText("")
-    downText:SetAlpha(0)
 end

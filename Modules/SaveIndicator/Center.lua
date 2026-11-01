@@ -10,7 +10,7 @@ local ICON = 32
 local LABEL = 14
 local STEP = ICON + 4
 local FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
-local SAMPLES = { { id = 389539, dr = 24 }, { id = 33206, dr = 40 } }
+local SAMPLES = { { id = 389539, dr = 24, time = 12 }, { id = 33206, dr = 40, time = 6 } }
 
 local row, host, preview
 local containers = {}
@@ -148,9 +148,37 @@ function Center.Place()
     if row then ns.SaveDefer(function() Point(row) end) end
 end
 
+function Center.DrawSamples(parent)
+    parent:SetSize(STEP * #SAMPLES, ICON + LABEL)
+    local parts = {}
+    for i, sample in ipairs(SAMPLES) do
+        local icon = parent:CreateTexture(nil, "ARTWORK")
+        icon:SetSize(ICON, ICON)
+        icon:SetPoint("TOPLEFT", (i - 1) * STEP, 0)
+        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        icon:SetTexture(C_Spell.GetSpellTexture(sample.id))
+        local time = parent:CreateFontString(nil, "OVERLAY")
+        time:SetFont(FONT, 13, "OUTLINE")
+        time:SetPoint("CENTER", icon, "CENTER")
+        time:SetText(tostring(sample.time))
+        local dr = parent:CreateFontString(nil, "OVERLAY")
+        dr:SetFont(FONT, 12, "OUTLINE")
+        dr:SetPoint("TOP", icon, "BOTTOM", 0, -1)
+        dr:SetText("|c" .. Rules.COLORS.normal .. Rules.Label(sample.dr) .. "|r")
+        parts[i] = { time = time, dr = dr }
+    end
+    return parts
+end
+
+function Center.PaintSamples(parts, showTime, showDR)
+    for _, part in ipairs(parts) do
+        part.time:SetShown(showTime)
+        part.dr:SetShown(showDR)
+    end
+end
+
 local function BuildPreview()
     preview = CreateFrame("Frame", "LittleThingsSaveRowPreview", UIParent)
-    preview:SetSize(STEP * #SAMPLES, ICON + LABEL)
     preview:SetFrameStrata("HIGH")
     preview:SetMovable(true)
     preview:SetClampedToScreen(true)
@@ -159,17 +187,7 @@ local function BuildPreview()
     local outline = preview:CreateTexture(nil, "BACKGROUND")
     outline:SetAllPoints()
     outline:SetColorTexture(1, 0.82, 0, 0.25)
-    for i, sample in ipairs(SAMPLES) do
-        local icon = preview:CreateTexture(nil, "ARTWORK")
-        icon:SetSize(ICON, ICON)
-        icon:SetPoint("TOPLEFT", (i - 1) * STEP, 0)
-        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        icon:SetTexture(C_Spell.GetSpellTexture(sample.id))
-        local dr = preview:CreateFontString(nil, "OVERLAY")
-        dr:SetFont(FONT, 12, "OUTLINE")
-        dr:SetPoint("TOP", icon, "BOTTOM", 0, -1)
-        dr:SetText("|c" .. Rules.COLORS.normal .. Rules.Label(sample.dr) .. "|r")
-    end
+    Center.PaintSamples(Center.DrawSamples(preview), false, true)
     preview:SetScript("OnDragStart", function(self)
         if not ns.db.saveIndicatorRow.locked and not InCombatLockdown() then
             self:StartMoving()

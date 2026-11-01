@@ -2,10 +2,12 @@
 local _, ns = ...
 
 local Rows = ns.ProfilerRows
+local UI = LibStub("LibVelvet-1.0")
+local T = UI.T
 
 local Profiler = {}
 
-local ROW_HEIGHT, HEADER_HEIGHT, REFRESH_SECONDS = 18, 22, 1
+local ROW_HEIGHT, HEADER_HEIGHT, REFRESH_SECONDS, TITLE_H = 18, 22, 1, 28
 
 local COLUMNS = {
     { key = "name", title = "Addon", width = 220, align = "LEFT" },
@@ -75,7 +77,7 @@ local function Refresh()
     end
     provider:Sort(Rows.Comparator(sortKey))
     for _, header in ipairs(window.headers) do
-        header.Text:SetTextColor((header.key == sortKey and HIGHLIGHT_FONT_COLOR or NORMAL_FONT_COLOR):GetRGB())
+        header.Text:SetTextColor(unpack(header.key == sortKey and T.selLabel or T.text))
     end
 end
 
@@ -130,9 +132,10 @@ local function CreateHeaders()
 end
 
 local function CreateWindow()
-    window = CreateFrame("Frame", "LittleThingsAddonPerformance", UIParent, "ButtonFrameTemplate")
-    ButtonFrameTemplate_HidePortrait(window)
-    window:SetTitle("Addon performance")
+    window = CreateFrame("Frame", "LittleThingsAddonPerformance", UIParent, "BackdropTemplate")
+    window:SetBackdrop(UI.FLAT)
+    window:SetBackdropColor(unpack(T.bg))
+    window:SetBackdropBorderColor(unpack(T.border))
     window:SetSize(TABLE_WIDTH + 44, 480)
     window:SetPoint("CENTER")
     window:SetFrameStrata("DIALOG")
@@ -143,7 +146,23 @@ local function CreateWindow()
     window:RegisterForDrag("LeftButton")
     window:SetScript("OnDragStart", window.StartMoving)
     window:SetScript("OnDragStop", window.StopMovingOrSizing)
-    table.insert(UISpecialFrames, window:GetName())
+    table.insert(UISpecialFrames, "LittleThingsAddonPerformance")
+
+    local title = window:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("TOPLEFT", 8, -(TITLE_H - 12) / 2)
+    title:SetTextColor(unpack(T.gold))
+    title:SetText("Addon performance")
+
+    local close = ns.Widgets.Button(window, "X", 22)
+    close:SetPoint("TOPRIGHT", -(TITLE_H - 22) / 2, -(TITLE_H - 22) / 2)
+    close:SetScript("OnClick", function() window:Hide() end)
+
+    window.Inset = CreateFrame("Frame", nil, window, "BackdropTemplate")
+    window.Inset:SetPoint("TOPLEFT", 4, -60)
+    window.Inset:SetPoint("BOTTOMRIGHT", -6, 26)
+    window.Inset:SetBackdrop(UI.FLAT)
+    window.Inset:SetBackdropColor(unpack(T.panel))
+    window.Inset:SetBackdropBorderColor(unpack(T.border))
 
     CreateHeaders()
 
@@ -159,17 +178,16 @@ local function CreateWindow()
     view:SetElementInitializer("Frame", InitRow)
     ScrollUtil.InitScrollBoxListWithScrollBar(window.ScrollBox, window.ScrollBar, view)
 
-    local refresh = CreateFrame("Button", nil, window, "UIPanelButtonTemplate")
-    refresh:SetSize(140, 22)
+    local refresh = ns.Widgets.Button(window, "Refresh memory", 140)
     refresh:SetPoint("BOTTOMRIGHT", -8, 3)
-    refresh:SetText("Refresh memory")
     refresh:SetScript("OnClick", function()
         MeasureMemory()
         Refresh()
     end)
 
-    local note = window:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local note = window:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     note:SetPoint("BOTTOMLEFT", 10, 9)
+    note:SetTextColor(unpack(T.muted))
     note:SetText("Times are the game's own measurements since login. Red rows took over 50 ms in a frame.")
 
     local elapsed = 0

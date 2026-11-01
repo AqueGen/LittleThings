@@ -156,10 +156,8 @@ local function Place(texture, button, previous, size)
     end
 end
 
-local function Paint(button)
+local function PaintEntries(button, entries)
     local icons = button.ltSpecIcons
-    local entries = ns.db.journalLoot and button.itemID and cache.key == CurrentKey()
-        and cache.entries[button.itemID]
     local count = entries and #entries or 0
 
     if count > 0 and not icons then
@@ -184,6 +182,11 @@ local function Paint(button)
     end
 
     PlaceArmorType(button, count > 0 and Corner().pushesArmor and ArmorShift(button, icons[count]) or nil)
+end
+
+local function Paint(button)
+    PaintEntries(button, ns.db.journalLoot and button.itemID and cache.key == CurrentKey()
+        and cache.entries[button.itemID])
 end
 
 local function ScrollBox()
@@ -255,8 +258,84 @@ local function Option(key, spec)
     spec.set = function(value)
         Options()[key] = value
         Repaint()
+        JournalLoot.Preview.Refresh()
     end
     return spec
+end
+
+local Preview = { columnMin = 476 }
+JournalLoot.Preview = Preview
+
+local CAPTION = "Preview: a sample loot row that drops for every healer and two of your specializations"
+local OFF = "Journal loot is off. Turn it on above to see the icons in the Adventure Guide."
+local ROW_W, ROW_H, ROW_ICON = 321, 46, 36
+
+local pane, host, row, lootBar
+
+local function DemoSpecs(classID)
+    local specs = {}
+    for _, class in ipairs(classes) do
+        for i, spec in ipairs(class.specs) do
+            if spec.role == "HEALER" or (class.id == classID and i < #class.specs) then
+                specs[spec.id] = true
+            end
+        end
+    end
+    return specs
+end
+
+local function BuildPreview()
+    row = CreateFrame("Frame", nil, host, "BackdropTemplate")
+    row:SetSize(ROW_W, ROW_H)
+    row:SetPoint("TOPLEFT", host, "TOPLEFT", 0, 0)
+    row:SetBackdrop(ns.Widgets.FLAT)
+    row:SetBackdropColor(0.12, 0.1, 0.08, 0.9)
+    row:SetBackdropBorderColor(0.35, 0.3, 0.22, 1)
+    local icon = row:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(ROW_ICON, ROW_ICON)
+    icon:SetPoint("LEFT", 5, 0)
+    icon:SetTexture(134400)
+    row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.name:SetPoint("TOPLEFT", icon, "TOPRIGHT", 8, -2)
+    row.name:SetText("Sample Trinket")
+    row.armorType = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.armorType:SetPoint("BOTTOMRIGHT", row.name, "TOPLEFT", ARMOR_X, ARMOR_Y)
+    row.armorType:SetText("Trinket")
+    lootBar = CreateFrame("Frame", nil, host)
+    lootBar.buttons = {}
+    lootBar:SetPoint("TOPRIGHT", row, "BOTTOMRIGHT", 0, -4)
+end
+
+function Preview.Attach(target)
+    pane = target
+    host = CreateFrame("Frame", nil, pane.stage)
+    pane:SetCaption(CAPTION)
+end
+
+function Preview.Refresh()
+    if not pane or not pane:IsVisible() then return end
+    if not classes then BuildClasses() end
+    if not row then BuildPreview() end
+    local classID = select(3, UnitClass("player"))
+    local scanned = classes
+    if not Options().allClasses then
+        scanned = {}
+        for _, class in ipairs(classes) do
+            if class.id == classID then scanned[1] = class end
+        end
+    end
+    PaintEntries(row, Icons.For(DemoSpecs(classID), scanned, Options().allClasses))
+    local h = ROW_H
+    lootBar:SetShown(Options().lootSpecButtons)
+    if Options().lootSpecButtons then
+        lootBar.size = Options().lootSpecSize
+        Buttons.Row(lootBar, Buttons.FillLootSpecs(lootBar))
+        for _, button in pairs(lootBar.buttons) do button:EnableMouse(false) end
+        h = h + 4 + lootBar.size
+    end
+    host:SetSize(ROW_W, h)
+    pane:SetOff(not ns.IsOn("journalLoot") and OFF or nil)
+    pane:Fit(host, ROW_W, h)
 end
 
 function JournalLoot.Pages(page)
