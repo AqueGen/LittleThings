@@ -334,6 +334,8 @@ function Panel.Layout(ids)
         button:Show()
     end
     Panel.panel:SetSize(panelW, panelH)
+    Panel.glyph:ClearAllPoints()
+    Panel.glyph:SetPoint("CENTER", Panel.handle, "CENTER", 0, ns.PanelDock.GlyphOffset(panelH))
     Panel.Place()
 end
 

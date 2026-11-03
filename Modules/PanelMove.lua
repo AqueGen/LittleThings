@@ -26,7 +26,8 @@ end
 
 function PanelMove.LockSpot(l, t, r, b, screenTop, stripW, s, blocked)
     if stripW then
-        return "CENTER", l + stripW / 2, t - stripW / 2, blocked and stripW - 2 * s or BADGE * s
+        local size = blocked and stripW - 2 * s or BADGE * s
+        return "CENTER", l + stripW / 2, t - stripW / 2, math.min(size, t - b - 2 * s)
     end
     if screenTop - t >= BADGE then return "BOTTOMRIGHT", r, t, BADGE end
     return "TOPRIGHT", r, b, BADGE
@@ -47,7 +48,7 @@ local TARGET_SIDE = { Below = "bottom", Above = "top", Right = "right", Left = "
 function PanelMove.SharedSides(id, docks)
     local shared = {}
     local own = docks[id]
-    if own and own.dockTo and MEMBER_SIDE[own.side or ""] then shared[MEMBER_SIDE[own.side]] = true end
+    if own and own.dockTo and docks[own.dockTo] and MEMBER_SIDE[own.side or ""] then shared[MEMBER_SIDE[own.side]] = true end
     for other, d in pairs(docks) do
         if other ~= id and d.dockTo == id and TARGET_SIDE[d.side or ""] then shared[TARGET_SIDE[d.side]] = true end
     end
@@ -109,7 +110,7 @@ local function Docks()
     local lib = LibStub and LibStub("LibVelvet-1.0", true)
     for id, p in pairs(lib and lib.dock and lib.dock.panels or {}) do
         local pos = p.spec.get and p.spec.get()
-        if pos and p.spec.frame then docks[id] = pos end
+        if pos and p.spec.frame and p.spec.frame:IsVisible() then docks[id] = pos end
     end
     return docks, lib
 end

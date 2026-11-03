@@ -51,6 +51,14 @@ describe("PanelDock.Align", function()
   end)
 end)
 
+describe("PanelDock.GlyphOffset", function()
+  it("keeps the fold glyph below the padlock but inside a short strip", function()
+    assert.equals(-8, ns.PanelDock.GlyphOffset(60))
+    assert.equals(-5, ns.PanelDock.GlyphOffset(20))
+    assert.equals(0, ns.PanelDock.GlyphOffset(8))
+  end)
+end)
+
 describe("PanelDock.Holds", function()
   local target = { x = 100, y = 100, w = 200, h = 60 }
   local function raw(x, y) return { x = x, y = y, w = 120, h = 40 } end

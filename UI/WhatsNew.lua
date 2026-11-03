@@ -16,6 +16,7 @@ local function EnableSpec(row)
     return {
         label = "Enable",
         name = row.label,
+        tooltip = row.tooltip,
         reload = not row.live,
         combatLocked = true,
         get = function() return ns.IsOn(row.key) end,

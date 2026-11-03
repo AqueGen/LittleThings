@@ -231,7 +231,7 @@ Switch on Raid marker panel (Party and raid). It is off by default. Its page has
 
 ## 16. Battle res guard
 
-Switch on Battle res guard (Combat). It is off by default. Its page has an Ask before release as group with Tank, Healer and Damage, all on by default.
+Switch on Battle res guard (Combat). It is off by default. Its page has an Ask before release as group with Tank, Healer and Damage dealer, all on by default.
 
 - [ ] In a key with a battle res charge left and a druid, death knight, warlock or paladin alive, die: the Release button gets a gold frame. A click on it opens the window above the death popup with "Battle res available: N" and "Can res: Name"; Blizzard's popup does not release.
 - [ ] Release anyway releases and the window and frame go. Wait for res closes the window, you stay dead, and the frame stays on Release.
@@ -257,7 +257,7 @@ Switch on Battle res guard (Combat). It is off by default. Its page has an Ask b
 
 ## 18. Low level gear
 
-Character and loot has one Gear in bags entry (no separate Low level gear and Warband gear entries); its page holds both switches under Marks, each Baganator note shows only while its switch is on. Switch on Low level gear there. It is off by default.
+Character and loot has one Gear in bags entry (no separate Low level gear and Warband gear entries); its page holds both switches under Bag marks, with the Baganator notes in their tooltips. Switch on Low level gear there. It is off by default.
 
 - [ ] Switch Gear in bags off: both marks go at once, the menu entry dims; on again: they come back.
 

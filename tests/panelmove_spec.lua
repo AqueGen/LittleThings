@@ -70,11 +70,12 @@ describe("PanelMove.SharedSides", function()
 
   it("names the sides of a docked pair that touch, for the member and the target", function()
     for side, pair in pairs({ Below = { "top", "bottom" }, Above = { "bottom", "top" }, Right = { "left", "right" }, Left = { "right", "left" } }) do
-      local docks = { calls = { dockTo = "raid", side = side } }
+      local docks = { raid = {}, calls = { dockTo = "raid", side = side } }
       assert.same({ [pair[1]] = true }, Move.SharedSides("calls", docks))
       assert.same({ [pair[2]] = true }, Move.SharedSides("raid", docks))
     end
     assert.same({}, Move.SharedSides("raid", {}))
+    assert.same({}, Move.SharedSides("calls", { calls = { dockTo = "raid", side = "Below" } }))
   end)
 end)
 
@@ -105,6 +106,11 @@ describe("PanelMove.LockSpot", function()
   it("shrinks the badge inside the strip when a neighbour sits on the left or above", function()
     assert.same({ "CENTER", 109, 491, 16 }, { Move.LockSpot(100, 500, 400, 440, 1080, 18, 1, true) })
     assert.same({ "CENTER", 118, 982, 32 }, { Move.LockSpot(100, 1000, 400, 880, 1080, 36, 2, true) })
+  end)
+
+  it("never makes the padlock taller than a short panel's strip minus 2", function()
+    assert.same({ "CENTER", 109, 491, 18 }, { Move.LockSpot(100, 500, 400, 480, 1080, 18, 1, false) })
+    assert.same({ "CENTER", 109, 491, 14 }, { Move.LockSpot(100, 500, 400, 484, 1080, 18, 1, true) })
   end)
 
   it("puts the badge outside the top-right corner of a panel without a strip, below it at the screen top", function()
@@ -371,5 +377,9 @@ describe("PanelMove with the Velvet dock", function()
     assert.is_true(named("LittleThingsMoveSeampartyCalls"):IsShown())
     assert.is_false(named("LittleThingsMoveOutlinepartyCalls").edges.top.shown)
     assert.is_false(named("LittleThingsMoveOutlineraidMarkers").edges.bottom.shown)
+    raid:Hide()
+    tick()
+    assert.is_true(named("LittleThingsMoveOutlinepartyCalls").edges.top.shown)
+    assert.is_false(named("LittleThingsMoveSeampartyCalls"):IsShown())
   end)
 end)

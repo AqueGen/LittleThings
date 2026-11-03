@@ -56,7 +56,7 @@ describe("PartyCallPanel docking", function()
     ns = {
       db = { partyCallOptions = db },
       Widgets = { FLAT = { bgFile = "flat" } },
-      CallRules = { Grid = function(_, o) state.grid = o return {}, 0, 0, "TOPLEFT" end },
+      CallRules = { Grid = function(_, o) state.grid = o return {}, 0, state.gridH or 0, "TOPLEFT" end },
     }
     assert(loadfile("./Modules/PanelDock.lua"))("LittleThings", ns)
     ns.PanelMove = { Moving = function() return state.moving == true end, CanDrag = function() return state.canDrag and not state.combat end }
@@ -218,6 +218,16 @@ describe("PartyCallPanel docking", function()
     state.moving = true
     Panel.Update()
     assert.equals(0, panel.borderColor[4])
+  end)
+
+  it("keeps the fold glyph inside a short panel's strip", function()
+    build()
+    state.gridH = 20
+    Panel.Layout({})
+    assert.same({ { "CENTER", Panel.handle, "CENTER", 0, -5 } }, Panel.glyph.points)
+    state.gridH = 80
+    Panel.Layout({})
+    assert.same({ { "CENTER", Panel.handle, "CENTER", 0, -8 } }, Panel.glyph.points)
   end)
 
   it("wires mouse-down on the panel, the handle and the call buttons so pre-drag movement counts", function()

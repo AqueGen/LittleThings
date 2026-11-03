@@ -13,6 +13,10 @@ local function Lib()
     return LibStub("LibVelvet-1.0")
 end
 
+function PanelDock.GlyphOffset(height)
+    return -math.min(PanelDock.LOCK / 2, math.max(0, height / 2 - 5))
+end
+
 function PanelDock.BuildHandle(handle, panel)
     local T = Lib().T
     handle:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
