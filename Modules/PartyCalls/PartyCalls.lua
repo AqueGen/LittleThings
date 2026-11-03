@@ -7,7 +7,7 @@ local Panel = ns.PartyCallPanel
 local PartyCalls = {}
 
 local DEFAULTS = { locked = false, scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
-    gap = 2, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down" }
+    gap = 0, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down" }
 
 local active, previewing, inCombat = false, false, false
 local previewWindow

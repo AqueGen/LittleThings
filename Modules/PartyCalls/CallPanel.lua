@@ -7,9 +7,9 @@ local Panel = {}
 ns.PartyCallPanel = Panel
 
 local FONTS = {
-    small = { font = "GameFontHighlightSmall", width = 56, height = 12 },
-    normal = { font = "GameFontHighlight", width = 66, height = 14 },
-    large = { font = "GameFontHighlightLarge", width = 80, height = 18 },
+    small = { font = "GameFontHighlightSmall", height = 12 },
+    normal = { font = "GameFontHighlight", height = 14 },
+    large = { font = "GameFontHighlightLarge", height = 18 },
 }
 local LABEL_GAP = 2
 
@@ -28,8 +28,7 @@ local function CellSize()
     if not db.labels then
         return db.iconSize, db.iconSize
     end
-    local font = Font()
-    return math.max(db.iconSize, font.width), db.iconSize + LABEL_GAP + font.height
+    return db.iconSize, db.iconSize + LABEL_GAP + Font().height
 end
 
 function Panel.Place()
