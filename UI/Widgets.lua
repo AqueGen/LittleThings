@@ -172,7 +172,7 @@ function Group:Slider(spec)
     end
     self:Add(holder, 24, function()
         SetShown(spec.get())
-        local locked = Locked(spec)
+        local locked = Locked(spec) or (spec.enabled and not spec.enabled())
         slider:SetEnabled(not locked)
         label:SetTextColor(unpack(locked and T.muted or T.text))
     end, spec.visible)
