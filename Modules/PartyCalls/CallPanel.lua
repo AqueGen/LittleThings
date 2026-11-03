@@ -57,6 +57,10 @@ local function ShownMergedRoot()
     return p and p.spec.frame:IsShown() and p or nil
 end
 
+function Panel.MergedOwner()
+    return ShownMergedRoot() and MergedRoot() or nil
+end
+
 local function HandleShown()
     return ns.PanelDock.HandleShown(false, ShownMergedRoot() ~= nil)
 end

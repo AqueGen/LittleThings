@@ -118,6 +118,13 @@ describe("PanelDock.Fade", function()
     assert.equals(1, f.foldHandle.alpha)
   end)
 
+  it("counts the hover part of an unregistered frame, so icons past the frame keep it shown", function()
+    local f = frame(false)
+    f.hoverPart = frame(true)
+    ns.PanelDock.Fade("unknown", f, { fade = true, fadeAlpha = 0 })
+    assert.equals(1, f.alpha)
+  end)
+
   it("uses the frame mouse-over for an unregistered id", function()
     local f = frame(true)
     ns.PanelDock.Fade("unknown", f, { fade = true, fadeAlpha = 0 })

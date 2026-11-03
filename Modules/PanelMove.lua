@@ -4,10 +4,9 @@ local addonName, ns = ...
 local PanelMove = {}
 ns.PanelMove = PanelMove
 
-local LOCK, TICK = 14, 0.1
+local LOCK, TICK = 12, 0.1
 local GOLD = { 1, 0.82, 0, 1 }
 local EDGE = { edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 }
-local LOCKED, OPEN = "Interface\\Buttons\\LockButton-Locked-Up", "Interface\\Buttons\\LockButton-Unlocked-Up"
 
 local panels, order, unlocked, overlays = {}, {}, {}, {}
 local moving, hoverId = false, nil
@@ -17,8 +16,10 @@ function PanelMove.Draggable(combat, mode, open)
     return not combat and (mode or open) == true
 end
 
-function PanelMove.LockSide(top, screenTop)
-    return screenTop - top >= LOCK and "above" or "below"
+function PanelMove.LockSpot(l, t, r, b, screenTop, strip)
+    if strip then return "TOPLEFT", l, t end
+    if screenTop - t >= LOCK then return "BOTTOMRIGHT", r, t end
+    return "TOPRIGHT", r, b
 end
 
 function PanelMove.CanDrag(id)
@@ -33,7 +34,7 @@ local function Rect(f)
     local l, t, r, b = f:GetLeft(), f:GetTop(), f:GetRight(), f:GetBottom()
     if not (l and t and r and b) then return nil end
     local s = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    return l * s, t * s, r * s, b * s
+    return l * s, t * s, r * s, b * s, s
 end
 
 local function Shown(id)
@@ -78,6 +79,7 @@ local function BuildLock()
     lock:SetFrameStrata("FULLSCREEN_DIALOG")
     lock.icon = lock:CreateTexture(nil, "ARTWORK")
     lock.icon:SetAllPoints()
+    lock.icon:SetAtlas("QuestSharing-Padlock")
     lock:RegisterForClicks("LeftButtonUp")
     lock:SetScript("OnClick", function()
         if hoverId then PanelMove.SetUnlocked(hoverId, not unlocked[hoverId]) end
@@ -85,32 +87,38 @@ local function BuildLock()
     lock:Hide()
 end
 
+local function Owner(id)
+    local owner = panels[id].owner and panels[id].owner()
+    return owner and panels[owner] and owner or id
+end
+
 local function Hovered()
     if lock and lock:IsShown() and lock:IsMouseOver() then return hoverId end
     for _, id in ipairs(order) do
         local f = Shown(id)
-        if f and f:IsMouseOver() then return id end
+        if f and f:IsMouseOver() then return Owner(id) end
     end
 end
 
 local function PaintLock(combat)
     local id = not combat and not moving and Hovered()
     local f = id and Shown(id)
-    local l, t, r, b
-    if f then l, t, r, b = Rect(f) end
+    local l, t, r, b, s
+    if f then l, t, r, b, s = Rect(f) end
     hoverId = l and id or nil
     if not hoverId then
         if lock then lock:Hide() end
         return
     end
     if not lock then BuildLock() end
+    local strip = panels[hoverId].strip
+    local size = strip and LOCK * s or LOCK
+    lock:SetSize(size, size)
     lock:ClearAllPoints()
-    if PanelMove.LockSide(t, UIParent:GetTop()) == "above" then
-        lock:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", l, t)
-    else
-        lock:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", l, b)
-    end
-    lock.icon:SetTexture(unlocked[hoverId] and OPEN or LOCKED)
+    local point, x, y = PanelMove.LockSpot(l, t, r, b, UIParent:GetTop(), strip)
+    lock:SetPoint(point, UIParent, "BOTTOMLEFT", x, y)
+    local color = unlocked[hoverId] and GOLD or { 1, 1, 1 }
+    lock.icon:SetVertexColor(color[1], color[2], color[3])
     lock:Show()
 end
 

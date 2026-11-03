@@ -72,6 +72,8 @@ local ALLOWED = {
 }
 
 local MOVER = "LittleThingsRaidMarkersMover"
+local PLAIN_UIPARENT_CHILDREN = set({ MOVER, "LittleThingsMovePanels", "LittleThingsMoveLock", "LittleThingsPanelUnlock",
+  "LittleThingsMoveOutlineraidMarkers", "LittleThingsMoveOutlinepartyCalls", "LittleThingsMoveOutlinesaveIndicator" })
 
 local FILES = {}
 for line in io.lines("LittleThings.toc") do
@@ -213,7 +215,7 @@ new_object = function(frames, kind, name, template, parent)
     events = {}, points = {}, shown = true, showCalls = 0, calls = {} }
   local protected = PROTECTED[kind]
   local secure = template and template:find("Secure")
-  local exempt = name == MOVER or (name and (name:find("^LittleThingsMove") or name == "LittleThingsPanelUnlock")) and true or false
+  local exempt = PLAIN_UIPARENT_CHILDREN[name] == true
   for _, method in ipairs(assert(ALLOWED[kind], kind)) do
     local impl = IMPL[method] or noop
     local recorded = protected[method] or (secure and method == "SetAttribute")
@@ -1252,6 +1254,20 @@ describe("RaidMarkers", function()
     assert.is_truthy(panelLabels:find("Scale|Vertical", 1, true))
     assert.is_truthy(panelLabels:find("Show on mouse-over|Faded opacity|Move panels|Reset position", 1, true))
     assert.same({ "Merge with docked panels", "Undock" }, groups["Docking"].labels)
+  end)
+
+  it("hides the solo sample panel after combat when the mode ended under lockdown", function()
+    local panel = addon.panel()
+    addon.ns.PanelMove.Toggle()
+    assert.is_true(panel:IsShown())
+    state.combat = true
+    addon.fire("PLAYER_REGEN_DISABLED")
+    assert.is_false(addon.ns.PanelMove.Moving())
+    assert.is_true(panel:IsShown())
+    assert.same({}, addon.blocked)
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.is_false(panel:IsShown())
   end)
 
   it("fills defaults before any page exists", function()

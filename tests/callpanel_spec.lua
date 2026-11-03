@@ -109,6 +109,17 @@ describe("PartyCallPanel docking", function()
     assert.equals(32, state.grid.cellH)
   end)
 
+  it("hands its lock to the root while merged with a shown root", function()
+    db.dockTo, db.side = "raidMarkers", "Below"
+    state.dockedAt = { 500, 700 }
+    build()
+    assert.is_nil(Panel.MergedOwner())
+    state.merged = true
+    assert.equals("raidMarkers", Panel.MergedOwner())
+    rootFrame:Hide()
+    assert.is_nil(Panel.MergedOwner())
+  end)
+
   it("keeps its merged layout in combat when the merged background hides", function()
     db.dockTo, db.side = "raidMarkers", "Below"
     state.dockedAt = { 500, 700 }

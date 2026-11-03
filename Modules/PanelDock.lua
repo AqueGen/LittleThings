@@ -55,7 +55,7 @@ end
 
 function PanelDock.Hovered(id, frame)
     local lib = Lib()
-    if not lib.dock.panels[id] then return frame:IsMouseOver() end
+    if not lib.dock.panels[id] then return frame:IsMouseOver() or (frame.hoverPart ~= nil and frame.hoverPart:IsMouseOver()) end
     return lib.Dock.Hovered(id)
 end
 

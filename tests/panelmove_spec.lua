@@ -30,7 +30,7 @@ local function panel(rect)
 end
 
 local function spec(state, name, frame)
-  local s = { name = name, frame = function() return frame end, calls = {} }
+  local s = { name = name, frame = function() return frame end, calls = {}, strip = true }
   for _, key in ipairs({ "setMoving", "reset", "stopDrag" }) do
     s[key] = function(...) s.calls[#s.calls + 1] = { key, ... } state.log[#state.log + 1] = name .. ":" .. key end
   end
@@ -48,13 +48,18 @@ describe("PanelMove.Draggable", function()
   end)
 end)
 
-describe("PanelMove.LockSide", function()
+describe("PanelMove.LockSpot", function()
   local Move = load({ printed = {} })
 
-  it("puts the lock above the panel's top-left corner, below it at the screen top", function()
-    assert.equals("above", Move.LockSide(1000, 1080))
-    assert.equals("above", Move.LockSide(1066, 1080))
-    assert.equals("below", Move.LockSide(1070, 1080))
+  it("puts the lock inside the top of the fold strip of a panel with a strip", function()
+    assert.same({ "TOPLEFT", 100, 500 }, { Move.LockSpot(100, 500, 400, 440, 1080, true) })
+    assert.same({ "TOPLEFT", 100, 1080 }, { Move.LockSpot(100, 1080, 400, 1020, 1080, true) })
+  end)
+
+  it("puts the lock outside the top-right corner of a panel without a strip, below it at the screen top", function()
+    assert.same({ "BOTTOMRIGHT", 400, 500 }, { Move.LockSpot(100, 500, 400, 440, 1080, false) })
+    assert.same({ "BOTTOMRIGHT", 400, 1068 }, { Move.LockSpot(100, 1068, 400, 1000, 1080, false) })
+    assert.same({ "TOPRIGHT", 400, 1000 }, { Move.LockSpot(100, 1070, 400, 1000, 1080, false) })
   end)
 end)
 
@@ -138,8 +143,12 @@ describe("PanelMove", function()
     tick()
     local icon = lock()
     assert.is_true(icon:IsShown())
-    assert.same({ { "BOTTOMLEFT", UIParent, "BOTTOMLEFT", 100, 434 } }, icon.points)
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 434 } }, icon.points)
+    assert.same({ 12, 12 }, { icon.width, icon.height })
+    assert.equals("QuestSharing-Padlock", icon.icon.atlas)
+    assert.same({ 1, 1, 1 }, icon.icon.vertex)
     icon.scripts.OnClick(icon)
+    assert.same({ 1, 0.82, 0 }, icon.icon.vertex)
     assert.is_true(Move.CanDrag("partyCalls"))
     assert.is_false(Move.CanDrag("raidMarkers"))
     assert.is_true(tracker.text("Party calls").parentFrame:IsShown())
@@ -156,12 +165,33 @@ describe("PanelMove", function()
     assert.is_false(icon:IsShown())
   end)
 
-  it("puts the lock below the panel at the screen top", function()
+  it("puts the lock below a strip-less panel at the screen top", function()
     local top = panel({ 10, 1078, 200, 1000 })
-    Move.Register("saveIndicator", spec(state, "Save indicator", top))
+    local s = spec(state, "Save indicator", top)
+    s.strip = false
+    Move.Register("saveIndicator", s)
     top.over = true
     tick()
-    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 10, 1000 } }, lock().points)
+    assert.same({ { "TOPRIGHT", UIParent, "BOTTOMLEFT", 200, 1000 } }, lock().points)
+  end)
+
+  it("shows a merged member's lock on the root's strip and unlocks the root", function()
+    local member = spec(state, "Members", panel({ 500, 300, 600, 200 }))
+    member.owner = function() return "raidMarkers" end
+    Move.Register("member", member)
+    member.frame().over = true
+    tick()
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 500 } }, lock().points)
+    lock().scripts.OnClick(lock())
+    assert.is_true(Move.CanDrag("raidMarkers"))
+    assert.is_false(Move.CanDrag("member"))
+  end)
+
+  it("sizes the lock to the strip at the panel's scale", function()
+    function raid:GetEffectiveScale() return 2 end
+    raid.over = true
+    tick()
+    assert.same({ 24, 24 }, { lock().width, lock().height })
   end)
 
   it("locks every unlocked panel again on Esc and when combat starts", function()

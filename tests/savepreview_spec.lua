@@ -124,6 +124,12 @@ describe("save indicator preview", function()
         ns.SaveIndicator.Enable()
         ns.SaveCenter.ToggleDemo()
         local p = preview()
+        local live
+        for _, f in ipairs(created) do
+            if f.name == "LittleThingsSaveRow" then live = f end
+        end
+        assert.is_truthy(live.hoverPart)
+        assert.equals(live, live.hoverPart.parentFrame)
         function p:StartMoving() self.moved = true end
         function p:GetCenter() return 600, 500 end
         function UIParent:GetCenter() return 500, 500 end

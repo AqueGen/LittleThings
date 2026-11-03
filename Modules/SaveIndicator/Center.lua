@@ -94,6 +94,7 @@ local function Build()
     Point(row)
     host = CreateFrame("Frame", nil, row)
     host:SetPoint("TOP", row, "TOP", (STEP - ICON) / 2, 0)
+    row.hoverPart = host
     local prev
     for _, entry in ipairs(Rules.Row(Rules.Enabled(ns.SaveData, ns.db.saveIndicatorRow.off))) do
         local c = Container(entry)

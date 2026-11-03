@@ -45,6 +45,8 @@ function Frames.new(parent)
     function f:SetAlpha(a) self.alpha = a end
     function f:EnableMouse(on) self.mouse = on and true or false end
     function f:SetScale(s) self.scale = s end
+    function f:SetAtlas(a) self.atlas = a end
+    function f:SetVertexColor(...) self.vertex = { ... } end
     return setmetatable(f, {
         __index = function(_, k)
             if type(k) ~= "string" or not k:match("^%u") then return nil end
