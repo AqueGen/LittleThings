@@ -17,10 +17,12 @@ function Rules.Columns(columns, cellWidth, room)
 end
 
 Rules.HINT_GAP = 16
+Rules.HINT_MIN = 180
 
-function Rules.HintFits(room, controlEnd, hintWidth, forceBelow)
-    if forceBelow then return false end
-    return room <= 0 or controlEnd + Rules.HINT_GAP + hintWidth <= room
+function Rules.HintX(room, columnEnd, hintWidth, forceBelow)
+    if forceBelow then return nil end
+    local x = columnEnd + Rules.HINT_GAP
+    if room <= 0 or room - x >= math.max(hintWidth, Rules.HINT_MIN) then return x end
 end
 
 function Rules.Stack(items, gap)

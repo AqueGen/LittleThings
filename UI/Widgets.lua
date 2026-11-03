@@ -50,6 +50,7 @@ end
 
 local function AddHint(group, spec, owner, controlEnd, height, indent)
     if not spec.hint then return height, function() end end
+    group.hintEnd = math.max(group.hintEnd or 0, controlEnd)
     local text = owner:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     text:SetJustifyH("LEFT")
     text:SetTextColor(unpack(T.muted))
@@ -57,7 +58,8 @@ local function AddHint(group, spec, owner, controlEnd, height, indent)
     local wide, below = text:GetStringWidth(), false
     local function Place()
         local room = (group.frame:GetWidth() or 0) - 2 * PAD
-        below = not Rules.HintFits(room, controlEnd, wide, group.page.hintsBelow)
+        local x = Rules.HintX(room, group.hintEnd, wide, group.page.hintsBelow)
+        below = x == nil
         text:ClearAllPoints()
         text:SetWordWrap(below)
         if below then
@@ -65,7 +67,7 @@ local function AddHint(group, spec, owner, controlEnd, height, indent)
             text:SetPoint("TOPLEFT", owner, "BOTTOMLEFT", indent, -2)
         else
             text:SetWidth(wide + 2)
-            text:SetPoint("LEFT", owner, "LEFT", controlEnd + Rules.HINT_GAP, 0)
+            text:SetPoint("LEFT", owner, "LEFT", x, 0)
         end
     end
     local function Height()
