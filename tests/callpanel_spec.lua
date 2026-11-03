@@ -86,11 +86,11 @@ describe("PartyCallPanel docking", function()
     assert.equals("+", Panel.glyph.text)
   end)
 
-  it("drops its handle and strip while merged and folds with the root's handle", function()
+  it("drops its handle and strip while merged with a shown root and folds with the root's handle", function()
     db.dockTo, db.side = "raidMarkers", "Below"
     state.dockedAt = { 500, 700 }
     build()
-    state.mergeFrame = {}
+    state.merged = true
     state.rootDb.collapsed = true
     Panel.Update()
     Panel.Layout({})
@@ -101,12 +101,27 @@ describe("PartyCallPanel docking", function()
     db.collapsed = true
     Panel.Layout({})
     assert.equals(32 + 2 + 12, state.grid.cellH)
-    state.mergeFrame = nil
+    rootFrame:Hide()
     Panel.Update()
     Panel.Layout({})
     assert.is_true(Panel.handle:IsShown())
     assert.equals(12, state.grid.strip)
     assert.equals(32, state.grid.cellH)
+  end)
+
+  it("keeps its merged layout in combat when the merged background hides", function()
+    db.dockTo, db.side = "raidMarkers", "Below"
+    state.dockedAt = { 500, 700 }
+    build()
+    state.merged, state.mergeFrame = true, {}
+    Panel.Update()
+    Panel.Layout({})
+    state.combat, state.mergeFrame = true, nil
+    Panel.Update()
+    Panel.Layout({})
+    assert.is_false(Panel.handle:IsShown())
+    assert.equals(0, state.grid.strip)
+    assert.equals(ns.Widgets.FLAT, Panel.panel.backdrop)
   end)
 
   it("places a fresh docked panel at its saved corner when built in combat", function()

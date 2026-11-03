@@ -1136,6 +1136,7 @@ describe("RaidMarkers", function()
     state.dockMembers = { "partyCalls" }
     _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() folded = folded + 1 end } }
     state.mergeFrame = { SetAlpha = noop }
+    addon.ns.db.raidMarkerPanel.merge = true
     onclick(handle, "LeftButton", false)
     handle.scripts.PostClick(handle, "LeftButton", false)
     assert.equals(1, folded)
@@ -1153,6 +1154,7 @@ describe("RaidMarkers", function()
     addon.realFade("raidMarkers", panel, { fade = true, fadeAlpha = 0 })
     assert.equals(1, handle.alpha)
     state.hovered, state.mergeFrame, state.dockMembers = false, nil, {}
+    addon.ns.db.raidMarkerPanel.merge = false
     local bar = addon.manaBar()
     assert.is_true(rawequal(MANA, bar.value))
     local formatted = addon.manaText().formatted
@@ -2154,7 +2156,14 @@ describe("RaidMarkers", function()
       specs["Scale"].set(1.5)
       assert.same({ { "Apply", "partyCalls", combat = false } }, calls("Apply"))
       assert.equals(1, changed)
-      assert.same({ { "RefreshMerge", "raidMarkers", combat = false } }, calls("RefreshMerge"))
+      assert.same({ { "RefreshMerge", "raidMarkers", combat = false }, { "RefreshMerge", "raidMarkers", combat = false } }, calls("RefreshMerge"))
+    end)
+
+    it("refreshes the merge once more after the members changed, so the background measures their new size", function()
+      state.dockCalls = {}
+      addon.ns.RaidMarkerPanel.ApplyDock()
+      assert.equals(2, #calls("RefreshMerge"))
+      assert.equals("RefreshMerge", state.dockCalls[#state.dockCalls][1])
     end)
 
     it("hides its own background while merged and paints it back when unmerged", function()
@@ -2181,7 +2190,7 @@ describe("RaidMarkers", function()
       assert.same({}, addon.blocked)
       state.combat = false
       addon.fire("PLAYER_REGEN_ENABLED")
-      assert.equals(1, #calls("RefreshMerge"))
+      assert.equals(2, #calls("RefreshMerge"))
     end)
 
     it("builds a secure fold handle strip inside the left edge with refs to the panel, the world row and the group block", function()
@@ -2200,7 +2209,7 @@ describe("RaidMarkers", function()
       assert.is_nil(rawget(handle, "alpha"))
       assert.equals(block(), addon.manaBar().parent)
       assert.equals(block(), addon.downText().parent)
-      assert.same({ "AnyUp" }, handle.clicks)
+      assert.same({ "LeftButtonUp" }, handle.clicks)
       assert.equals("-", glyph(handle).text)
       handle.scripts.OnEnter(handle)
       assert.same({ 1, 0.82, 0 }, glyph(handle).color)
@@ -2250,19 +2259,20 @@ describe("RaidMarkers", function()
       assert.same({}, state.dockCalls)
       state.combat = false
       addon.fire("PLAYER_REGEN_ENABLED")
-      assert.equals(1, #calls("RefreshMerge"))
+      assert.equals(2, #calls("RefreshMerge"))
     end)
 
     it("folds the merged members from the click in combat, and leaves unmerged members alone", function()
       local handle, changed = addon.handle(), 0
       state.dockMembers = { "partyCalls" }
       _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() changed = changed + 1 end } }
+      addon.panel():Show()
       state.dockCalls = {}
       state.combat = true
       onclick(handle, "LeftButton", false)
       handle.scripts.PostClick(handle, "LeftButton", false)
       assert.equals(0, changed)
-      state.mergeFrame = {}
+      addon.ns.db.raidMarkerPanel.merge = true
       onclick(handle, "LeftButton", false)
       handle.scripts.PostClick(handle, "LeftButton", false)
       assert.equals(1, changed)
@@ -2317,7 +2327,7 @@ describe("RaidMarkers", function()
       assert.same({}, state.dockCalls)
       state.combat = false
       addon.fire("PLAYER_REGEN_ENABLED")
-      assert.equals(1, #calls("RefreshMerge"))
+      assert.equals(2, #calls("RefreshMerge"))
     end)
 
     it("tells docked members when it hides the merged background at combat start", function()

@@ -51,17 +51,19 @@ function Panel.Merged()
     return root ~= nil and Lib().Dock.Merged(root)
 end
 
-local function MergedShown()
-    return Lib().Dock.MergeFrame(DOCK_ID) ~= nil
+local function ShownMergedRoot()
+    local root = MergedRoot()
+    local p = root and Lib().Dock.Merged(root) and Lib().dock.panels[root]
+    return p and p.spec.frame:IsShown() and p or nil
 end
 
 local function HandleShown()
-    return ns.PanelDock.HandleShown(false, MergedShown())
+    return ns.PanelDock.HandleShown(false, ShownMergedRoot() ~= nil)
 end
 
 local function Folded()
-    local root = MergedShown() and MergedRoot()
-    return (root and Lib().dock.panels[root].spec.get() or Db()).collapsed
+    local root = ShownMergedRoot()
+    return (root and root.spec.get() or Db()).collapsed
 end
 
 local function ShowLabels()
@@ -115,9 +117,8 @@ function Panel.Place()
         SaveCorner()
     end
     Panel.dockedTo, Panel.dockedSide = db.dockTo, db.side
-    local root = MergedRoot()
-    local rootFrame = root and Lib().Dock.Merged(root) and Lib().dock.panels[root].spec.frame
-    panel:SetScale(rootFrame and rootFrame:IsShown() and rootFrame:GetScale() or db.scale)
+    local root = ShownMergedRoot()
+    panel:SetScale(root and root.spec.frame:GetScale() or db.scale)
     if not (db.dockTo and InCombatLockdown() and panel:GetNumPoints() > 0) then
         panel:ClearAllPoints()
         if db.posX and db.posY then

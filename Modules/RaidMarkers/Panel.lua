@@ -275,6 +275,7 @@ function Shared.ApplyDock()
     ChangeMembers(true)
     Lib().Dock.RefreshMerge(DOCK_ID)
     Shared.PaintBackground()
+    Lib().Dock.RefreshMerge(DOCK_ID)
 end
 
 function Shared.Layout()
@@ -438,7 +439,7 @@ function Shared.BuildHandle()
     Shared.handle, panel.foldHandle = handle, handle
     Shared.handleGlyph = ns.PanelDock.BuildHandle(handle, panel)
     handle:SetIgnoreParentAlpha(true)
-    handle:RegisterForClicks("AnyUp")
+    handle:RegisterForClicks("LeftButtonUp")
     handle:RegisterForDrag("LeftButton")
     handle:SetScript("OnDragStart", DragStart)
     handle:SetScript("OnDragStop", DragStop)
@@ -449,7 +450,7 @@ function Shared.BuildHandle()
     handle:SetScript("PostClick", function(self)
         ns.db.raidMarkerPanel.collapsed = self:GetAttribute("lt-collapsed") and true or false
         PaintHandle()
-        if InCombatLockdown() and Lib().Dock.MergeFrame(DOCK_ID) then
+        if InCombatLockdown() and ns.db.raidMarkerPanel.merge and Shared.panel:IsShown() then
             ChangeMembers(false)
         end
         Shared.ApplyOutOfCombat(Shared.ApplyDock)
