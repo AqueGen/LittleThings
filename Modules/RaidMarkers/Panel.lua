@@ -345,7 +345,7 @@ local function StopDrag(hidden)
 end
 
 local function DragStart()
-    if not ns.db.raidMarkerPanel.locked and not InCombatLockdown() then
+    if ns.PanelMove.CanDrag(DOCK_ID) then
         StartDrag()
     end
 end
@@ -355,6 +355,8 @@ local function DragStop()
         StopDrag()
     end
 end
+
+Shared.StopDragging = DragStop
 
 local function Tick()
     Shared.RefreshWorld()
@@ -398,7 +400,7 @@ function Shared.BuildFrame()
         return ns.db.raidMarkerPanel
     end
     Lib().Dock.Register(DOCK_ID, { frame = panel, root = true, get = Db, set = function() end,
-        locked = function() return Db().locked end, merged = function() return Db().merge end, onChange = Shared.PaintBackground })
+        locked = function() return not ns.PanelMove.CanDrag(DOCK_ID) end, merged = function() return Db().merge end, onChange = Shared.PaintBackground })
 
     local mover = CreateFrame("Frame", "LittleThingsRaidMarkersMover", UIParent)
     Shared.mover = mover

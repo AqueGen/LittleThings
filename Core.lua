@@ -512,8 +512,10 @@ local function HandleSlashCommand(input)
         ns.Profiler.Toggle()
     elseif command == "gear" then
         ns.LowLevelGear.Report()
+    elseif command == "move" or command == "unlock" then
+        ns.PanelMove.Toggle()
     elseif not meter then
-        ns.Print("commands: cpu, gear. The damage meter module is off, its commands are not available")
+        ns.Print("commands: cpu, gear, move. The damage meter module is off, its commands are not available")
     elseif command == "probe" then
         ns.Probe()
     elseif command == "diag" then
@@ -524,7 +526,7 @@ local function HandleSlashCommand(input)
         ns.db[command] = not ns.db[command]
         ns.Print(command .. ": " .. tostring(ns.db[command]))
     else
-        ns.Print("commands: cpu, gear, diag, probe, taint, format, snap")
+        ns.Print("commands: cpu, gear, move, diag, probe, taint, format, snap")
     end
 end
 

@@ -6,10 +6,10 @@ local Panel = ns.PartyCallPanel
 
 local PartyCalls = {}
 
-local DEFAULTS = { locked = false, scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
+local DEFAULTS = { scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
     gap = 4, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down", merge = false, fade = false, fadeAlpha = 0, collapsed = false }
 
-local active, previewing, inCombat = false, false, false
+local active, previewing, moving, inCombat = false, false, false, false
 local previewWindow
 local lastAny, lastById = nil, {}
 local events, ticker
@@ -40,7 +40,8 @@ local function VisibleIds()
     local calls, state, ids = ns.db.partyCallOptions.calls, CurrentState(), {}
     for _, id in ipairs(ns.db.partyCallOptions.order) do
         local call = calls[id]
-        if previewing and call.enabled and Rules.Text(call) or not previewing and Rules.Visible(call, state) then
+        local sample = previewing or moving
+        if sample and call.enabled and Rules.Text(call) or not sample and Rules.Visible(call, state) then
             ids[#ids + 1] = id
         end
     end
@@ -61,7 +62,7 @@ function PartyCalls.Refresh()
     if previewing and previewWindow then
         Panel.MoveClearOf(previewWindow)
     end
-    local shown = Rules.PanelShown({ party = IsInGroup(), raid = IsInRaid(), preview = previewing,
+    local shown = Rules.PanelShown({ party = IsInGroup(), raid = IsInRaid(), preview = previewing or moving,
         anyVisible = #ids > 0 })
     Panel.panel:SetShown(shown and true or false)
     Panel.panel:SetFrameStrata(previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
@@ -139,6 +140,12 @@ function PartyCalls.Enable()
     inCombat = InCombatLockdown() or UnitAffectingCombat("player")
     if not Panel.panel then
         Panel.Build(PartyCalls.Click, PartyCalls.Refresh)
+        ns.PanelMove.Register("partyCalls", { name = "Party calls", frame = function() return Panel.panel end,
+            setMoving = function(on)
+                moving = on
+                PartyCalls.Refresh()
+            end,
+            reset = Panel.ResetPosition, stopDrag = Panel.StopDragging })
     end
     if not events then
         events = CreateFrame("Frame")
@@ -283,8 +290,6 @@ function PartyCalls.Pages(page)
     end
 
     local panel = page:Group("Panel")
-    panel:Check(Option("locked", { label = "Lock position",
-        tooltip = "Drag the panel to place it, then lock it so it cannot be dragged." }))
     panel:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
         tooltip = "Size of the whole panel.",
         enabled = function() return not Panel.Merged() end }))
@@ -292,6 +297,8 @@ function PartyCalls.Pages(page)
         options = { { text = "Send to party", value = "send" }, { text = "Put in chat, Enter sends", value = "chat" },
             { text = "Put in chat while in combat", value = "chatInCombat" } },
         tooltip = "Send posts the call at once. Put in chat opens the chat line on Party with the call typed in; press Enter to send it." }))
+    ns.PanelDock.FadeOptions(panel, Db(), ApplyDock)
+    ns.PanelMove.Button(panel)
     panel:Button({ label = "Reset position", tooltip = "Moves the panel back above the centre of the screen.",
         onClick = function()
             if Panel.panel then

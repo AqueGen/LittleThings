@@ -188,6 +188,10 @@ function StopDrag(_, hidden)
     Panel.Place()
 end
 
+function Panel.StopDragging()
+    StopDrag()
+end
+
 local function Overlaps(a, b)
     local sa, sb = a:GetEffectiveScale(), b:GetEffectiveScale()
     local al, ar, at, ab = a:GetLeft(), a:GetRight(), a:GetTop(), a:GetBottom()
@@ -277,7 +281,7 @@ function Panel.Build(onClick, onChange)
     panel:SetScript("OnHide", function(self) StopDrag(self, true) end)
     local db = Db()
     Lib().Dock.Register(DOCK_ID, { frame = panel, root = false, get = Db, set = function() end,
-        locked = function() return Db().locked end, onChange = onChange })
+        locked = function() return not ns.PanelMove.CanDrag(DOCK_ID) end, onChange = onChange })
     local handle = CreateFrame("Button", nil, panel)
     Panel.handle, panel.foldHandle = handle, handle
     Panel.glyph = ns.PanelDock.BuildHandle(handle, panel)

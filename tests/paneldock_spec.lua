@@ -15,6 +15,10 @@ describe("PanelDock.FadeAlpha", function()
   it("is opaque when fade is off", function()
     assert.equals(1, ns.PanelDock.FadeAlpha(false, { fade = false, fadeAlpha = 0 }))
   end)
+
+  it("is opaque while Move panels mode is on", function()
+    assert.equals(1, ns.PanelDock.FadeAlpha(false, { fade = true, fadeAlpha = 0 }, true))
+  end)
 end)
 
 describe("PanelDock.HandleAlpha", function()

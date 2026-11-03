@@ -56,10 +56,11 @@ local ALLOWED = {
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
     "CreateTexture", "CreateMaskTexture", "CreateFontString", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
     "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetShown",
-    "HookScript", "IsMouseOver", "GetFrameLevel", "SetAlpha" },
+    "HookScript", "IsMouseOver", "GetFrameLevel", "SetAlpha", "IsVisible" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateMaskTexture", "CreateFontString", "SetHighlightTexture",
     "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetFrameLevel",
-    "SetAlpha", "IsMouseOver", "SetFontString", "SetIgnoreParentAlpha", "RegisterForDrag" },
+    "SetAlpha", "IsMouseOver", "SetFontString", "SetIgnoreParentAlpha", "RegisterForDrag", "SetFrameStrata", "Show", "Hide", "IsShown",
+    "SetText" },
   Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "AddMaskTexture",
     "SetBlendMode", "Hide", "SetShown" },
   MaskTexture = { "SetTexture", "SetAllPoints" },
@@ -155,6 +156,7 @@ function IMPL:Hide()
   end
 end
 function IMPL:IsShown() return self.shown end
+function IMPL:IsVisible() return self.shown end
 function IMPL:SetShown(v) self.shown = v and true or false end
 function IMPL:SetPoint(...)
   self.setPoints = (rawget(self, "setPoints") or 0) + 1
@@ -211,7 +213,7 @@ new_object = function(frames, kind, name, template, parent)
     events = {}, points = {}, shown = true, showCalls = 0, calls = {} }
   local protected = PROTECTED[kind]
   local secure = template and template:find("Secure")
-  local exempt = name == MOVER
+  local exempt = name == MOVER or (name and (name:find("^LittleThingsMove") or name == "LittleThingsPanelUnlock")) and true or false
   for _, method in ipairs(assert(ALLOWED[kind], kind)) do
     local impl = IMPL[method] or noop
     local recorded = protected[method] or (secure and method == "SetAttribute")
@@ -236,6 +238,7 @@ local function load(state, db)
     Widgets = { FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 } },
     IconButtons = { ROLE_ATLAS = { HEALER = "UI-LFG-RoleIcon-Healer-Micro-GroupFinder" } },
     RegisterModule = function(_, m) module = m end,
+    Print = function(text) state.printed = state.printed or {} state.printed[#state.printed + 1] = text end,
     IsOn = function() return not state.off end,
     ApplyDefaults = function(target, defaults)
       for k, v in pairs(defaults) do
@@ -260,6 +263,7 @@ local function load(state, db)
   _G.GetRaidTargetIndex = function() return state.targetIndex end
   _G.IsRaidMarkerActive = function(i) return state.placed and state.placed[i] or false end
   _G.SetRaidTargetIconTexture = noop
+  _G.UISpecialFrames, _G.tinsert = {}, table.insert
   _G.SecureHandlerSetFrameRef = function(frame, label, ref) frame.attrs["frameref-" .. label] = ref end
   state.dockCalls, state.fades, state.dockMembers = {}, {}, state.dockMembers or {}
   local function dockCall(name, id)
@@ -279,6 +283,7 @@ local function load(state, db)
   state.snap = state.snap or { 0, 0 }
   _G.LibStub = function(name) assert(name == "LibVelvet-1.0") return dockLib end
   assert(loadfile("Modules/PanelDock.lua"))("LittleThings", ns)
+  assert(loadfile("Modules/PanelMove.lua"))("LittleThings", ns)
   local realDock = ns.PanelDock
   ns.PanelDock = setmetatable({
     Fade = function(id, frame, fadeDb) state.fades[#state.fades + 1] = { id, frame, fadeDb } end,
@@ -442,6 +447,11 @@ local function load(state, db)
     groupButtons = groupButtons, blocked = frames.blocked, tick = tick, eventFrame = eventFrame, children = children,
     mover = function() return named("LittleThingsRaidMarkersMover") end,
     handle = function() return named("LittleThingsRaidMarkersCollapse") end,
+    moveTick = function()
+      for _, t in ipairs(tickers) do
+        if t.interval == 0.1 then return t.fn() end
+      end
+    end,
     realFade = realDock.Fade,
     manaBar = function()
       for _, f in ipairs(frames) do
@@ -695,6 +705,7 @@ describe("RaidMarkers", function()
   local function startDrag(panel)
     panel.scale, panel.left, panel.bottom, panel.width, panel.height = 2, 100, 50, 300, 60
     addon.ns.db.raidMarkerPanel.scale = 2
+    addon.ns.PanelMove.SetUnlocked("raidMarkers", true)
     panel.scripts.OnDragStart(panel)
   end
 
@@ -1006,12 +1017,24 @@ describe("RaidMarkers", function()
     end
   end)
 
+  it("stops an unlocked drag when combat starts and saves where the outline was", function()
+    local panel, mover = addon.panel(), addon.mover()
+    startDrag(panel)
+    mover.left, mover.bottom = 401, 301
+    addon.fire("PLAYER_REGEN_DISABLED")
+    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_false(mover:IsShown())
+    assert.is_false(addon.ns.PanelMove.CanDrag("raidMarkers"))
+    state.combat = true
+    panel.scripts.OnDragStop(panel)
+    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.same({}, addon.blocked)
+  end)
+
   it("saves a drag released in combat and places the panel after combat", function()
     local panel, mover = addon.panel(), addon.mover()
     startDrag(panel)
-    addon.fire("PLAYER_REGEN_DISABLED")
     state.combat = true
-    addon.fire("PLAYER_REGEN_DISABLED")
     assert.is_nil(mover.calls.StopMovingOrSizing)
     local placed = panel.setPoints
     mover.left, mover.bottom = 401, 301
@@ -1060,6 +1083,15 @@ describe("RaidMarkers", function()
     byLabel["Mana text"].set("both")
     state.percent = { party1 = MANA_PCT, party2 = MANA_PCT }
 
+    local Move = addon.ns.PanelMove
+    Move.SetUnlocked("raidMarkers", true)
+    panel.mouseOver = true
+    addon.moveTick()
+    assert.is_true(addon.named("LittleThingsMoveLock"):IsShown())
+    assert.is_true(addon.named("LittleThingsMoveOutlineraidMarkers"):IsShown())
+    Move.Toggle()
+    assert.is_true(Move.Moving())
+
     local events = {
       { "PLAYER_ROLES_ASSIGNED", before = function() state.roles = { party2 = "HEALER", party1 = SECRET } end },
       { "READY_CHECK", "Leader", 30 },
@@ -1090,6 +1122,14 @@ describe("RaidMarkers", function()
       addon.fire(entry[1], unpack(entry, 2))
       if entry[1] == "READY_CHECK_FINISHED" then addon.advance() end
     end
+    assert.is_false(Move.Moving())
+    assert.is_false(Move.CanDrag("raidMarkers"))
+    addon.moveTick()
+    assert.is_false(addon.named("LittleThingsMoveLock"):IsShown())
+    assert.is_false(addon.named("LittleThingsMoveOutlineraidMarkers"):IsShown())
+    assert.is_false(addon.named("LittleThingsMovePanels"):IsShown())
+    Move.Toggle()
+    assert.is_false(Move.Moving())
     state.targetIndex = 4
     addon.fire("RAID_TARGET_UPDATE")
     state.leader, state.assistant = true, false
@@ -1175,9 +1215,43 @@ describe("RaidMarkers", function()
     assert.same({}, addon.blocked)
     assert.same({}, state.calls)
     assert.same({}, state.clearedBindings)
+    assert.equals("Move panels is available out of combat only.", state.printed[1])
     for _, call in ipairs(state.dockCalls) do
       assert.is_false(call.combat, call[1])
     end
+  end)
+
+  it("shows solo in Move panels mode, drags only then, and hides again when the mode ends", function()
+    local panel, mover = addon.panel(), addon.mover()
+    assert.is_false(panel:IsShown())
+    panel.scripts.OnDragStart(panel)
+    assert.is_false(mover:IsShown())
+    addon.ns.PanelMove.Toggle()
+    assert.is_true(panel:IsShown())
+    panel.scripts.OnDragStart(panel)
+    assert.is_true(mover:IsShown())
+    addon.ns.PanelMove.Toggle()
+    assert.is_false(mover:IsShown())
+    assert.is_false(panel:IsShown())
+  end)
+
+  it("puts mouse-over fade and Move panels in the panel group, keeps Merge and Undock in Docking, and drops Lock position", function()
+    local groups = {}
+    local function group(title)
+      local g = { title = title, labels = {} }
+      for _, kind in ipairs({ "Check", "Slider", "Button", "Dropdown" }) do
+        g[kind] = function(_, spec) g.labels[#g.labels + 1] = spec.label end
+      end
+      groups[title] = g
+      return g
+    end
+    addon.ns.PanelDock.Options = nil
+    addon.module.Pages({ Group = function(_, title) return group(title) end })
+    local panelLabels = table.concat(groups["Raid marker panel"].labels, "|")
+    assert.is_nil(panelLabels:find("Lock position", 1, true))
+    assert.is_truthy(panelLabels:find("Scale|Vertical", 1, true))
+    assert.is_truthy(panelLabels:find("Show on mouse-over|Faded opacity|Move panels|Reset position", 1, true))
+    assert.same({ "Merge with docked panels", "Undock" }, groups["Docking"].labels)
   end)
 
   it("fills defaults before any page exists", function()
@@ -1185,7 +1259,7 @@ describe("RaidMarkers", function()
     assert.equals(10, db.pullLeft)
     assert.equals(5, db.pullRight)
     assert.equals(1, db.scale)
-    assert.is_false(db.locked)
+    assert.is_nil(db.locked)
   end)
 
   it("shows in a party and hides solo", function()
@@ -2123,11 +2197,13 @@ describe("RaidMarkers", function()
       assert.equals(addon.panel(), spec.frame)
       assert.is_true(spec.root)
       assert.equals(db, spec.get())
-      assert.is_false(spec.locked())
+      assert.is_true(spec.locked())
       assert.is_false(spec.merged())
-      db.locked, db.merge = true, true
+      db.locked, db.merge = false, true
       assert.is_true(spec.locked())
       assert.is_true(spec.merged())
+      addon.ns.PanelMove.Toggle()
+      assert.is_false(spec.locked())
     end)
 
     it("fades through the shared mouse-over helper from the start", function()

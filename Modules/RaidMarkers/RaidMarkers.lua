@@ -8,7 +8,7 @@ local RaidMarkers = {}
 
 local ORDINALS ={ "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
 
-local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
+local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
     showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false,
     healerMana = false, manaText = "percent", groupDown = false, merge = false, fade = false, fadeAlpha = 0, collapsed = false }
 
@@ -29,7 +29,7 @@ local function RequestVisibility()
         inRaid = IsInRaid(),
         leader = Shared.HasRank(UnitIsGroupLeader),
         assistant = Shared.HasRank(UnitIsGroupAssistant),
-        preview = Shared.previewing,
+        preview = Shared.previewing or Shared.moving,
         showSolo = ns.db.raidMarkerPanel.showSolo,
         partyLeaderOnly = ns.db.raidMarkerPanel.partyLeaderOnly,
         raidWithoutRank = ns.db.raidMarkerPanel.raidWithoutRank,
@@ -50,6 +50,19 @@ local function RequestVisibility()
     end
 end
 
+local function ResetPosition()
+    local db = ns.db.raidMarkerPanel
+    db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
+    if Shared.panel then
+        Shared.ApplyOutOfCombat(Shared.Place)
+    end
+end
+
+local function SetMoving(on)
+    Shared.moving = on
+    RequestVisibility()
+end
+
 local function Build()
     if Shared.panel or not Shared.active or InCombatLockdown() then
         return
@@ -63,6 +76,8 @@ local function Build()
     Shared.BuildHelpers()
     Shared.BuildWorldButtons(header)
     Shared.BuildHandle()
+    ns.PanelMove.Register(Shared.DOCK_ID, { name = "Raid marker panel", frame = function() return Shared.panel end,
+        setMoving = SetMoving, reset = ResetPosition, stopDrag = Shared.StopDragging })
     Shared.ApplyOrder()
     Shared.Layout()
     Shared.Place()
@@ -203,8 +218,6 @@ function RaidMarkers.Pages(page)
         tooltip = "Hides the panel while you are in combat. The game hides it, so this is safe in combat." }, Shared.ApplyCombatHide))
 
     local group = page:Group("Raid marker panel")
-    group:Check(Option("locked", { label = "Lock position", combatLocked = true,
-        tooltip = "Drag the panel to place it, then lock it so it cannot be dragged." }))
     group:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f", combatLocked = true,
         tooltip = "Size of the whole panel." }, Shared.Place))
     group:Check(Option("vertical", { label = "Vertical", combatLocked = true,
@@ -213,15 +226,11 @@ function RaidMarkers.Pages(page)
         tooltip = "Countdown length when the pull button is left-clicked." }))
     group:Slider(Option("pullRight", { label = "Pull, right click (seconds)", min = 3, max = 60,
         tooltip = "Countdown length when the pull button is right-clicked." }))
+    ns.PanelDock.FadeOptions(group, ns.db.raidMarkerPanel, ApplyDockOptions)
+    ns.PanelMove.Button(group)
     group:Button({ label = "Reset position", combatLocked = true,
         tooltip = "Moves the panel back above the centre of the screen.",
-        onClick = function()
-            local db = ns.db.raidMarkerPanel
-            db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
-            if Shared.panel then
-                Shared.ApplyOutOfCombat(Shared.Place)
-            end
-        end })
+        onClick = ResetPosition })
 
     ns.PanelDock.Options(page, ns.db.raidMarkerPanel, ApplyDockOptions, Shared.DOCK_ID)
 

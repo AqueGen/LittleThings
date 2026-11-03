@@ -179,7 +179,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 15. Raid marker panel
 
-Switch on Raid marker panel (Party and raid). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Lock position, Scale, Vertical, Pull left/right seconds and Reset position, and a Placement order group (1st..8th). The panel also shows while this page is open, so it can be placed solo.
+Switch on Raid marker panel (Party and raid). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Scale, Vertical, Show on mouse-over, Faded opacity, Move panels, Pull left/right seconds and Reset position, and a Placement order group (1st..8th). The panel also shows while this page is open, so it can be placed solo.
 
 - [ ] No Lua error on login with the module on and off; switching it on and off live works.
 - [ ] Solo: open the Raid marker panel page - the panel appears; drag it, close the window - it hides and keeps the new spot after /reload.
@@ -202,7 +202,7 @@ Switch on Raid marker panel (Party and raid). It is off by default. Its page has
 - [ ] The panel and every button have a thin border; the group buttons form a block right of both rows: Ready and Pull on top, Role across the bottom.
 - [ ] Ready check with one decline: the button goes red. With one player silent until the end: red. All ready: green. It resets after 5 s.
 - [ ] "Ready 20/20" in a 20-player raid fits the button.
-- [ ] Dragging: the panel can only be grabbed by its padding and gaps, because the secure buttons take the mouse. Note whether that is comfortable. Lock position stops the drag; the position survives /reload; Reset position brings it back.
+- [ ] Dragging: the panel can only be grabbed by its padding and gaps, because the secure buttons take the mouse. Note whether that is comfortable. It drags only in Move panels mode or after its lock icon is clicked; the position survives /reload; Reset position brings it back.
 - [ ] **Start dragging the panel, pull a mob, release (Hide in combat off): no `ADDON_ACTION_BLOCKED`; the outline stops at the release point; the panel jumps there when combat ends; it survives /reload; click-targeting and right-drag camera work during the pull.**
 - [ ] Hide in combat on: start dragging, pull a mob - the outline disappears at the pull, the panel keeps the spot where the outline was, no `ADDON_ACTION_BLOCKED`.
 - [ ] `/dump LittleThingsRaidMarkers:IsProtected()` in a group - note the result.
@@ -286,7 +286,7 @@ Switch on Warband gear on the Gear in bags page. It is off by default.
 
 ## 19. Save indicator
 
-Switch on Save indicator (Combat). It is off by default. Its page has Centre row (Time left, Damage reduction, Lock position, Scale, X, Y, Test, Center horizontally, Reset position) and Tracked saves.
+Switch on Save indicator (Combat). It is off by default. Its page has Centre row (Time left, Damage reduction, Scale, X, Y, Test, Center horizontally, Reset position, Show on mouse-over, Faded opacity, Move panels) and Tracked saves.
 
 - [ ] Solo, Sentinel: an icon below the centre of the screen with seconds inside and `-30%` under it; the number falls by 2 per stack in combat and turns orange at `-18%`.
 - [ ] Ardent Defender or Guardian of Ancient Kings: its own icon with `-30%` / `-50%`, stronger saves left of weaker ones, Sentinel left of a fixed 30% save.
@@ -294,7 +294,7 @@ Switch on Save indicator (Combat). It is off by default. Its page has Centre row
 - [ ] Blessing of Protection shows `phys`, Spellwarding `magic`, Life Cocoon `shield`, in blue, right of the percentage saves; Power Word: Barrier shows `-20%`.
 - [ ] The page's Tracked saves box shows Your class and Externals from other classes as a three-column grid with icons; untick one, /reload: it no longer shows in the row.
 - [ ] One, two and three saves at once: the row stays centred on its X/Y point.
-- [ ] Settings page open: a gold outlined sample (Sentinel -24%, Pain Suppression -40%) shows; drag it, close the page: the row sits there, also after /reload. Lock position stops the drag, Scale resizes, Reset position puts it back.
+- [ ] Settings page open: a gold outlined sample (Sentinel -24%, Pain Suppression -40%) shows; it does not drag until Move panels is on or its lock icon is clicked; drag it then, close the page: the row sits there, also after /reload. Scale resizes, Reset position puts it back.
 - [ ] Untick Time left or Damage reduction, /reload: the seconds or the reduction are gone.
 - [ ] Raid: the row shows. Battleground or arena: nothing; back out, it returns.
 - [ ] **`/console taintLog 1`, a full key: no LittleThings entries in `Logs/taint.log`, BugSack empty.**
@@ -341,7 +341,12 @@ Switch on the Raid marker panel (Show when solo) and Party calls; join a party s
 
 - [ ] **First: in combat, with Show on mouse-over on for the raid marker panel, move the mouse on and off it: it fades and comes back, no `ADDON_ACTION_BLOCKED`. If blocked, note it: the raid panel then fades out of combat only.**
 - [ ] Drag Party calls next to each edge of the raid marker panel: it snaps within 16 px with a 6 px gap and stays docked. Drag the raid marker panel: Party calls moves with it. Drop the raid marker panel near another panel's edge: it snaps on release. Screen edges do not snap; the panel stays on screen anyway.
-- [ ] Lock position on the raid marker panel: it does not drag. Drag starts in combat: nothing moves.
+- [ ] No page has Lock position. Out of Move panels mode a fresh panel does not drag. Drag starts in combat: nothing moves.
+- [ ] **Move panels (button on the raid marker panel, Party calls and Save indicator pages, `/lt move`, `/lt unlock`): solo and out of a dungeon, all three panels show with sample content, each with a thin gold outline and its name above it; a bar at the top centre reads "Moving LittleThings panels" with Reset positions and Done. Drag each panel; Party calls still docks to the raid marker panel. Faded panels show at full opacity. Done, Esc, `/lt move` again or pulling a target dummy (mid-drag too) ends the mode: panels hide again by their own rules, positions kept, no `ADDON_ACTION_BLOCKED`. In combat `/lt move` prints "LittleThings: Move panels is available out of combat only."**
+- [ ] Reset positions in the bar: every panel goes back to its default place, Party calls undocked.
+- [ ] Lock icon: hover a panel out of combat: a small lock shows just above its top-left corner (below it at the screen top), over no button. Move onto the lock: it stays. Click: the icon opens, the outline shows, the panel drags. Click again, Esc or /reload: locked. Pull a target dummy while hovering: the lock never shows in combat.
+- [ ] Mouselook: hold right mouse over each panel and turn the camera, out of and in combat, with and without the lock icon showing: the camera turns, no stutter, nothing sticks.
+- [ ] Save indicator Show on mouse-over with Faded opacity 0: the row vanishes in combat until the mouse is over it; opacity 0.5 keeps it half visible.
 - [ ] Change the raid marker panel's Scale and Vertical, and Reset position: the docked Party calls follows.
 - [ ] Merge with docked panels on (raid marker panel page): one background and border around both, no gap; the raid panel draws no own background. Merge off: both backgrounds back, gap 6.
 - [ ] Fold handle: a narrow strip inside the left edge of the raid marker panel and of Party calls, as tall as the panel, with a thin divider on its right and "-" (expanded) or "+" (folded); the glyph turns gold on hover. No button sits under the strip; markers and icons start right of it. The handle is always visible; with Show on mouse-over and opacity 0 the panel vanishes but the handle stays faintly visible (0.35) and clickable.

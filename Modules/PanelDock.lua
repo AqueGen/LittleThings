@@ -31,8 +31,8 @@ function PanelDock.BuildHandle(handle, panel)
     return glyph
 end
 
-function PanelDock.FadeAlpha(hovered, db)
-    if not db.fade or hovered then return 1 end
+function PanelDock.FadeAlpha(hovered, db, moving)
+    if not db.fade or hovered or moving then return 1 end
     return db.fadeAlpha or 0
 end
 
@@ -61,7 +61,7 @@ end
 
 local function Tick(id, frame, db)
     if not frame:IsShown() then return end
-    SetAlpha(id, frame, PanelDock.FadeAlpha(PanelDock.Hovered(id, frame), db))
+    SetAlpha(id, frame, PanelDock.FadeAlpha(PanelDock.Hovered(id, frame), db, ns.PanelMove and ns.PanelMove.Moving()))
 end
 
 function PanelDock.Fade(id, frame, db)
@@ -75,6 +75,24 @@ function PanelDock.Fade(id, frame, db)
     end
     tickers[frame] = C_Timer.NewTicker(TICK, function() Tick(id, frame, db) end)
     Tick(id, frame, db)
+end
+
+function PanelDock.FadeOptions(group, db, apply)
+    group:Check({ label = "Show on mouse-over",
+        tooltip = "Fades the panel and the panels docked to it until the mouse is over any of them.",
+        get = function() return db.fade and true or false end,
+        set = function(value)
+            db.fade = value
+            apply()
+        end })
+    group:Slider({ label = "Faded opacity", min = 0, max = 1, step = 0.05, format = "%.2f",
+        tooltip = "How visible the panel stays while the mouse is away.",
+        get = function() return db.fadeAlpha or 0 end,
+        set = function(value)
+            db.fadeAlpha = value
+            apply()
+        end,
+        enabled = function() return db.fade and true or false end })
 end
 
 function PanelDock.Options(page, db, apply, id)
@@ -97,21 +115,6 @@ function PanelDock.Options(page, db, apply, id)
             apply()
         end,
         enabled = function() return not Docked() and #dock.Members(id) > 0 end })
-    group:Check({ label = "Show on mouse-over",
-        tooltip = "Fades the panel and the panels docked to it until the mouse is over any of them.",
-        get = function() return db.fade and true or false end,
-        set = function(value)
-            db.fade = value
-            apply()
-        end })
-    group:Slider({ label = "Faded opacity", min = 0, max = 1, step = 0.05, format = "%.2f",
-        tooltip = "How visible the panel stays while the mouse is away.",
-        get = function() return db.fadeAlpha or 0 end,
-        set = function(value)
-            db.fadeAlpha = value
-            apply()
-        end,
-        enabled = function() return db.fade and true or false end })
     group:Button({ label = "Undock", combatLocked = true,
         tooltip = "Detaches this panel from the panel it is docked to.",
         onClick = function()

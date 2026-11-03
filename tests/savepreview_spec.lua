@@ -76,6 +76,11 @@ describe("save indicator preview", function()
                 end
             end,
         }
+        _G.C_Timer = { NewTicker = function() return {} end }
+        _G.UISpecialFrames, _G.tinsert = {}, table.insert
+        ns.Widgets, ns.Print = { FLAT = {} }, function() end
+        assert(loadfile("Modules/PanelDock.lua"))("LittleThings", ns)
+        assert(loadfile("Modules/PanelMove.lua"))("LittleThings", ns)
         for _, path in ipairs({ "SaveRules", "SaveData", "Center", "RowPreview", "SaveIndicator" }) do
             assert(loadfile("Modules/SaveIndicator/" .. path .. ".lua"))("LittleThings", ns)
         end
@@ -95,6 +100,44 @@ describe("save indicator preview", function()
         for _, f in ipairs(created) do
             assert.is_nil(f.name)
         end
+    end)
+
+    it("offers mouse-over fade and Move panels next to Scale, and no Lock position", function()
+        local byLabel = options()
+        assert.is_nil(byLabel["Lock position"])
+        assert.is_truthy(byLabel["Show on mouse-over"])
+        assert.is_truthy(byLabel["Faded opacity"])
+        assert.equals(ns.PanelMove.Toggle, byLabel["Move panels"].onClick)
+        assert.is_false(ns.db.saveIndicatorRow.fade)
+        assert.equals(0, ns.db.saveIndicatorRow.fadeAlpha)
+    end)
+
+    it("shows the sample row in Move panels mode and lets it drag only then", function()
+        local function preview()
+            for _, f in ipairs(created) do
+                if f.name == "LittleThingsSaveRowPreview" then return f end
+            end
+        end
+        _G.AuraContainerSortMethod = {}
+        _G.C_StringUtil = { CreateNumericRuleFormatter = function() return { SetBreakpoints = function() end } end }
+        _G.LibStub = function() return { dock = { panels = {} }, Dock = { MergeFrame = function() end } } end
+        ns.SaveIndicator.Enable()
+        ns.SaveCenter.ToggleDemo()
+        local p = preview()
+        function p:StartMoving() self.moved = true end
+        function p:GetCenter() return 600, 500 end
+        function UIParent:GetCenter() return 500, 500 end
+        p.scripts.OnDragStart(p)
+        assert.is_nil(p.moved)
+        ns.SaveCenter.ToggleDemo()
+        assert.is_false(p.shown)
+        ns.PanelMove.Toggle()
+        assert.is_true(p.shown)
+        p.scripts.OnDragStart(p)
+        assert.is_true(p.moved)
+        ns.PanelMove.Toggle()
+        assert.equals(100, ns.db.saveIndicatorRow.x)
+        assert.is_false(p.shown)
     end)
 
     it("follows the time, reduction and scale settings", function()
