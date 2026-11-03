@@ -151,7 +151,8 @@ local function PlaceTopLeft(x, y)
     SaveCorner()
 end
 
-local function Release(mover)
+local function Release(mover, deferred)
+    if deferred and Db().dockTo then return end
     PlaceTopLeft(mover:GetLeft() - UIParent:GetLeft(), UIParent:GetTop() - mover:GetTop())
 end
 

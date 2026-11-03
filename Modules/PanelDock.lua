@@ -64,7 +64,7 @@ function PanelDock.GhostDrag(id, panel, opts)
     mover:Hide()
     mover:SetMovable(true)
     mover:SetClampedToScreen(true)
-    mover:SetFrameStrata("DIALOG")
+    mover:SetFrameStrata("TOOLTIP")
     local outline = mover:CreateTexture(nil, "OVERLAY")
     outline:SetAllPoints()
     outline:SetColorTexture(1, 0.82, 0, 0.3)
@@ -148,7 +148,7 @@ function PanelDock.Options(page, db, apply, id)
         return db
     end
     local function InGroup()
-        return Docked() or #dock.Members(id) > 0
+        return (Docked() and Lib().dock.panels[db.dockTo] ~= nil) or #dock.Members(id) > 0
     end
     local group = page:Group("Docking")
     group:Check({ label = "Merge with docked panels", combatLocked = true,

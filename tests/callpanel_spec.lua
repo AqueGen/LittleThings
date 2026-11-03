@@ -90,6 +90,22 @@ describe("PartyCallPanel docking", function()
     assert.is_false(Panel.drag.active)
   end)
 
+  it("keeps a docked member on its dock spot when the drag ends in combat", function()
+    db.dockTo, db.side = "raidMarkers", "Below"
+    state.dockedAt = { 500, 700 }
+    local panel = build()
+    panel.scripts.OnDragStart(panel)
+    local mover = Panel.drag.mover
+    function mover:GetLeft() return 120 end
+    function mover:GetTop() return 900 end
+    state.combat = true
+    panel.scripts.OnDragStop(panel)
+    assert.same({ { "TOPLEFT", rootFrame, "BOTTOMLEFT", 0, -6 } }, panel.points)
+    assert.equals("raidMarkers", db.dockTo)
+    assert.same({ 500, 700 }, { db.posX, db.posY })
+    assert.is_false(mover.shown)
+  end)
+
   it("does not start a ghost drag while locked", function()
     local panel = build()
     panel.left, panel.top = 300, 400

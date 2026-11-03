@@ -46,6 +46,7 @@ function Frames.new(parent)
     function f:EnableMouse(on) self.mouse = on and true or false end
     function f:SetScale(s) self.scale = s end
     function f:SetAtlas(a) self.atlas = a end
+    function f:SetFrameStrata(s) self.strata = s end
     function f:SetBackdropBorderColor(...) self.border = { ... } end
     function f:SetVertexColor(...) self.vertex = { ... } end
     return setmetatable(f, {

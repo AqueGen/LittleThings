@@ -366,7 +366,6 @@ end
 
 function Shared.ApplyStrata()
     Shared.panel:SetFrameStrata(Shared.previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
-    Shared.mover:SetFrameStrata(Shared.previewing and "TOOLTIP" or "DIALOG")
 end
 
 function Shared.BuildFrame()
@@ -388,7 +387,6 @@ function Shared.BuildFrame()
         locked = function() return not ns.PanelMove.CanDrag(DOCK_ID) end, merged = function() return Db().merge end, onChange = Shared.PaintBackground })
 
     drag = ns.PanelDock.GhostDrag(DOCK_ID, panel, { name = "LittleThingsRaidMarkersMover", release = Release, snapped = Snapped })
-    Shared.mover = drag.mover
     Shared.ApplyStrata()
 
     panel:EnableMouse(true)
