@@ -121,7 +121,6 @@ function SaveIndicator.Pages(page)
         tooltip = "Moves the row back below the centre of the screen.",
         onClick = ResetPosition })
     ns.PanelDock.FadeOptions(row, ns.db.saveIndicatorRow, Fade)
-    ns.PanelMove.Button(row)
 
     local tracked = Rules.Groups(ns.SaveData, select(2, UnitClass("player")))
     local group = page:Group("Tracked saves")

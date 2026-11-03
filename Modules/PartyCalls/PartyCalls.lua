@@ -299,7 +299,6 @@ function PartyCalls.Pages(page)
             { text = "Put in chat while in combat", value = "chatInCombat" } },
         tooltip = "Send posts the call at once. Put in chat opens the chat line on Party with the call typed in; press Enter to send it." }))
     ns.PanelDock.FadeOptions(panel, Db(), ApplyDock)
-    ns.PanelMove.Button(panel)
     panel:Button({ label = "Reset position", tooltip = "Moves the panel back above the centre of the screen.",
         onClick = function()
             if Panel.panel then

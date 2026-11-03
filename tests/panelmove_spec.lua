@@ -48,6 +48,22 @@ describe("PanelMove.Draggable", function()
   end)
 end)
 
+describe("PanelMove.Available", function()
+  local Move = load({ printed = {} })
+
+  it("is available while any movable panel module is on", function()
+    local on = {}
+    local function isOn(key) return on[key] == true end
+    assert.is_false(Move.Available(isOn))
+    for _, key in ipairs({ "raidMarkers", "partyCalls", "saveIndicator" }) do
+      on = { [key] = true }
+      assert.is_true(Move.Available(isOn))
+    end
+    on = { groupChat = true }
+    assert.is_false(Move.Available(isOn))
+  end)
+end)
+
 describe("PanelMove.LockSpot", function()
   local Move = load({ printed = {} })
 

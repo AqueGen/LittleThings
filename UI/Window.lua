@@ -19,7 +19,7 @@ local ZONE_MIN, ZONE_MAX, BAND_H = 260, 380, 150
 local WINDOWS_KEY = "damageMeterWindows"
 local EXTRAS = { { key = WINDOWS_KEY, label = "Meter windows", after = "damageMeter" } }
 
-local frame, menu, scroll, host
+local frame, menu, scroll, host, unlock
 local pages, builders, entries, headers, panes = {}, {}, {}, {}, {}
 local current
 
@@ -201,6 +201,25 @@ local function SavePosition()
     saved.point, saved.relativePoint, saved.x, saved.y = point, relativePoint, x, y
 end
 
+local function TitleButton(parent, text, width, anchor, onClick, primary)
+    local button = Widgets.Button(parent, text, width, primary)
+    button:SetPoint("RIGHT", anchor, anchor == parent and "RIGHT" or "LEFT", anchor == parent and -(TITLE_H - 22) / 2 or -GAP, 0)
+    button:SetScript("OnClick", function()
+        onClick()
+        Window.Refresh()
+    end)
+    return button
+end
+
+local function PaintUnlock()
+    local combat = InCombatLockdown()
+    unlock:SetShown(ns.PanelMove.Available(ns.IsOn))
+    unlock:SetText(ns.PanelMove.Moving() and "Done" or "Move the panels")
+    unlock:SetEnabled(not combat)
+    UI.SetPrimary(unlock, true)
+    if combat then unlock.label:SetTextColor(unpack(T.muted)) end
+end
+
 local function Build()
     frame = CreateFrame("Frame", "LittleThingsSettings", UIParent, "BackdropTemplate")
     tinsert(UISpecialFrames, "LittleThingsSettings")
@@ -239,9 +258,18 @@ local function Build()
     name:SetTextColor(unpack(T.gold))
     name:SetText("LittleThings")
 
-    local close = Widgets.Button(title, "X", 22)
-    close:SetPoint("RIGHT", title, "RIGHT", -(TITLE_H - 22) / 2, 0)
-    close:SetScript("OnClick", function() frame:Hide() end)
+    local close = TitleButton(title, "X", 22, title, function() frame:Hide() end)
+    unlock = TitleButton(title, "Move the panels", 110, close, function()
+        if not InCombatLockdown() then ns.PanelMove.Toggle() end
+    end, true)
+    unlock:SetMotionScriptsWhileDisabled(true)
+    unlock:SetScript("OnEnter", function(self)
+        if not InCombatLockdown() then return end
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Out of combat only.", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    unlock:SetScript("OnLeave", GameTooltip_Hide)
 
     menu = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     menu:SetPoint("TOPLEFT", 0, -TITLE_H)
@@ -317,6 +345,7 @@ end
 
 function Window.Refresh()
     if not frame or not frame:IsShown() then return end
+    PaintUnlock()
     LayoutMenu()
     if current and pages[current] then pages[current]:Refresh() end
     RefreshPreview()
@@ -333,6 +362,7 @@ function Window.Show(key)
     local page = pages[key] or BuildPage(key)
     page.frame:Show()
     frame:Show()
+    PaintUnlock()
     LayoutMenu()
     page:Refresh()
     scroll:SetVerticalScroll(0)

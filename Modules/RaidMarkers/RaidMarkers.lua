@@ -227,7 +227,6 @@ function RaidMarkers.Pages(page)
     group:Slider(Option("pullRight", { label = "Pull, right click (seconds)", min = 3, max = 60,
         tooltip = "Countdown length when the pull button is right-clicked." }))
     ns.PanelDock.FadeOptions(group, ns.db.raidMarkerPanel, ApplyDockOptions)
-    ns.PanelMove.Button(group)
     group:Button({ label = "Reset position", combatLocked = true,
         tooltip = "Moves the panel back above the centre of the screen.",
         onClick = ResetPosition })

@@ -53,8 +53,8 @@ local function AskReload(spec, valueText)
     end
 end
 
-function Widgets.Button(parent, text, width)
-    return UI.Button(parent, text, width)
+function Widgets.Button(parent, text, width, primary)
+    return UI.Button(parent, text, width, primary)
 end
 
 local Group = {}

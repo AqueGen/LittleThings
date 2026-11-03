@@ -1237,7 +1237,7 @@ describe("RaidMarkers", function()
     assert.is_false(panel:IsShown())
   end)
 
-  it("puts mouse-over fade and Move panels in the panel group, keeps Merge and Undock in Docking, and drops Lock position", function()
+  it("puts mouse-over fade in the panel group, keeps Merge and Undock in Docking, and drops Lock position and Move panels", function()
     local groups = {}
     local function group(title)
       local g = { title = title, labels = {} }
@@ -1251,8 +1251,9 @@ describe("RaidMarkers", function()
     addon.module.Pages({ Group = function(_, title) return group(title) end })
     local panelLabels = table.concat(groups["Raid marker panel"].labels, "|")
     assert.is_nil(panelLabels:find("Lock position", 1, true))
+    assert.is_nil(panelLabels:find("Move", 1, true))
     assert.is_truthy(panelLabels:find("Scale|Vertical", 1, true))
-    assert.is_truthy(panelLabels:find("Show on mouse-over|Faded opacity|Move panels|Reset position", 1, true))
+    assert.is_truthy(panelLabels:find("Show on mouse-over|Faded opacity|Reset position", 1, true))
     assert.same({ "Merge with docked panels", "Undock" }, groups["Docking"].labels)
   end)
 

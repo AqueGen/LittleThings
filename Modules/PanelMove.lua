@@ -8,6 +8,7 @@ local LOCK, TICK = 12, 0.1
 local GOLD = { 1, 0.82, 0, 1 }
 local EDGE = { edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 }
 
+local MODULES = { "raidMarkers", "partyCalls", "saveIndicator" }
 local panels, order, unlocked, overlays = {}, {}, {}, {}
 local moving, hoverId = false, nil
 local bar, lock, catcher, events
@@ -28,6 +29,17 @@ end
 
 function PanelMove.Moving()
     return moving
+end
+
+function PanelMove.Available(isOn)
+    for _, key in ipairs(MODULES) do
+        if isOn(key) then return true end
+    end
+    return false
+end
+
+local function Notify()
+    if ns.Window then ns.Window.Refresh() end
 end
 
 local function Rect(f)
@@ -189,6 +201,7 @@ function PanelMove.Start()
     bar:Show()
     for _, id in ipairs(order) do panels[id].setMoving(true) end
     Tick()
+    Notify()
 end
 
 function PanelMove.Stop()
@@ -200,6 +213,7 @@ function PanelMove.Stop()
     end
     bar:Hide()
     Tick()
+    Notify()
 end
 
 function PanelMove.Toggle()
@@ -222,10 +236,4 @@ function PanelMove.Register(id, spec)
         PanelMove.LockAll()
     end)
     C_Timer.NewTicker(TICK, Tick)
-end
-
-function PanelMove.Button(group)
-    group:Button({ label = "Move panels", combatLocked = true,
-        tooltip = "Shows every LittleThings panel with an outline so you can drag them. Also /lt move. Done or Esc ends it.",
-        onClick = PanelMove.Toggle })
 end
