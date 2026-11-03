@@ -39,7 +39,7 @@ function WarbandGear.OnSwitch(enabled)
 end
 
 function WarbandGear.Pages(page)
-    page:Group("Baganator"):Note("With Baganator, the marker is a corner widget, " .. CORNER_LABEL .. ". It shows \"WB\" in the bottom left corner of the item icon. Move it or turn it off under Icon Corners on the Icons tab of Baganator's settings.")
+    page:Group("Baganator"):Note("Baganator: the corner widget " .. CORNER_LABEL .. " shows \"WB\" in the bottom left corner of the item icon. Move it or turn it off under Icon Corners on the Icons tab of Baganator's settings.")
 end
 
 WarbandGear.key = "warbandGear"
