@@ -133,16 +133,15 @@ local function collect(skip)
     return rects, list
 end
 
-function Dock.Snap(id)
+function Dock.Snap(id, rect)
     local p = panels[id]
-    local mine = rectOf(p.spec.frame)
+    local mine = rect or rectOf(p.spec.frame)
     local skip = movingSet(id)
     for _, m in ipairs(Dock.Members(id)) do skip[m] = true end
     local _, list = collect(skip)
     if p.spec.root then
         if #list == 0 then return mine.x, mine.y end
-        local x, y = D.Snap(mine, list, gapOf(id), D.SNAP, false)
-        return x, y
+        return D.Snap(mine, list, gapOf(id), D.SNAP, false)
     end
     local best
     for _, merged in ipairs({ false, true }) do
@@ -151,15 +150,15 @@ function Dock.Snap(id)
             if mergedOf(o.id) == merged then subset[#subset + 1] = o end
         end
         if #subset > 0 then
-            local x, y, tid = D.Snap(mine, subset, merged and 0 or D.GAP, D.SNAP)
+            local x, y, tid, side, offset = D.Snap(mine, subset, merged and 0 or D.GAP, D.SNAP)
             local disp = math.abs(x - mine.x) + math.abs(y - mine.y)
             if not best or (tid ~= nil and best.tid == nil) or (tid ~= nil) == (best.tid ~= nil) and disp < best.disp then
-                best = { x = x, y = y, tid = tid, disp = disp }
+                best = { x = x, y = y, tid = tid, side = side, offset = offset, disp = disp }
             end
         end
     end
     if not best then return mine.x, mine.y end
-    return best.x, best.y
+    return best.x, best.y, best.tid, best.side, best.offset
 end
 
 local function dropOut(id, moving, rects, positions, roots)
