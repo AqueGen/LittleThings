@@ -16,6 +16,13 @@ function Rules.Columns(columns, cellWidth, room)
     return math.max(1, math.min(columns, math.floor(room / cellWidth)))
 end
 
+Rules.HINT_GAP = 16
+
+function Rules.HintFits(room, controlEnd, hintWidth, forceBelow)
+    if forceBelow then return false end
+    return room <= 0 or controlEnd + Rules.HINT_GAP + hintWidth <= room
+end
+
 function Rules.Stack(items, gap)
     local offsets, y, any = {}, 0, false
     for index, item in ipairs(items) do

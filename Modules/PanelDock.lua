@@ -236,14 +236,14 @@ end
 
 function PanelDock.FadeOptions(group, db, apply)
     group:Check({ label = "Show on mouse-over",
-        tooltip = "Fades the panel and the panels docked to it until the mouse is over any of them.",
+        hint = "Fade the panel until the mouse is over it", tooltip = "Fades the panel and the panels docked to it until the mouse is over any of them.",
         get = function() return db.fade and true or false end,
         set = function(value)
             db.fade = value
             apply()
         end })
     group:Slider({ label = "Faded opacity", min = 0, max = 1, step = 0.05, format = "%.2f",
-        tooltip = "How visible the panel stays while the mouse is away.",
+        hint = "How visible the panel stays while faded", tooltip = "How visible the panel stays while the mouse is away.",
         get = function() return db.fadeAlpha or 0 end,
         set = function(value)
             db.fadeAlpha = value
@@ -273,6 +273,7 @@ function PanelDock.Options(page, db, apply, id)
     end
     local group = page:Group("Docking")
     group:Check({ label = "Merge with docked panels", combatLocked = true,
+        hint = "One shared background behind docked panels",
         tooltip = function()
             local text = "Draws one shared background behind the docked panels, with no gap between them. One setting for the whole group, on either panel's page."
             if not InGroup() then text = text .. "\nDock this panel to another one first." end
@@ -285,7 +286,7 @@ function PanelDock.Options(page, db, apply, id)
         end,
         enabled = InGroup })
     group:Button({ label = "Undock", combatLocked = true,
-        tooltip = "Detaches this panel from the panel it is docked to.",
+        hint = "Detaches this panel from its neighbour", tooltip = "Detaches this panel from the panel it is docked to.",
         onClick = function()
             dock.Undock(id)
             apply()

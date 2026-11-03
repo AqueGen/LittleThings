@@ -49,6 +49,7 @@ local function SwitchSpec(row)
     return {
         label = row.label,
         tooltip = row.tooltip,
+        hint = row.hint,
         reload = not row.live,
         combatLocked = true,
         get = function() return ns.db[row.key] == true end,
@@ -67,11 +68,17 @@ local function CallPages(key, page, fallback)
     end
 end
 
+local function PreviewFor(key)
+    for _, module in ipairs(ns.ModulesFor(key)) do
+        if module.Preview then return module.Preview end
+    end
+end
+
 local function BuildModulePage(page, row)
     local head = page:Group(row.label)
     head:Check(SwitchSpec(row))
-    head:Note(row.tooltip)
 
+    page.hintsBelow = PreviewFor(row.key) ~= nil
     page.visible = function() return ns.IsOn(row.key) end
 
     local section, group
@@ -142,12 +149,6 @@ local function LayoutMenu()
         y = y - PAD
     end
     Paint()
-end
-
-local function PreviewFor(key)
-    for _, module in ipairs(ns.ModulesFor(key)) do
-        if module.Preview then return module.Preview end
-    end
 end
 
 local function PaneFor(preview)

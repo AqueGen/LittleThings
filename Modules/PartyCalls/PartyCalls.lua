@@ -266,24 +266,24 @@ end
 local function Look(page)
     local look = page:Group("Look")
     look:Slider(Option("bgAlpha", { label = "Background", min = 0, max = 1, step = 0.05, format = "%.2f",
-        tooltip = "Opacity of the panel background. 0 hides it." }))
-    look:Check(Option("border", { label = "Border", tooltip = "A thin line around the panel." }))
-    look:Slider(Option("pad", { label = "Edge padding", min = 0, max = 12, tooltip = "Space between the edge and the buttons." }))
-    look:Slider(Option("iconSize", { label = "Icon size", min = 20, max = 56, tooltip = "Size of each icon." }))
-    look:Slider(Option("gap", { label = "Spacing", min = 0, max = 20, tooltip = "Space between buttons." }))
-    look:Check(Option("labels", { label = "Labels", tooltip = "The short text under each icon." }))
-    look:Dropdown(Option("labelSize", { label = "Label size",
+        hint = "Opacity of the panel background", tooltip = "Opacity of the panel background. 0 hides it." }))
+    look:Check(Option("border", { label = "Border", hint = "A thin line around the panel", tooltip = "A thin line around the panel." }))
+    look:Slider(Option("pad", { label = "Edge padding", min = 0, max = 12, hint = "Space between the edge and the buttons", tooltip = "Space between the edge and the buttons." }))
+    look:Slider(Option("iconSize", { label = "Icon size", min = 20, max = 56, hint = "Size of each icon", tooltip = "Size of each icon." }))
+    look:Slider(Option("gap", { label = "Spacing", min = 0, max = 20, hint = "Space between buttons", tooltip = "Space between buttons." }))
+    look:Check(Option("labels", { label = "Labels", hint = "Short text under each icon", tooltip = "The short text under each icon." }))
+    look:Dropdown(Option("labelSize", { label = "Label size", hint = "Size of the text under each icon",
         options = { { text = "Small", value = "small" }, { text = "Normal", value = "normal" }, { text = "Large", value = "large" } },
         enabled = function() return Db().labels end }))
     look:Dropdown({ label = "Grow", default = DEFAULTS.grow,
         options = { { text = "Right", value = "right" }, { text = "Left", value = "left" },
             { text = "Down", value = "down" }, { text = "Up", value = "up" } },
-        tooltip = "Where a row of buttons goes from the panel's corner. That corner stays in place when buttons show or hide.",
+        hint = "Direction a row of buttons grows", tooltip = "Where a row of buttons goes from the panel's corner. That corner stays in place when buttons show or hide.",
         get = function() return Db().grow end, set = GrowSet })
     look:Slider(Option("perRow", { label = "Buttons per row", min = 1, max = 20,
-        tooltip = "After this many buttons the next one starts a new row." }))
+        hint = "Buttons in a row before a new one starts", tooltip = "After this many buttons the next one starts a new row." }))
     look:Dropdown(Option("wrap", { label = "New rows go", options = WrapOptions,
-        tooltip = "Where the next row starts." }))
+        hint = "Where the next row starts", tooltip = "Where the next row starts." }))
 end
 
 function PartyCalls.Pages(page)
@@ -299,16 +299,16 @@ function PartyCalls.Pages(page)
 
     local panel = page:Group("Panel")
     panel:Check(Option("showSolo", { label = "Show when solo",
-        tooltip = "Shows the panel outside a group too. The buttons do nothing there." }))
+        hint = "Show the panel outside a group too", tooltip = "Shows the panel outside a group too. The buttons do nothing there." }))
     panel:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
-        tooltip = "Size of the whole panel.",
+        hint = "Size of the whole panel", tooltip = "Size of the whole panel.",
         enabled = function() return not Panel.Merged() end }))
     panel:Dropdown(Option("click", { label = "On click",
         options = { { text = "Send to party", value = "send" }, { text = "Put in chat, Enter sends", value = "chat" },
             { text = "Put in chat while in combat", value = "chatInCombat" } },
-        tooltip = "Send posts the call at once. Put in chat opens the chat line on Party with the call typed in; press Enter to send it." }))
+        hint = "Send at once, or put the call in the chat line", tooltip = "Send posts the call at once. Put in chat opens the chat line on Party with the call typed in; press Enter to send it." }))
     ns.PanelDock.FadeOptions(panel, Db(), ApplyDock)
-    panel:Button({ label = "Reset position", tooltip = "Moves the panel back above the centre of the screen.",
+    panel:Button({ label = "Reset position", hint = "Puts the panel back at its default place", tooltip = "Moves the panel back above the centre of the screen.",
         onClick = function()
             if Panel.panel then
                 Panel.ResetPosition()
@@ -326,33 +326,33 @@ function PartyCalls.Pages(page)
             Rules.Move(Db(), id, delta)
             PartyCalls.Refresh()
         end })
-    calls:Button({ label = "Add call", tooltip = "A new call of your own at the end of the list.",
+    calls:Button({ label = "Add call", hint = "Adds a call of your own to the list", tooltip = "A new call of your own at the end of the list.",
         onClick = function()
             selected = Rules.AddCustom(Db())
             PartyCalls.Refresh()
         end })
-    calls:Check(Field("enabled", { label = "Show this call" }))
-    calls:Input(Field("label", { label = "Label", maxBytes = 16, tooltip = "Short text under the icon." }))
+    calls:Check(Field("enabled", { label = "Show this call", hint = "Hide a call without deleting it" }))
+    calls:Input(Field("label", { label = "Label", maxBytes = 16, hint = "Short text under the icon", tooltip = "Short text under the icon." }))
     calls:Input(Field("message", { label = "Message", maxBytes = 249, width = 320,
-        tooltip = "What goes to party chat. The raid mark is put in front of it." }))
-    calls:Input(Field("icon", { label = "Icon", tooltip = "A spell id (for example 2825) or a texture path.",
+        hint = "What goes to party chat", tooltip = "What goes to party chat. The raid mark is put in front of it." }))
+    calls:Input(Field("icon", { label = "Icon", hint = "A spell id or a texture path", tooltip = "A spell id (for example 2825) or a texture path.",
         icon = function() return Rules.Texture(Selected().icon, C_Spell.GetSpellTexture, GetFileIDFromPath) end }))
     calls:Dropdown(Field("mark", { label = "Raid mark", options = MarkOptions(),
-        tooltip = "Shown at the start of the message in everyone's chat." }))
+        hint = "Mark shown at the start of the message", tooltip = "Shown at the start of the message in everyone's chat." }))
     calls:CheckGrid({ RoleSpec("TANK", "Tank"), RoleSpec("HEALER", "Healer"), RoleSpec("DAMAGER", "Damage") }, 3, 110)
-    calls:Dropdown(Field("combat", { label = "When",
+    calls:Dropdown(Field("combat", { label = "When", hint = "Show the call always, or only in or out of combat",
         options = { { text = "Always", value = "any" }, { text = "In combat", value = "in" },
             { text = "Out of combat", value = "out" } } }))
-    calls:Dropdown(Field("content", { label = "Where",
+    calls:Dropdown(Field("content", { label = "Where", hint = "Limit the call to dungeons or Mythic+",
         options = { { text = "Any group", value = "group" }, { text = "Any dungeon", value = "dungeon" },
             { text = "Mythic+", value = "mplus" } } }))
-    calls:Button({ label = "Reset to default", tooltip = "Puts this built-in call back as it shipped.",
+    calls:Button({ label = "Reset to default", hint = "Restores this call to its shipped state", tooltip = "Puts this built-in call back as it shipped.",
         visible = function() return Rules.IsBuiltin(selected) end,
         onClick = function()
             Rules.Reset(Db().calls, selected)
             PartyCalls.Refresh()
         end })
-    calls:Button({ label = "Delete call", tooltip = "Removes this call of your own.",
+    calls:Button({ label = "Delete call", hint = "Removes this call", tooltip = "Removes this call of your own.",
         visible = function() return not Rules.IsBuiltin(selected) end,
         onClick = function()
             local index

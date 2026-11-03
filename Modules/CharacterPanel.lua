@@ -168,22 +168,22 @@ function CharacterPanel.Pages(page)
     InitializeDb()
 
     page:Group("Bars"):Check({ label = "Lock bars",
-        tooltip = "Drag a bar on the character panel to place it, fine-tune with the offsets below, then lock it so it cannot be dragged.",
+        hint = "Stops the bars from being dragged", tooltip = "Drag a bar on the character panel to place it, fine-tune with the offsets below, then lock it so it cannot be dragged.",
         get = function() return ns.db.characterPanelLocked == true end,
         set = function(value) ns.db.characterPanelLocked = value end })
 
     for _, bar in ipairs(BARS) do
         local group = page:Group(bar.label)
         group:Dropdown(Bar(bar, "header", { label = "Header", options = HEADER_OPTIONS,
-            tooltip = "Where the bar's title sits." }, RefreshIfShown))
+            hint = "Where the bar's title sits", tooltip = "Where the bar's title sits." }, RefreshIfShown))
         group:Dropdown(Bar(bar, "corner", { label = "Anchor corner", options = CORNER_OPTIONS,
-            tooltip = "Which corner of the character panel the bar hangs from." }, Anchor))
+            hint = "Corner of the character panel the bar hangs from", tooltip = "Which corner of the character panel the bar hangs from." }, Anchor))
         for _, key in ipairs({ "x", "y" }) do
             group:Slider(Bar(bar, key, { label = key:upper() .. " offset", min = -400, max = 400,
-                tooltip = "Pixels from the chosen corner." }, Anchor))
+                hint = "Pixels from the chosen corner", tooltip = "Pixels from the chosen corner." }, Anchor))
         end
         group:Slider(Bar(bar, "size", { label = "Icon size", min = 16, max = 48,
-            tooltip = "Icon size in pixels." }, RefreshIfShown))
+            hint = "Icon size in pixels", tooltip = "Icon size in pixels." }, RefreshIfShown))
     end
 end
 

@@ -179,8 +179,8 @@ function BattleResGuard.OnSwitch(enabled)
     end
 end
 
-local function RoleOption(role, label, tooltip)
-    return { label = label, tooltip = tooltip, default = true,
+local function RoleOption(role, label, hint, tooltip)
+    return { label = label, hint = hint, tooltip = tooltip, default = true,
         get = function() return ns.db.battleResGuardRoles[role] end,
         set = function(value) ns.db.battleResGuardRoles[role] = value end }
 end
@@ -188,9 +188,9 @@ end
 function BattleResGuard.Pages(page)
     InitializeDb()
     local group = page:Group("Ask before release as")
-    group:Check(RoleOption("TANK", "Tank", "Release asks first while your current specialization is a tank."))
-    group:Check(RoleOption("HEALER", "Healer", "Release asks first while your current specialization is a healer."))
-    group:Check(RoleOption("DAMAGER", "Damage", "Release asks first while your current specialization deals damage."))
+    group:Check(RoleOption("TANK", "Tank", "Ask first while you are a tank", "Release asks first while your current specialization is a tank."))
+    group:Check(RoleOption("HEALER", "Healer", "Ask first while you are a healer", "Release asks first while your current specialization is a healer."))
+    group:Check(RoleOption("DAMAGER", "Damage", "Ask first while you deal damage", "Release asks first while your current specialization deals damage."))
 end
 
 BattleResGuard.key = "battleResGuard"

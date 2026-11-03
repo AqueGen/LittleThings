@@ -341,17 +341,17 @@ end
 function JournalLoot.Pages(page)
     local group = page:Group("Loot icons")
     group:Check(Option("allClasses", { label = "All classes",
-        tooltip = "Show every class's specs, folded into a class, role or everyone icon where they all get the item. Off shows the class picked in the journal's filter, or yours." }))
+        hint = "Show the specs of every class", tooltip = "Show every class's specs, folded into a class, role or everyone icon where they all get the item. Off shows the class picked in the journal's filter, or yours." }))
     group:Dropdown(Option("corner", { label = "Position", options = CornerOptions,
-        tooltip = "Bottom right corner: one column at the right edge of every row, on the boss line where the row has one. Where the icons would cover the armor type it moves left of them. Name line: right of the item name, clear of a transmog addon's corner mark, but a long name can run under the icons." }))
+        hint = "Where the icons sit on each loot row", tooltip = "Bottom right corner: one column at the right edge of every row, on the boss line where the row has one. Where the icons would cover the armor type it moves left of them. Name line: right of the item name, clear of a transmog addon's corner mark, but a long name can run under the icons." }))
     group:Slider(Option("size", { label = "Icon size", min = 12, max = 24,
-        tooltip = "Icon size in pixels." }))
+        hint = "Size of the loot icons in pixels", tooltip = "Icon size in pixels." }))
 
     local buttons = page:Group("Loot specialization")
     buttons:Check(Option("lootSpecButtons", { label = "Loot specialization buttons",
-        tooltip = "Your loot specialization icons below a boss's loot list, so you can pick it right after looking at what drops." }))
+        hint = "Loot specialization icons below the loot list", tooltip = "Your loot specialization icons below a boss's loot list, so you can pick it right after looking at what drops." }))
     buttons:Slider(Option("lootSpecSize", { label = "Button size", min = 16, max = 48,
-        tooltip = "Size of the loot specialization buttons in pixels." }))
+        hint = "Size of the loot specialization buttons", tooltip = "Size of the loot specialization buttons in pixels." }))
 end
 
 function JournalLoot.Enable()

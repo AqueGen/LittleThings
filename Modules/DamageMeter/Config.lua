@@ -26,9 +26,10 @@ local function Db(key, spec, onChange)
     return spec
 end
 
-local function AddBlizzardCVarCheck(group, cvar, label, tooltip)
+local function AddBlizzardCVarCheck(group, cvar, label, hint, tooltip)
     group:Check({
         label = label,
+        hint = hint,
         combatLocked = true,
         tooltip = function()
             local isAvailable, failureReason = C_DamageMeter.IsDamageMeterAvailable()
@@ -60,7 +61,7 @@ local function BuildBehaviourOptions(page)
     local group = page:Group("Behaviour")
 
     group:Check(Db("format", { label = "Readable numbers",
-        tooltip = "Show 56.72M instead of 56716 K. The percentage is shown only out of combat, because it is the one part that needs arithmetic on values that are Secret in combat." },
+        hint = "Show 56.72M instead of 56716 K", tooltip = "Show 56.72M instead of 56716 K. The percentage is shown only out of combat, because it is the one part that needs arithmetic on values that are Secret in combat." },
         function()
             if not ns.db.format then
                 ns.Format.Restore()
@@ -68,18 +69,18 @@ local function BuildBehaviourOptions(page)
         end))
 
     group:Check(Db("snap", { label = "Snap windows together",
-        tooltip = "Dragging a window near another attaches it, and they move and resize together." }))
+        hint = "Windows attach when dragged close together", tooltip = "Dragging a window near another attaches it, and they move and resize together." }))
 
     group:Slider(Db("snapThreshold", { label = "Snap distance", min = 5, max = 50,
-        tooltip = "How close an edge must be, in pixels, before it snaps." }))
+        hint = "How close an edge must be to snap, in pixels", tooltip = "How close an edge must be, in pixels, before it snaps." }))
 
     group:Slider(Db("idleAlpha", { label = "Idle transparency", min = 0.1, max = 1, step = 0.05, format = "%.2f",
-        tooltip = "How visible the meter is when the mouse is not on it, as a fraction of the Edit Mode transparency. "
+        hint = "How visible the meter is while the mouse is away", tooltip = "How visible the meter is when the mouse is not on it, as a fraction of the Edit Mode transparency. "
             .. "A window set to uninteractable stays at the idle value, because its mouse is disabled." },
         function() ns.Presence.ApplyAlphaToAll() end))
 
     group:Dropdown({ label = "Layer", default = ns.defaults.strata, options = StrataOptions,
-        tooltip = "Which layer the meter draws on. Raise it if another addon covers it.",
+        hint = "Raise it if another addon covers the meter", tooltip = "Which layer the meter draws on. Raise it if another addon covers it.",
         get = function() return ns.Presence.ResolveStrata(ns.db.strata) end,
         set = function(value)
             ns.db.strata = value
@@ -87,8 +88,8 @@ local function BuildBehaviourOptions(page)
         end })
 
     local blizzard = page:Group(DAMAGE_METER_LABEL .. " (Blizzard)")
-    AddBlizzardCVarCheck(blizzard, "damageMeterEnabled", ENABLE_DAMAGE_METER, ENABLE_DAMAGE_METER_TOOLTIP)
-    AddBlizzardCVarCheck(blizzard, "damageMeterResetOnNewInstance", AUTO_RESET_DAMAGE_METER, AUTO_RESET_DAMAGE_METER_TOOLTIP)
+    AddBlizzardCVarCheck(blizzard, "damageMeterEnabled", ENABLE_DAMAGE_METER, "Turns Blizzard's damage meter on or off", ENABLE_DAMAGE_METER_TOOLTIP)
+    AddBlizzardCVarCheck(blizzard, "damageMeterResetOnNewInstance", AUTO_RESET_DAMAGE_METER, "Clears the meter data when you enter a new instance", AUTO_RESET_DAMAGE_METER_TOOLTIP)
 end
 
 function Config.Open()

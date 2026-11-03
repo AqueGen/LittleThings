@@ -210,40 +210,40 @@ function RaidMarkers.Pages(page)
 
     local visibility = page:Group("Visibility")
     visibility:Check(Option("showSolo", { label = "Show when solo",
-        tooltip = "Shows the panel outside a group too. Markers and group buttons do nothing there." }, RequestVisibility))
+        hint = "Show the panel outside a group too", tooltip = "Shows the panel outside a group too. Markers and group buttons do nothing there." }, RequestVisibility))
     visibility:Check(Option("partyLeaderOnly", { label = "In a party, only as leader",
-        tooltip = "In a party the panel shows only while you lead the group." }, RequestVisibility))
+        hint = "Hide the panel in a party unless you lead", tooltip = "In a party the panel shows only while you lead the group." }, RequestVisibility))
     visibility:Check(Option("raidWithoutRank", { label = "In a raid, also without lead or assist",
-        tooltip = "In a raid the panel shows to everyone; markers and group buttons work only with lead or assist." }, RequestVisibility))
+        hint = "Show the panel to everyone in a raid", tooltip = "In a raid the panel shows to everyone; markers and group buttons work only with lead or assist." }, RequestVisibility))
     visibility:Check(Option("hideInCombat", { label = "Hide in combat", combatLocked = true,
-        tooltip = "Hides the panel while you are in combat. The game hides it, so this is safe in combat." }, Shared.ApplyCombatHide))
+        hint = "Hide the panel while in combat", tooltip = "Hides the panel while you are in combat. The game hides it, so this is safe in combat." }, Shared.ApplyCombatHide))
 
     local group = page:Group("Raid marker panel")
     group:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f", combatLocked = true,
-        tooltip = "Size of the whole panel." }, Shared.Place))
+        hint = "Size of the whole panel", tooltip = "Size of the whole panel." }, Shared.Place))
     group:Check(Option("vertical", { label = "Vertical", combatLocked = true,
-        tooltip = "One column: each target marker next to the world marker of the same symbol, the other buttons below." }, Shared.Layout))
+        hint = "One column instead of a row", tooltip = "One column: each target marker next to the world marker of the same symbol, the other buttons below." }, Shared.Layout))
     group:Slider(Option("pullLeft", { label = "Pull, left click (seconds)", min = 3, max = 60,
-        tooltip = "Countdown length when the pull button is left-clicked." }))
+        hint = "Countdown on a left click of the pull button", tooltip = "Countdown length when the pull button is left-clicked." }))
     group:Slider(Option("pullRight", { label = "Pull, right click (seconds)", min = 3, max = 60,
-        tooltip = "Countdown length when the pull button is right-clicked." }))
+        hint = "Countdown on a right click of the pull button", tooltip = "Countdown length when the pull button is right-clicked." }))
     ns.PanelDock.FadeOptions(group, ns.db.raidMarkerPanel, ApplyDockOptions)
     group:Button({ label = "Reset position", combatLocked = true,
-        tooltip = "Moves the panel back above the centre of the screen.",
+        hint = "Puts the panel back at its default place", tooltip = "Moves the panel back above the centre of the screen.",
         onClick = ResetPosition })
 
     ns.PanelDock.Options(page, ns.db.raidMarkerPanel, ApplyDockOptions, Shared.DOCK_ID)
 
     local helpers = page:Group("Tank helpers")
     helpers:Check(Option("healerMana", { label = "Healer mana", combatLocked = true,
-        tooltip = "A bar under the group buttons with your party healer's mana. Party only." }, Shared.Layout))
+        hint = "Healer mana bar under the group buttons", tooltip = "A bar under the group buttons with your party healer's mana. Party only." }, Shared.Layout))
     helpers:Dropdown(Option("manaText", { label = "Mana text", combatLocked = true,
         options = { { text = "None", value = "none" }, { text = "Percent", value = "percent" },
             { text = "Value", value = "value" }, { text = "Both", value = "both" } },
         enabled = function() return ns.db.raidMarkerPanel.healerMana end,
-        tooltip = "What the healer mana bar shows on top of it. None keeps the bar thin." }, Shared.Layout))
+        hint = "What the healer mana bar shows", tooltip = "What the healer mana bar shows on top of it. None keeps the bar thin." }, Shared.Layout))
     helpers:Check(Option("groupDown", { label = "Dead or offline count", combatLocked = true,
-        tooltip = "A red count next to the group buttons when party members are dead or offline. Party only." }, Shared.Layout))
+        hint = "Count of dead or offline party members", tooltip = "A red count next to the group buttons when party members are dead or offline. Party only." }, Shared.Layout))
 
     local options = { { text = "None", value = 0 } }
     for n = 1, 8 do
@@ -252,7 +252,7 @@ function RaidMarkers.Pages(page)
     local placement = page:Group("Placement order")
     for i, label in ipairs(ORDINALS) do
         placement:Dropdown({ label = label, options = options, default = i, combatLocked = true,
-            tooltip = "World marker placed at this step by the placement mode and the next world marker key. None skips the step.",
+            hint = "World marker placed at this step", tooltip = "World marker placed at this step by the placement mode and the next world marker key. None skips the step.",
             get = function() return ns.db.raidMarkerPanel.order[i] end,
             set = function(value)
                 ns.db.raidMarkerPanel.order[i] = value

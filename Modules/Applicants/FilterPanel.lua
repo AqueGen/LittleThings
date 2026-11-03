@@ -354,11 +354,11 @@ end
 function Filter.Pages(page)
     local group = page:Group()
     group:Check({ label = "Remove closed applications",
-        tooltip = "Applications that were cancelled, timed out, declined or turned the invite down leave the list at once, as if you clicked their X.",
+        hint = "Drops cancelled and declined applications", tooltip = "Applications that were cancelled, timed out, declined or turned the invite down leave the list at once, as if you clicked their X.",
         get = function() return Filter.Options().removeFinished end,
         set = function(value) Filter.Options().removeFinished = value end })
     group:Dropdown({ label = "Panel side", options = SIDE_OPTIONS, default = POSITION_DEFAULTS.side,
-        tooltip = "Which side of the group finder the applicant filter panel sits on.",
+        hint = "Which side of the group finder the panel sits on", tooltip = "Which side of the group finder the applicant filter panel sits on.",
         get = function() return Position().side end,
         set = function(value)
             Position().side = value
@@ -366,7 +366,7 @@ function Filter.Pages(page)
         end })
     for _, key in ipairs({ "x", "y" }) do
         group:Slider({ label = "Panel " .. key:upper() .. " offset", min = -800, max = 800,
-            tooltip = "Pixels to move the panel from its side of the group finder. X moves it right, Y moves it up. Dragging the panel sets these for you.",
+            hint = "Pixels to move the panel from its side", tooltip = "Pixels to move the panel from its side of the group finder. X moves it right, Y moves it up. Dragging the panel sets these for you.",
             get = function() return Position()[key] end,
             set = function(value)
                 Position()[key] = value

@@ -190,10 +190,6 @@ function LowLevelGear.Report()
     end
 end
 
-function LowLevelGear.Pages(page)
-    page:Group("Baganator"):Note("Baganator: the corner widget " .. CORNER_LABEL .. " shows \"Low\" in the bottom left corner of the item icon, under the equipment set mark. Move it or turn it off under Icon Corners on the Icons tab of Baganator's settings.")
-end
-
 ns.LowLevelGear = LowLevelGear
 LowLevelGear.key = "lowLevelGear"
 ns.RegisterModule("LowLevelGear", LowLevelGear)
