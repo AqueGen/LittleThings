@@ -222,3 +222,123 @@ describe("PanelDock.Fade", function()
     assert.equals(0, hoveredCalls)
   end)
 end)
+
+describe("PanelDock.GhostDrag with the Velvet dock", function()
+  local Frames = dofile("tests/frames.lua")
+
+  local function rectFrame(parent)
+    local f = Frames.new(parent)
+    function f:GetEffectiveScale() return 1 end
+    function f:GetNumPoints() return #self.points end
+    function f:GetLeft()
+      local p = self.points[1]
+      if not p then return nil end
+      local rel = p[2]
+      local x = rel:GetLeft() + (p[3]:find("RIGHT") and rel:GetWidth() or 0) + p[4]
+      return x - (p[1]:find("RIGHT") and self.width or 0)
+    end
+    function f:GetTop()
+      local p = self.points[1]
+      if not p then return nil end
+      local rel = p[2]
+      local y = rel:GetTop() - (p[3]:find("BOTTOM") and rel:GetHeight() or 0) + p[5]
+      return y + (p[1]:find("BOTTOM") and self.height or 0)
+    end
+    function f:GetBottom() return self:GetTop() and self:GetTop() - self.height end
+    function f:GetRight() return self:GetLeft() and self:GetLeft() + self.width end
+    return f
+  end
+
+  it("docks a member released 10 px below the root's bottom edge", function()
+    _G.LibStub = nil
+    _G.UIParent = Frames.new()
+    UIParent.width, UIParent.height = 1920, 1080
+    function UIParent:GetEffectiveScale() return 1 end
+    function UIParent:GetLeft() return 0 end
+    function UIParent:GetTop() return 1080 end
+    _G.CreateFrame = function(_, _, parent) return rectFrame(parent) end
+    _G.InCombatLockdown = function() return false end
+    Frames.loadVelvet()
+    local lib = LibStub("LibVelvet-1.0")
+    local root, member = rectFrame(UIParent), rectFrame(UIParent)
+    root.width, root.height, member.width, member.height = 200, 60, 120, 40
+    root:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -100)
+    member:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 400, -600)
+    local rootDb, memberDb = {}, {}
+    lib.Dock.Register("raidMarkers", { frame = root, root = true, get = function() return rootDb end, set = function() end,
+      locked = function() return false end, merged = function() return false end })
+    lib.Dock.Register("partyCalls", { frame = member, get = function() return memberDb end, set = function() end,
+      locked = function() return false end })
+    ns.PanelMove = { Moving = function() return false end, CanDrag = function() return true end }
+    local function placeAt(x, y)
+      member:ClearAllPoints()
+      member:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, -y)
+    end
+    local drag = ns.PanelDock.GhostDrag("partyCalls", member, {
+      release = function(m) placeAt(m:GetLeft() - UIParent:GetLeft(), UIParent:GetTop() - m:GetTop()) end, snapped = placeAt })
+    drag.Start()
+    drag.mover:ClearAllPoints()
+    drag.mover:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 110, -170)
+    drag.Stop()
+    assert.same({ "raidMarkers", "Below" }, { memberDb.dockTo, memberDb.side })
+    assert.equals(root, member.points[1][2])
+    assert.same({ 100, 1080 - 166 }, { member:GetLeft(), member:GetTop() })
+  end)
+end)
+
+describe("PanelDock.Options merge", function()
+  local panels, members, checks
+
+  local function options(db, id)
+    checks = {}
+    local group = {}
+    function group:Check(spec) checks[spec.label] = spec end
+    function group:Button() end
+    ns.PanelDock.Options({ Group = function() return group end }, db, function() checks.applied = true end, id)
+    return checks["Merge with docked panels"]
+  end
+
+  before_each(function()
+    local rootDb = { merge = false }
+    panels = {
+      raidMarkers = { spec = { root = true, get = function() return rootDb end } },
+      partyCalls = { spec = { get = function() return panels.partyCallsDb end } },
+    }
+    members = {}
+    _G.InCombatLockdown = function() return false end
+    _G.LibStub = function() return { dock = { panels = panels }, Dock = {
+      Members = function(id) return members[id] or {} end,
+      Undock = function() end,
+    } } end
+  end)
+
+  it("reads and writes the group root's merge from a docked member's page", function()
+    panels.partyCallsDb = { dockTo = "raidMarkers", side = "Below", merge = false }
+    local merge = options(panels.partyCallsDb, "partyCalls")
+    assert.is_true(merge.enabled())
+    assert.is_false(merge.get())
+    merge.set(true)
+    assert.is_true(panels.raidMarkers.spec.get().merge)
+    assert.is_false(panels.partyCallsDb.merge)
+    assert.is_true(merge.get())
+    assert.is_true(checks.applied)
+  end)
+
+  it("is enabled on a root page with members and works on its own db", function()
+    members.raidMarkers = { "partyCalls" }
+    local db = panels.raidMarkers.spec.get()
+    local merge = options(db, "raidMarkers")
+    assert.is_true(merge.enabled())
+    merge.set(true)
+    assert.is_true(db.merge)
+  end)
+
+  it("is disabled with a dock-first line only for a panel neither docked nor with members", function()
+    panels.partyCallsDb = {}
+    local merge = options(panels.partyCallsDb, "partyCalls")
+    assert.is_false(merge.enabled())
+    assert.is_truthy(merge.tooltip():find("Dock this panel to another one first.", 1, true))
+    panels.partyCallsDb.dockTo = "raidMarkers"
+    assert.is_nil(merge.tooltip():find("Dock this panel", 1, true))
+  end)
+end)

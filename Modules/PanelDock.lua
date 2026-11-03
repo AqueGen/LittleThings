@@ -137,20 +137,32 @@ function PanelDock.Options(page, db, apply, id)
     local function Docked()
         return db.dockTo ~= nil
     end
+    local function GroupDb()
+        local panels, cur, seen = Lib().dock.panels, db.dockTo, {}
+        while cur and panels[cur] and not seen[cur] do
+            seen[cur] = true
+            local spec = panels[cur].spec
+            if spec.root then return spec.get() end
+            cur = spec.get().dockTo
+        end
+        return db
+    end
+    local function InGroup()
+        return Docked() or #dock.Members(id) > 0
+    end
     local group = page:Group("Docking")
     group:Check({ label = "Merge with docked panels", combatLocked = true,
         tooltip = function()
-            local text = "Draws one shared background behind this panel and the panels docked to it, with no gap between them."
-            if Docked() then text = text .. "\nSet on the panel this one is docked to." end
-            if not Docked() and #dock.Members(id) == 0 then text = text .. "\nDock another panel to this one first." end
+            local text = "Draws one shared background behind the docked panels, with no gap between them. One setting for the whole group, on either panel's page."
+            if not InGroup() then text = text .. "\nDock this panel to another one first." end
             return text
         end,
-        get = function() return db.merge and true or false end,
+        get = function() return GroupDb().merge and true or false end,
         set = function(value)
-            db.merge = value
+            GroupDb().merge = value
             apply()
         end,
-        enabled = function() return not Docked() and #dock.Members(id) > 0 end })
+        enabled = InGroup })
     group:Button({ label = "Undock", combatLocked = true,
         tooltip = "Detaches this panel from the panel it is docked to.",
         onClick = function()
