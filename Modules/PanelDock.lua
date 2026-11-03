@@ -54,6 +54,7 @@ function PanelDock.Options(page, db, apply, id)
         tooltip = function()
             local text = "Draws one shared background behind this panel and the panels docked to it, with no gap between them."
             if Docked() then text = text .. "\nSet on the panel this one is docked to." end
+            if not Docked() and #dock.Members(id) == 0 then text = text .. "\nDock another panel to this one first." end
             return text
         end,
         get = function() return db.merge and true or false end,

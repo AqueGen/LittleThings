@@ -77,9 +77,23 @@ local function LabelLines(ids)
     return 1
 end
 
+local function SaveCorner()
+    local panel, db = Panel.panel, Db()
+    local anchor = Panel.anchor or "TOPLEFT"
+    if not panel:GetLeft() then
+        return
+    end
+    db.posX = math.floor((anchor:find("RIGHT") and panel:GetRight() or panel:GetLeft()) + 0.5)
+    db.posY = math.floor((anchor:find("BOTTOM") and panel:GetBottom() or panel:GetTop()) + 0.5)
+end
+
 function Panel.Place()
     local db = Db()
     local panel = Panel.panel
+    if Panel.wasDocked and not db.dockTo then
+        SaveCorner()
+    end
+    Panel.wasDocked = db.dockTo ~= nil
     local root = MergedRoot()
     local rootPanel = root and Lib().Dock.Merged(root) and Lib().dock.panels[root]
     panel:SetScale(rootPanel and rootPanel.spec.frame:GetScale() or db.scale)
@@ -95,23 +109,19 @@ function Panel.Place()
     Lib().Dock.Apply(DOCK_ID)
 end
 
-local function SaveCorner()
-    local panel, db = Panel.panel, Db()
-    local anchor = Panel.anchor or "TOPLEFT"
-    if not panel:GetLeft() then
-        return
-    end
-    db.posX = math.floor((anchor:find("RIGHT") and panel:GetRight() or panel:GetLeft()) + 0.5)
-    db.posY = math.floor((anchor:find("BOTTOM") and panel:GetBottom() or panel:GetTop()) + 0.5)
-end
-
 local function Cursor()
     local scale = UIParent:GetEffectiveScale()
     local x, y = GetCursorPosition()
     return x / scale, y / scale
 end
 
+local StopDrag
+
 local function DragStep()
+    if not IsMouseButtonDown("LeftButton") then
+        StopDrag()
+        return
+    end
     local panel, grab = Panel.panel, Panel.grab
     local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
     local cx, cy = Cursor()
@@ -132,20 +142,18 @@ local function StartDrag()
     local cx, cy = Cursor()
     Panel.grab = { x = cx - panel:GetLeft() * scale, y = cy - panel:GetTop() * scale }
     Panel.dragging = true
-    panel:SetScript("OnUpdate", DragStep)
+    Panel.dragger:SetScript("OnUpdate", DragStep)
 end
 
-local function StopDrag(_, hidden)
+function StopDrag(_, hidden)
     if not Panel.dragging then
         return
     end
     Panel.dragging = false
-    Panel.panel:SetScript("OnUpdate", nil)
+    Panel.dragger:SetScript("OnUpdate", nil)
+    SaveCorner()
     if not hidden then
         Lib().Dock.Drop(DOCK_ID)
-    end
-    if not Panel.Docked() then
-        SaveCorner()
     end
     Panel.Place()
 end
@@ -177,6 +185,9 @@ end
 
 function Panel.ResetPosition()
     local db = Db()
+    if db.dockTo then
+        Lib().Dock.Undock(DOCK_ID)
+    end
     db.posX, db.posY = nil, nil
     Panel.Place()
 end
@@ -224,6 +235,7 @@ function Panel.Build(onClick, onChange)
     Panel.onClick = onClick
     local panel = CreateFrame("Frame", "LittleThingsPartyCalls", UIParent, "BackdropTemplate")
     Panel.panel = panel
+    Panel.dragger = CreateFrame("Frame")
     panel:Hide()
     panel:SetClampedToScreen(true)
     panel:SetDontSavePosition(true)
@@ -240,6 +252,7 @@ function Panel.Build(onClick, onChange)
         db.collapsed = not db.collapsed
         onChange()
     end, DOCK_ID)
+    Panel.arrow:SetFrameLevel(panel:GetFrameLevel() + 10)
     Panel.arrow:SetCollapsed(db.collapsed)
     Panel.anchor = select(4, Rules.Grid(0, { grow = db.grow, wrap = db.wrap, perRow = 1, cellW = 0, cellH = 0, gap = 0, pad = 0 }))
     Panel.Place()
@@ -282,7 +295,7 @@ function Panel.Layout(ids)
         cellW = width, cellH = height, gap = db.gap, pad = db.pad })
     if anchor ~= Panel.anchor then
         Panel.anchor = anchor
-        if db.posX then
+        if db.posX and not Panel.Docked() then
             SaveCorner()
         end
     end

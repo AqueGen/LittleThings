@@ -65,11 +65,9 @@ function PartyCalls.Refresh()
         anyVisible = #ids > 0 })
     Panel.panel:SetShown(shown and true or false)
     Panel.panel:SetFrameStrata(previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
-    if Panel.Docked() then
-        local dock = LibStub("LibVelvet-1.0").Dock
-        for id, p in pairs(LibStub("LibVelvet-1.0").dock.panels) do
-            if p.spec.root then dock.RefreshMerge(id) end
-        end
+    local lib = LibStub("LibVelvet-1.0")
+    for id, p in pairs(lib.dock.panels) do
+        if p.spec.root then lib.Dock.RefreshMerge(id) end
     end
 end
 
