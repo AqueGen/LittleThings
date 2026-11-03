@@ -13,6 +13,7 @@ local FONTS = {
 }
 local LABEL_GAP = 2
 local MAX_LABEL_LINES = 2
+local DOCK_ID = "partyCalls"
 
 Panel.buttons = {}
 Panel.labelLines = 1
@@ -25,16 +26,46 @@ local function Font()
     return FONTS[Db().labelSize] or FONTS.small
 end
 
+local function Lib()
+    return LibStub("LibVelvet-1.0")
+end
+
+local function ShowLabels()
+    local db = Db()
+    return db.labels and not db.collapsed
+end
+
+function Panel.Docked()
+    return Db().dockTo ~= nil
+end
+
+local function MergedRoot()
+    local panels = Lib().dock.panels
+    local cur, seen = Db().dockTo, {}
+    while cur and not seen[cur] do
+        seen[cur] = true
+        local p = panels[cur]
+        if not p then return nil end
+        if p.spec.root then return cur end
+        cur = p.spec.get().dockTo
+    end
+end
+
+function Panel.Merged()
+    local root = MergedRoot()
+    return root ~= nil and Lib().Dock.Merged(root)
+end
+
 local function CellSize()
     local db = Db()
-    if not db.labels then
+    if not ShowLabels() then
         return db.iconSize, db.iconSize
     end
     return db.iconSize, db.iconSize + LABEL_GAP + Panel.labelLines * Font().height
 end
 
 local function LabelLines(ids)
-    if not Db().labels then
+    if not ShowLabels() then
         return 1
     end
     for _, id in ipairs(ids) do
@@ -49,13 +80,19 @@ end
 function Panel.Place()
     local db = Db()
     local panel = Panel.panel
+    local root = MergedRoot()
+    local rootPanel = root and Lib().Dock.Merged(root) and Lib().dock.panels[root]
+    panel:SetScale(rootPanel and rootPanel.spec.frame:GetScale() or db.scale)
+    if db.dockTo and InCombatLockdown() then
+        return
+    end
     panel:ClearAllPoints()
-    panel:SetScale(db.scale)
     if db.posX and db.posY then
         panel:SetPoint(Panel.anchor or "TOPLEFT", UIParent, "BOTTOMLEFT", db.posX, db.posY)
     else
         panel:SetPoint("CENTER", UIParent, "CENTER", 0, 160)
     end
+    Lib().Dock.Apply(DOCK_ID)
 end
 
 local function SaveCorner()
@@ -68,20 +105,48 @@ local function SaveCorner()
     db.posY = math.floor((anchor:find("BOTTOM") and panel:GetBottom() or panel:GetTop()) + 0.5)
 end
 
-local function StartDrag()
-    if not Db().locked then
-        Panel.panel:StartMoving()
-        Panel.dragging = true
-    end
+local function Cursor()
+    local scale = UIParent:GetEffectiveScale()
+    local x, y = GetCursorPosition()
+    return x / scale, y / scale
 end
 
-local function StopDrag()
+local function DragStep()
+    local panel, grab = Panel.panel, Panel.grab
+    local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local cx, cy = Cursor()
+    panel:ClearAllPoints()
+    panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", (cx - grab.x - UIParent:GetLeft()) / scale,
+        (cy - grab.y - UIParent:GetTop()) / scale)
+    local x, y = Lib().Dock.Snap(DOCK_ID)
+    panel:ClearAllPoints()
+    panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x / scale, -y / scale)
+end
+
+local function StartDrag()
+    local panel = Panel.panel
+    if Panel.dragging or not Lib().Dock.CanDrag(DOCK_ID) or not panel:GetLeft() then
+        return
+    end
+    local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local cx, cy = Cursor()
+    Panel.grab = { x = cx - panel:GetLeft() * scale, y = cy - panel:GetTop() * scale }
+    Panel.dragging = true
+    panel:SetScript("OnUpdate", DragStep)
+end
+
+local function StopDrag(_, hidden)
     if not Panel.dragging then
         return
     end
     Panel.dragging = false
-    Panel.panel:StopMovingOrSizing()
-    SaveCorner()
+    Panel.panel:SetScript("OnUpdate", nil)
+    if not hidden then
+        Lib().Dock.Drop(DOCK_ID)
+    end
+    if not Panel.Docked() then
+        SaveCorner()
+    end
     Panel.Place()
 end
 
@@ -96,7 +161,7 @@ local function Overlaps(a, b)
 end
 
 function Panel.MoveClearOf(window)
-    if Panel.dragging or not Overlaps(Panel.panel, window) then
+    if Panel.dragging or Panel.Docked() or not Overlaps(Panel.panel, window) then
         return
     end
     local scale = window:GetEffectiveScale() / UIParent:GetEffectiveScale()
@@ -155,7 +220,7 @@ local function Ensure(id)
     return button
 end
 
-function Panel.Build(onClick)
+function Panel.Build(onClick, onChange)
     Panel.onClick = onClick
     local panel = CreateFrame("Frame", "LittleThingsPartyCalls", UIParent, "BackdropTemplate")
     Panel.panel = panel
@@ -167,14 +232,25 @@ function Panel.Build(onClick)
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", StartDrag)
     panel:SetScript("OnDragStop", StopDrag)
-    panel:SetScript("OnHide", StopDrag)
+    panel:SetScript("OnHide", function(self) StopDrag(self, true) end)
     local db = Db()
+    Lib().Dock.Register(DOCK_ID, { frame = panel, root = false, get = Db, set = function() end,
+        locked = function() return Db().locked end, onChange = onChange })
+    Panel.arrow = Lib().Dock.Arrow(panel, function()
+        db.collapsed = not db.collapsed
+        onChange()
+    end, DOCK_ID)
+    Panel.arrow:SetCollapsed(db.collapsed)
     Panel.anchor = select(4, Rules.Grid(0, { grow = db.grow, wrap = db.wrap, perRow = 1, cellW = 0, cellH = 0, gap = 0, pad = 0 }))
     Panel.Place()
 end
 
 local function PaintBackground()
     local db, panel = Db(), Panel.panel
+    if Panel.Merged() then
+        panel:SetBackdrop(nil)
+        return
+    end
     panel:SetBackdrop(ns.Widgets.FLAT)
     panel:SetBackdropColor(0, 0, 0, db.bgAlpha)
     panel:SetBackdropBorderColor(0.3, 0.3, 0.3, db.border and 1 or 0)
@@ -185,6 +261,7 @@ function Panel.Update()
     local width = CellSize()
     local font = Font()
     PaintBackground()
+    Panel.arrow:SetCollapsed(db.collapsed)
     for id, call in pairs(db.calls) do
         local button = Ensure(id)
         button.icon:SetSize(db.iconSize, db.iconSize)
@@ -193,7 +270,7 @@ function Panel.Update()
         button.label:SetFontObject(font.font)
         button.label:SetWidth(width)
         button.label:SetText(call.label)
-        button.label:SetShown(db.labels)
+        button.label:SetShown(ShowLabels())
     end
 end
 

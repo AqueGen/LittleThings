@@ -7,7 +7,7 @@ local Panel = ns.PartyCallPanel
 local PartyCalls = {}
 
 local DEFAULTS = { locked = false, scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
-    gap = 4, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down" }
+    gap = 4, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down", merge = false, fade = false, fadeAlpha = 0, collapsed = false }
 
 local active, previewing, inCombat = false, false, false
 local previewWindow
@@ -65,6 +65,19 @@ function PartyCalls.Refresh()
         anyVisible = #ids > 0 })
     Panel.panel:SetShown(shown and true or false)
     Panel.panel:SetFrameStrata(previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
+    if Panel.Docked() then
+        local dock = LibStub("LibVelvet-1.0").Dock
+        for id, p in pairs(LibStub("LibVelvet-1.0").dock.panels) do
+            if p.spec.root then dock.RefreshMerge(id) end
+        end
+    end
+end
+
+local function ApplyDock()
+    PartyCalls.Refresh()
+    if Panel.panel then
+        ns.PanelDock.Fade("partyCalls", Panel.panel, ns.db.partyCallOptions)
+    end
 end
 
 local function Repaint()
@@ -127,7 +140,7 @@ function PartyCalls.Enable()
     InitializeDb()
     inCombat = InCombatLockdown() or UnitAffectingCombat("player")
     if not Panel.panel then
-        Panel.Build(PartyCalls.Click)
+        Panel.Build(PartyCalls.Click, PartyCalls.Refresh)
     end
     if not events then
         events = CreateFrame("Frame")
@@ -140,6 +153,7 @@ function PartyCalls.Enable()
         end
         events:SetScript("OnEvent", function(_, event) handlers[event]() end)
     end
+    ns.PanelDock.Fade("partyCalls", Panel.panel, ns.db.partyCallOptions)
     PartyCalls.Refresh()
 end
 
@@ -274,7 +288,8 @@ function PartyCalls.Pages(page)
     panel:Check(Option("locked", { label = "Lock position",
         tooltip = "Drag the panel to place it, then lock it so it cannot be dragged." }))
     panel:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
-        tooltip = "Size of the whole panel." }))
+        tooltip = "Size of the whole panel.",
+        enabled = function() return not Panel.Merged() end }))
     panel:Dropdown(Option("click", { label = "On click",
         options = { { text = "Send to party", value = "send" }, { text = "Put in chat, Enter sends", value = "chat" },
             { text = "Put in chat while in combat", value = "chatInCombat" } },
@@ -287,6 +302,7 @@ function PartyCalls.Pages(page)
         end })
 
     Look(page)
+    ns.PanelDock.Options(page, Db(), ApplyDock, "partyCalls")
 
     local calls = page:Group("Calls")
     calls:List({ items = CallItems,
