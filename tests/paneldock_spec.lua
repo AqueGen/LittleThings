@@ -285,6 +285,41 @@ describe("PanelDock.GhostDrag with the Velvet dock", function()
     assert.equals(root, member.points[1][2])
     assert.same({ 100, 1080 - 166 }, { member:GetLeft(), member:GetTop() })
   end)
+
+  it("docks a member released on top of the root to the root's nearest edge", function()
+    _G.LibStub = nil
+    _G.UIParent = Frames.new()
+    UIParent.width, UIParent.height = 1920, 1080
+    function UIParent:GetEffectiveScale() return 1 end
+    function UIParent:GetLeft() return 0 end
+    function UIParent:GetTop() return 1080 end
+    _G.CreateFrame = function(_, _, parent) return rectFrame(parent) end
+    _G.InCombatLockdown = function() return false end
+    Frames.loadVelvet()
+    local lib = LibStub("LibVelvet-1.0")
+    local root, member = rectFrame(UIParent), rectFrame(UIParent)
+    root.width, root.height, member.width, member.height = 200, 60, 120, 40
+    root:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -100)
+    member:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 400, -600)
+    local memberDb = {}
+    lib.Dock.Register("raidMarkers", { frame = root, root = true, get = function() return {} end, set = function() end,
+      locked = function() return false end, merged = function() return false end })
+    lib.Dock.Register("partyCalls", { frame = member, get = function() return memberDb end, set = function() end,
+      locked = function() return false end })
+    ns.PanelMove = { Moving = function() return false end, CanDrag = function() return true end }
+    local function placeAt(x, y)
+      member:ClearAllPoints()
+      member:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, -y)
+    end
+    local drag = ns.PanelDock.GhostDrag("partyCalls", member, {
+      release = function(m) placeAt(m:GetLeft() - UIParent:GetLeft(), UIParent:GetTop() - m:GetTop()) end, snapped = placeAt })
+    drag.Start()
+    drag.mover:ClearAllPoints()
+    drag.mover:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 120, -120)
+    drag.Stop()
+    assert.same({ "raidMarkers", "Below", 20 }, { memberDb.dockTo, memberDb.side, memberDb.offset })
+    assert.equals(1080 - 166, member:GetTop())
+  end)
 end)
 
 describe("PanelDock.Options merge", function()
