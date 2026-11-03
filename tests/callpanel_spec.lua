@@ -15,24 +15,31 @@ describe("PartyCallPanel docking", function()
     function f:GetRight() return self.left and self.left + 100 end
     function f:GetBottom() return self.top and self.top - 50 end
     function f:SetBackdrop(b) self.backdrop = b end
+    function f:GetEffectiveScale() return self.scale or 1 end
     return f
   end
 
   before_each(function()
-    state = { combat = false, applied = {}, rootDb = {} }
+    state = { combat = false, applied = {}, rootDb = {}, dockCalls = {}, snapTo = { 0, 0 }, canDrag = true }
     rootChanges = 0
     rootFrame = newFrame()
     rootFrame.scale = 2
     db = { scale = 1, posX = 300, posY = 400, calls = {}, bgAlpha = 0.6, border = true, iconSize = 32, labels = true, gap = 4, pad = 4 }
     _G.UIParent = newFrame()
     _G.InCombatLockdown = function() return state.combat end
-    _G.CreateFrame = function(_, _, parent) return newFrame(parent) end
+    _G.CreateFrame = function(_, name, parent)
+      local f = newFrame(parent)
+      f.name = name
+      return f
+    end
     local lib
     lib = { dock = { panels = {
       raidMarkers = { spec = { root = true, frame = rootFrame, get = function() return state.rootDb end,
         onChange = function() rootChanges = rootChanges + 1 end } },
     } }, Dock = {
       Register = function(id, spec) lib.dock.panels[id] = { spec = spec } end,
+      Snap = function(id) state.dockCalls[#state.dockCalls + 1] = { "Snap", id } return state.snapTo[1], state.snapTo[2] end,
+      Drop = function(id) state.dockCalls[#state.dockCalls + 1] = { "Drop", id, posX = db.posX } end,
       Merged = function() return state.merged == true end,
       MergeFrame = function() return state.mergeFrame end,
       Apply = function(id)
@@ -51,6 +58,7 @@ describe("PartyCallPanel docking", function()
       CallRules = { Grid = function(_, o) state.grid = o return {}, 0, 0, "TOPLEFT" end },
     }
     assert(loadfile("./Modules/PanelDock.lua"))("LittleThings", ns)
+    ns.PanelMove = { Moving = function() return false end, CanDrag = function() return state.canDrag and not state.combat end }
     assert(loadfile("./Modules/PartyCalls/CallPanel.lua"))("LittleThings", ns)
     Panel = ns.PartyCallPanel
   end)
@@ -60,6 +68,35 @@ describe("PartyCallPanel docking", function()
     Panel.Build(function() end, function() state.changes = state.changes + 1 end)
     return Panel.panel
   end
+
+  it("drags a gold ghost, not the panel, and on release places, snaps, saves the corner before Drop, then docks", function()
+    local panel = build()
+    UIParent.left, UIParent.top = 0, 1080
+    panel.left, panel.top = 300, 400
+    local before = #panel.points
+    panel.scripts.OnDragStart(panel)
+    local mover = Panel.drag.mover
+    assert.equals("LittleThingsPartyCallsMover", mover.name)
+    assert.is_true(mover.shown)
+    assert.equals(before, #panel.points)
+    function mover:GetLeft() return 120 end
+    function mover:GetTop() return 900 end
+    state.snapTo = { 126, 186 }
+    panel.scripts.OnDragStop(panel)
+    assert.is_false(mover.shown)
+    assert.same({ "Snap", "partyCalls" }, state.dockCalls[1])
+    assert.equals("Drop", state.dockCalls[2][1])
+    assert.is_number(state.dockCalls[2].posX)
+    assert.is_false(Panel.drag.active)
+  end)
+
+  it("does not start a ghost drag while locked", function()
+    local panel = build()
+    panel.left, panel.top = 300, 400
+    state.canDrag = false
+    panel.scripts.OnDragStart(panel)
+    assert.is_false(Panel.drag.mover.shown)
+  end)
 
   it("builds a plain fold handle as a strip inside the left edge, as tall as the panel", function()
     local panel = build()

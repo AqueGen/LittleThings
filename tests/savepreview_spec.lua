@@ -130,18 +130,32 @@ describe("save indicator preview", function()
         end
         assert.is_truthy(live.hoverPart)
         assert.equals(live, live.hoverPart.parentFrame)
-        function p:StartMoving() self.moved = true end
+        local function mover()
+            for _, f in ipairs(created) do
+                if f.name == "LittleThingsSaveRowMover" then return f end
+            end
+        end
+        for _, f in ipairs({ p, UIParent }) do
+            function f:GetEffectiveScale() return 1 end
+            function f:GetLeft() return 0 end
+            function f:GetTop() return 1080 end
+            function f:GetBottom() return 1000 end
+        end
         function p:GetCenter() return 600, 500 end
         function UIParent:GetCenter() return 500, 500 end
         p.scripts.OnDragStart(p)
-        assert.is_nil(p.moved)
+        assert.is_false(mover().shown)
         ns.SaveCenter.ToggleDemo()
         assert.is_false(p.shown)
         ns.PanelMove.Toggle()
         assert.is_true(p.shown)
         p.scripts.OnDragStart(p)
-        assert.is_true(p.moved)
+        assert.is_true(mover().shown)
+        local m = mover()
+        function m:GetLeft() return 100 end
+        function m:GetTop() return 600 end
         ns.PanelMove.Toggle()
+        assert.is_false(m.shown)
         assert.equals(100, ns.db.saveIndicatorRow.x)
         assert.is_false(p.shown)
     end)

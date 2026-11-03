@@ -45,7 +45,6 @@ Shared.active = false
 Shared.previewing = false
 Shared.pending = {}
 
-local dragging = false
 local ticker
 
 local function Lib()
@@ -312,48 +311,34 @@ function Shared.ApplyOutOfCombat(apply)
     end
 end
 
-local function StartDrag()
-    local panel, mover = Shared.panel, Shared.mover
-    local scale = PanelScale()
-    mover:SetSize(panel:GetWidth() * scale, panel:GetHeight() * scale)
-    mover:ClearAllPoints()
-    mover:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", panel:GetLeft() * scale, panel:GetBottom() * scale)
-    mover:Show()
-    mover:StartMoving()
-    dragging = true
-end
-
-local function StopDrag(hidden)
-    local mover = Shared.mover
-    dragging = false
-    mover:StopMovingOrSizing()
+local function Release(mover, deferred)
     local scale = PanelScale()
     local db = ns.db.raidMarkerPanel
     db.point, db.relativePoint = "BOTTOMLEFT", "BOTTOMLEFT"
     db.x, db.y = math.floor(mover:GetLeft() / scale + 0.5), math.floor(mover:GetBottom() / scale + 0.5)
-    mover:Hide()
-    if hidden or InCombatLockdown() then
+    if deferred then
         Shared.ApplyOutOfCombat(Shared.Place)
-        return
+    else
+        Shared.Place()
     end
-    Shared.Place()
-    local x, y = Lib().Dock.Snap(DOCK_ID)
+end
+
+local function Snapped(x, y)
+    local scale = PanelScale()
+    local db = ns.db.raidMarkerPanel
     db.point, db.relativePoint = "TOPLEFT", "TOPLEFT"
     db.x, db.y = math.floor(x / scale + 0.5), math.floor(-y / scale + 0.5)
     Shared.Place()
-    Lib().Dock.Drop(DOCK_ID)
 end
 
+local drag
+
 local function DragStart()
-    if ns.PanelMove.CanDrag(DOCK_ID) then
-        StartDrag()
-    end
+    drag.Start()
 end
 
 local function DragStop()
-    if dragging then
-        StopDrag()
-    end
+    drag.Stop()
 end
 
 Shared.StopDragging = DragStop
@@ -402,15 +387,9 @@ function Shared.BuildFrame()
     Lib().Dock.Register(DOCK_ID, { frame = panel, root = true, get = Db, set = function() end,
         locked = function() return not ns.PanelMove.CanDrag(DOCK_ID) end, merged = function() return Db().merge end, onChange = Shared.PaintBackground })
 
-    local mover = CreateFrame("Frame", "LittleThingsRaidMarkersMover", UIParent)
-    Shared.mover = mover
-    mover:Hide()
-    mover:SetMovable(true)
-    mover:SetClampedToScreen(true)
+    drag = ns.PanelDock.GhostDrag(DOCK_ID, panel, { name = "LittleThingsRaidMarkersMover", release = Release, snapped = Snapped })
+    Shared.mover = drag.mover
     Shared.ApplyStrata()
-    local outline = mover:CreateTexture(nil, "OVERLAY")
-    outline:SetAllPoints()
-    outline:SetColorTexture(1, 0.82, 0, 0.3)
 
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
@@ -429,9 +408,7 @@ function Shared.BuildFrame()
     end)
     panel:SetScript("OnHide", function()
         Shared.StopTicker()
-        if dragging then
-            StopDrag(true)
-        end
+        drag.Stop(true)
     end)
 end
 

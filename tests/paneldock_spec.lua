@@ -75,6 +75,96 @@ describe("PanelDock.Hovered", function()
   end)
 end)
 
+describe("PanelDock.GhostDrag", function()
+  local Frames = dofile("tests/frames.lua")
+  local state, panel, drag, calls
+
+  before_each(function()
+    state = { combat = false, can = true }
+    calls = {}
+    _G.UIParent = Frames.new()
+    function UIParent:GetEffectiveScale() return 0.8 end
+    _G.CreateFrame = function(_, name, parent) local f = Frames.new(parent) f.name = name return f end
+    _G.InCombatLockdown = function() return state.combat end
+    _G.LibStub = function() return { Dock = {
+      Snap = function(id) calls[#calls + 1] = { "Snap", id } return 40, 60 end,
+      Drop = function(id) calls[#calls + 1] = { "Drop", id } end,
+    } } end
+    ns.PanelMove = { Moving = function() return false end,
+      CanDrag = function(id) assert(id == "panelId") return state.can and not state.combat end }
+    panel = Frames.new()
+    function panel:GetEffectiveScale() return 1.6 end
+    function panel:GetLeft() return 100 end
+    function panel:GetBottom() return 50 end
+    panel.width, panel.height = 30, 20
+  end)
+
+  local function make(withSnap)
+    drag = ns.PanelDock.GhostDrag("panelId", panel, { name = "TestMover",
+      release = function(mover, deferred) calls[#calls + 1] = { "release", mover, deferred } end,
+      snapped = withSnap and function(x, y) calls[#calls + 1] = { "snapped", x, y } end or nil,
+      after = function() calls[#calls + 1] = { "after" } end })
+    function drag.mover:StartMoving() self.moving = true end
+    function drag.mover:StopMovingOrSizing() self.moving = false end
+    return drag
+  end
+
+  it("builds one hidden gold mover on UIParent per panel", function()
+    make(true)
+    assert.equals("TestMover", drag.mover.name)
+    assert.equals(UIParent, drag.mover.parentFrame)
+    assert.is_false(drag.mover.shown)
+  end)
+
+  it("refuses to start while locked or in combat", function()
+    make(true)
+    state.can = false
+    drag.Start()
+    assert.is_false(drag.mover.shown)
+    state.can, state.combat = true, true
+    drag.Start()
+    assert.is_false(drag.mover.shown)
+    assert.is_false(drag.active)
+  end)
+
+  it("moves only the mover over the panel's screen rect", function()
+    make(true)
+    drag.Start()
+    assert.is_true(drag.mover.shown and drag.mover.moving)
+    assert.same({ 60, 40 }, { drag.mover.width, drag.mover.height })
+    assert.same({ { "BOTTOMLEFT", UIParent, "BOTTOMLEFT", 200, 100 } }, drag.mover.points)
+    assert.same({}, panel.points)
+  end)
+
+  it("places at the mover on release, then snaps and drops, and hides the mover", function()
+    make(true)
+    drag.Start()
+    drag.Stop()
+    assert.same({ { "release", drag.mover, false }, { "Snap", "panelId" }, { "snapped", 40, 60 }, { "Drop", "panelId" }, { "after" } }, calls)
+    assert.is_false(drag.mover.shown)
+    assert.is_false(drag.active)
+    drag.Stop()
+    assert.equals(5, #calls)
+  end)
+
+  it("only places, without snap or drop, when the drag ends by hiding or in combat, or has no dock", function()
+    make(true)
+    drag.Start()
+    drag.Stop(true)
+    assert.same({ { "release", drag.mover, true }, { "after" } }, calls)
+    calls = {}
+    drag.Start()
+    state.combat = true
+    drag.Stop()
+    assert.same({ { "release", drag.mover, true }, { "after" } }, calls)
+    state.combat, calls = false, {}
+    make(false)
+    drag.Start()
+    drag.Stop()
+    assert.same({ { "release", drag.mover, false }, { "after" } }, calls)
+  end)
+end)
+
 describe("PanelDock.Fade", function()
   local merged, tick, hoveredCalls
 

@@ -143,53 +143,24 @@ function Panel.Place()
     end
 end
 
-local function Cursor()
-    local scale = UIParent:GetEffectiveScale()
-    local x, y = GetCursorPosition()
-    return x / scale, y / scale
+local function PlaceTopLeft(x, y)
+    local panel = Panel.panel
+    local s = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    panel:ClearAllPoints()
+    panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x / s, -y / s)
+    SaveCorner()
 end
 
-local StopDrag
-
-local function DragStep()
-    if not IsMouseButtonDown("LeftButton") then
-        StopDrag()
-        return
-    end
-    local panel, grab = Panel.panel, Panel.grab
-    local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    local cx, cy = Cursor()
-    panel:ClearAllPoints()
-    panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", (cx - grab.x - UIParent:GetLeft()) / scale,
-        (cy - grab.y - UIParent:GetTop()) / scale)
-    local x, y = Lib().Dock.Snap(DOCK_ID)
-    panel:ClearAllPoints()
-    panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x / scale, -y / scale)
+local function Release(mover)
+    PlaceTopLeft(mover:GetLeft() - UIParent:GetLeft(), UIParent:GetTop() - mover:GetTop())
 end
 
 local function StartDrag()
-    local panel = Panel.panel
-    if Panel.dragging or not Lib().Dock.CanDrag(DOCK_ID) or not panel:GetLeft() then
-        return
-    end
-    local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    local cx, cy = Cursor()
-    Panel.grab = { x = cx - panel:GetLeft() * scale, y = cy - panel:GetTop() * scale }
-    Panel.dragging = true
-    Panel.dragger:SetScript("OnUpdate", DragStep)
+    Panel.drag.Start()
 end
 
-function StopDrag(_, hidden)
-    if not Panel.dragging then
-        return
-    end
-    Panel.dragging = false
-    Panel.dragger:SetScript("OnUpdate", nil)
-    SaveCorner()
-    if not hidden then
-        Lib().Dock.Drop(DOCK_ID)
-    end
-    Panel.Place()
+local function StopDrag(_, hidden)
+    Panel.drag.Stop(hidden)
 end
 
 function Panel.StopDragging()
@@ -207,7 +178,7 @@ local function Overlaps(a, b)
 end
 
 function Panel.MoveClearOf(window)
-    if Panel.dragging or Panel.Docked() or not Overlaps(Panel.panel, window) then
+    if Panel.drag.active or Panel.Docked() or not Overlaps(Panel.panel, window) then
         return
     end
     local scale = window:GetEffectiveScale() / UIParent:GetEffectiveScale()
@@ -273,17 +244,17 @@ function Panel.Build(onClick, onChange)
     Panel.onClick = onClick
     local panel = CreateFrame("Frame", "LittleThingsPartyCalls", UIParent, "BackdropTemplate")
     Panel.panel = panel
-    Panel.dragger = CreateFrame("Frame")
     panel:Hide()
     panel:SetClampedToScreen(true)
     panel:SetDontSavePosition(true)
-    panel:SetMovable(true)
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", StartDrag)
     panel:SetScript("OnDragStop", StopDrag)
     panel:SetScript("OnHide", function(self) StopDrag(self, true) end)
     local db = Db()
+    Panel.drag = ns.PanelDock.GhostDrag(DOCK_ID, panel, { name = "LittleThingsPartyCallsMover",
+        release = Release, snapped = PlaceTopLeft, after = Panel.Place })
     Lib().Dock.Register(DOCK_ID, { frame = panel, root = false, get = Db, set = function() end,
         locked = function() return not ns.PanelMove.CanDrag(DOCK_ID) end, onChange = onChange })
     local handle = CreateFrame("Button", nil, panel)

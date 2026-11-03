@@ -14,7 +14,8 @@ local SAMPLES = { { id = 389539, dr = 24, time = 12 }, { id = 33206, dr = 40, ti
 
 local row, host, preview
 local containers = {}
-local wanted, dragging = false, false
+local wanted = false
+local drag
 
 local function Point(frame)
     local db = ns.db.saveIndicatorRow
@@ -186,7 +187,6 @@ end
 local function BuildPreview()
     preview = CreateFrame("Frame", "LittleThingsSaveRowPreview", UIParent)
     preview:SetFrameStrata("HIGH")
-    preview:SetMovable(true)
     preview:SetClampedToScreen(true)
     preview:EnableMouse(true)
     preview:RegisterForDrag("LeftButton")
@@ -194,19 +194,19 @@ local function BuildPreview()
     outline:SetAllPoints()
     outline:SetColorTexture(1, 0.82, 0, 0.25)
     Center.PaintSamples(Center.DrawSamples(preview), false, true)
-    preview:SetScript("OnDragStart", function(self)
-        if ns.PanelMove.CanDrag("saveIndicator") then
-            dragging = true
-            self:StartMoving()
-        end
-    end)
-    preview:SetScript("OnDragStop", Center.StopDrag)
+    drag = ns.PanelDock.GhostDrag("saveIndicator", preview, { name = "LittleThingsSaveRowMover", release = Center.Release })
+    preview:SetScript("OnDragStart", function() drag.Start() end)
+    preview:SetScript("OnDragStop", function() drag.Stop() end)
 end
 
 function Center.StopDrag()
-    if not dragging then return end
-    dragging = false
-    preview:StopMovingOrSizing()
+    if drag then drag.Stop() end
+end
+
+function Center.Release(mover)
+    local s = preview:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    preview:ClearAllPoints()
+    preview:SetPoint("TOPLEFT", UIParent, "TOPLEFT", (mover:GetLeft() - UIParent:GetLeft()) / s, (mover:GetTop() - UIParent:GetTop()) / s)
     local db = ns.db.saveIndicatorRow
     local cx, cy = preview:GetCenter()
     local ux, uy = UIParent:GetCenter()

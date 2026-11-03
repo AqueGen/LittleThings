@@ -59,6 +59,42 @@ function PanelDock.Hovered(id, frame)
     return lib.Dock.Hovered(id)
 end
 
+function PanelDock.GhostDrag(id, panel, opts)
+    local mover = CreateFrame("Frame", opts.name, UIParent)
+    mover:Hide()
+    mover:SetMovable(true)
+    mover:SetClampedToScreen(true)
+    mover:SetFrameStrata("DIALOG")
+    local outline = mover:CreateTexture(nil, "OVERLAY")
+    outline:SetAllPoints()
+    outline:SetColorTexture(1, 0.82, 0, 0.3)
+    local drag = { mover = mover, active = false }
+    function drag.Start()
+        if drag.active or not ns.PanelMove.CanDrag(id) or not panel:GetLeft() then return end
+        local s = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+        mover:SetSize(panel:GetWidth() * s, panel:GetHeight() * s)
+        mover:ClearAllPoints()
+        mover:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", panel:GetLeft() * s, panel:GetBottom() * s)
+        mover:Show()
+        mover:StartMoving()
+        drag.active = true
+    end
+    function drag.Stop(hidden)
+        if not drag.active then return end
+        drag.active = false
+        mover:StopMovingOrSizing()
+        local deferred = hidden == true or InCombatLockdown()
+        opts.release(mover, deferred)
+        mover:Hide()
+        if not deferred and opts.snapped then
+            opts.snapped(Lib().Dock.Snap(id))
+            Lib().Dock.Drop(id)
+        end
+        if opts.after then opts.after() end
+    end
+    return drag
+end
+
 local function Tick(id, frame, db)
     if not frame:IsShown() then return end
     SetAlpha(id, frame, PanelDock.FadeAlpha(PanelDock.Hovered(id, frame), db, ns.PanelMove and ns.PanelMove.Moving()))
