@@ -106,7 +106,7 @@ describe("character panel preview", function()
         end
         assert.is_true(small >= 3)
         for _, spec in ipairs(specs) do
-            if spec.label == "Anchor corner" then spec.set("topleft") end
+            if spec.label == "Attach to corner" then spec.set("topleft") end
         end
         assert.is_true(h > 424)
         assert.equals(424, pane.fit[3])

@@ -94,16 +94,16 @@ function SaveIndicator.Pages(page)
         page.frame:HookScript("OnHide", SyncPreview)
     end
 
-    local row = page:Group("Centre row")
+    local row = page:Group("Save row")
     row:Check(Option("showTime", { label = "Time left", reload = true,
         hint = "Seconds left inside each icon", tooltip = "Seconds left inside each icon." }))
     row:Check(Option("showDR", { label = "Damage reduction", reload = true,
         hint = "Reduction shown under each icon", tooltip = "The reduction under each icon, orange under 20%." }))
     row:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
         hint = "Size of the whole row", tooltip = "Size of the whole row." }, Place))
-    row:Slider(Option("x", { label = "X", min = -1000, max = 1000,
+    row:Slider(Option("x", { label = "Horizontal offset", min = -1000, max = 1000,
         hint = "Pixels right of the screen centre", tooltip = "Pixels right of the screen centre; 0 is centred. Dragging the row sets it for you." }, Place))
-    row:Slider(Option("y", { label = "Y", min = -600, max = 600,
+    row:Slider(Option("y", { label = "Vertical offset", min = -600, max = 600,
         hint = "Pixels above the screen centre", tooltip = "Pixels above the screen centre. Dragging the row sets it for you." }, Place))
     row:Button({ label = "Test",
         hint = "Shows a sample row over the game", tooltip = "Shows a sample row (Sentinel -24%, Pain Suppression -40%) that stays after this window closes, so you can see it over the game. Press again to hide it.",

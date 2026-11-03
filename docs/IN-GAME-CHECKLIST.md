@@ -55,7 +55,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 - [ ] Cursor moving from the bars into an open breakdown keeps both at full alpha; leaving dims them within about a fifth of a second.
 - [ ] A window shown from the gear menu picks up the idle transparency and the layer immediately.
 - [ ] Changing Transparency in Edit Mode still works and both states move with it.
-- [ ] The Layer dropdown moves the meter above other frames, breakdown still in front of the bars.
+- [ ] The Draw layer dropdown moves the meter above other frames, breakdown still in front of the bars.
 
 ## 5. Key bindings
 
@@ -107,7 +107,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 8. Applicant keys
 
-- [ ] Switch on Keys and raid progress on applicants, list a Mythic+ key: the key numbers appear without a reload.
+- [ ] Switch on Applicant keys and progress, list a Mythic+ key: the key numbers appear without a reload.
 - [ ] Sort Mythic+ applicants on, Mythic+ sort by Rating: bright applicants come first, highest rating on top, dimmed ones below them. Pick Item level on the Group finder page: a reload prompt appears and the order changes only after the reload. Untick the switch: same prompt, Blizzard's order after the reload. A raid listing keeps Blizzard's order.
 - [ ] Only missing roles on, a healer slot open: healers rise to the top. Someone joins as healer: healers drop down and the next missing role rises, without touching anything.
 - [ ] Mythic+ listing, sorted, with applicants arriving and people being invited and leaving: count the "secret" errors from LFGList.lua 1699 / 1760 in BugSack per key, and check invite and decline still work and the header (Auto Accept, Browse Groups, Remove Listing) still looks right.
@@ -116,7 +116,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 9. Applicant filter
 
-- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background and shows Classes, Roles, Minimum item level, Group utility and Reset; it is gone on the search list and when the finder closes. Drag it by its background: it stays where dropped, the page's X/Y offsets show the new values, and the spot is kept after /reload. Panel side Left and the offsets move it at once.
+- [ ] Switch on Applicant filter, list a Mythic+ key, open the applicants: the panel sits right of the finder with a solid background and shows Classes, Roles, Minimum item level, Group utility and Reset; it is gone on the search list and when the finder closes. Drag it by its background: it stays where dropped, the page's horizontal and vertical offsets show the new values, and the spot is kept after /reload. Filter panel side Left and the offsets move it at once.
 - [ ] List a raid: the panel drops Group utility. Over the column, a Normal / Heroic / Mythic legend in green / blue / purple replaces Best / Here.
 - [ ] Listed, zone into the dungeon (or a raid leader into the raid), applicants arrive and cancel, someone joins: BugSack stays empty; the list is Blizzard's, rows are not dimmed and the panel says Filter paused until you leave the instance.
 - [ ] Class icons show counts, including dimmed applicants; need, exclude and clear work as the tooltip says.
@@ -141,7 +141,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 11. Performance
 
-- [ ] Switch on Performance: its page shows a Graphics section (Optimize my FPS, Restore my settings) and a Memory section (Smoother garbage collection and Clean up in the open world ticked, Collect garbage) and an Addons section (Show addon CPU). Every label in the confirmation window reads like the game's own graphics menu (Fair, Disabled, a 1-10 number for view distance), none is a bare number or blank.
+- [ ] Switch on Performance: its page shows a Graphics section (Optimize graphics, Restore graphics) and a Memory section (Smoother garbage collection and Clean up in the open world ticked, Collect garbage) and an Addons section (Show addon CPU). Every label in the confirmation window reads like the game's own graphics menu (Fair, Disabled, a 1-10 number for view distance), none is a bare number or blank.
 - [ ] Raise shadows and view distance in the game's graphics menu, press Optimize: the window lists only what differs, as before > after. Cancel changes nothing. Apply: the game's graphics menu shows the new values, no error.
 - [ ] Press Optimize again: chat says the settings are already optimized, no window.
 - [ ] Press Restore: the window lists the values from before the first Optimize. Apply puts them back. Restore again: chat says nothing to restore.
@@ -179,7 +179,7 @@ Needs two Edit Mode layouts whose damage meter sits in a different place, and wh
 
 ## 15. Raid marker panel
 
-Switch on Raid marker panel (Party and raid). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Scale, Vertical, Show on mouse-over, Faded opacity, Pull left/right seconds and Reset position, and a Placement order group (1st..8th). The panel also shows while this page is open, so it can be placed solo.
+Switch on Raid marker panel (Party and raid). It is off by default. Its page has a Visibility group (Show when solo, In a party, only as leader, In a raid, also without lead or assist, Hide in combat; all off by default) and Scale, Vertical layout, Fade until mouse-over, Opacity when faded, Pull timer left/right seconds and Reset position, and a World marker order group (1st..8th). The panel also shows while this page is open, so it can be placed solo.
 
 - [ ] No Lua error on login with the module on and off; switching it on and off live works.
 - [ ] Solo: open the Raid marker panel page - the panel appears; drag it, close the window - it hides and keeps the new spot after /reload.
@@ -207,10 +207,10 @@ Switch on Raid marker panel (Party and raid). It is off by default. Its page has
 - [ ] Hide in combat on: start dragging, pull a mob - the outline disappears at the pull, the panel keeps the spot where the outline was, no `ADDON_ACTION_BLOCKED`.
 - [ ] `/dump LittleThingsRaidMarkers:IsProtected()` in a group - note the result.
 - [ ] Scale and Vertical change the panel at once out of combat and are greyed in combat.
-- [ ] Key bindings (under LittleThings): Next world marker at the cursor follows the Placement order (1..8 by default) and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places the 1st slot again.
+- [ ] Key bindings (under LittleThings): Next world marker at the cursor follows the World marker order (1..8 by default) and wraps, and works in combat; Clear all world markers removes everything and the next press of the first key places the 1st slot again.
 - [ ] Horizontal layout: the Place button sits between the world dots and the world clear icon, both rows end at the same edge, and "Place" fits its button.
 - [ ] Placement mode: left click on Place - the label turns gold with "1/N", the button gets a gold border and the next world dot a white ring.
-- [ ] With the mode on, every left click on the ground places the next marker of the Placement order at the cursor: with the default order four clicks place 1, 2, 3, 4 (not 1, 3, 5, 7); after the last one it wraps to the first and the mode stays on.
+- [ ] With the mode on, every left click on the ground places the next marker of the World marker order at the cursor: with the default order four clicks place 1, 2, 3, 4 (not 1, 3, 5, 7); after the last one it wraps to the first and the mode stays on.
 - [ ] Right click on Place ends the mode; so does Esc, and Esc does not open the game menu while the mode is on. A second left click on Place also ends it.
 - [ ] **The mode turns on, places markers and turns off in combat, with no `ADDON_ACTION_BLOCKED`.**
 - [ ] After the mode ends, left click targets and left-drag turns the camera again.
@@ -221,9 +221,9 @@ Switch on Raid marker panel (Party and raid). It is off by default. Its page has
 - [ ] Healer mana on, party with a healer: the bar follows the healer's mana in and out of combat and inside a key, no Lua errors.
 - [ ] No healer / raid / solo: no bar.
 - [ ] Healer mana: a healer role icon sits left of the bar; with mana text on, the healer's name shows in class colour before the numbers.
-- [ ] Mana text Percent/Value/Both shows the healer's mana in that form in and out of combat and in a key; None shows only the bar.
-- [ ] Dead or offline count shows "1 down" when a member dies or disconnects and disappears when they are back.
-- [ ] Placement order: set a few slots to None - the mode and the key skip them; set all to None - Place turns grey, its tooltip says "Placement order is empty" and a click does nothing. A duplicate slot places the same marker again.
+- [ ] Mana bar text Percent/Value/Both shows the healer's mana in that form in and out of combat and in a key; None shows only the bar.
+- [ ] Dead and offline count shows "1 down" when a member dies or disconnects and disappears when they are back.
+- [ ] World marker order: set a few slots to None - the mode and the key skip them; set all to None - Place turns grey, its tooltip says "World marker order is empty" and a click does nothing. A duplicate slot places the same marker again.
 - [ ] Vertical layout: one column, each target marker next to the world marker of the same symbol (star next to the yellow star, and so on); Clear all and the world clear icon under the pairs, then Place, Ready, Pull and Role across the column; "Clear all" fits its button.
 - [ ] **The key binding works on an unparented hidden button, and `/wm [@cursor]N` set from the combat snippet places the marker under the cursor.**
 - [ ] **`/console taintLog 1`, a full key: no LittleThings entries in `Logs/taint.log`.**
@@ -249,7 +249,7 @@ Switch on Battle res guard (Combat). It is off by default. Its page has an Ask b
 - [ ] With an existing account DB, `/run LittleThingsDB.battleResGuard = nil` then `/reload`: a couple of seconds after login the New in LittleThings panel shows in the middle of the screen with one Battle res guard row: title, description and an Enable box.
 - [ ] Tick Enable: the settings window's Battle res guard page shows the switch on and the menu entry is no longer grey, no reload prompt.
 - [ ] `/run LittleThingsDB.damageMeter = nil` then `/reload`: tick Enable on the Damage meter row - the reload prompt names Damage meter.
-- [ ] `/run LittleThingsDB.groupFinder = false LittleThingsDB.signUpRoles = nil` then `/reload`: the row reads Group finder: Sign-up roles on the search panel. Tick Enable: Group finder is on too. Untick it: only Sign-up roles goes off, Group finder stays on.
+- [ ] `/run LittleThingsDB.groupFinder = false LittleThingsDB.signUpRoles = nil` then `/reload`: the row reads Group finder: Sign-up role icons. Tick Enable: Group finder is on too. Untick it: only Sign-up role icons goes off, Group finder stays on.
 - [ ] Open settings closes the panel and opens the module's page (the parent's page for a child row). Close, Esc, then `/reload` again: no panel.
 - [ ] Clear a switch as above, `/reload` while in combat: no panel until combat ends, then it shows. Enter combat with the panel open: Enable greys and comes back after combat.
 - [ ] Delete `WTF/Account/<account>/SavedVariables/LittleThings.lua` with the game closed (fresh install), log in: no panel.
@@ -286,7 +286,7 @@ Switch on Warband gear on the Gear in bags page. It is off by default.
 
 ## 19. Save indicator
 
-Switch on Save indicator (Combat). It is off by default. Its page has Centre row (Time left, Damage reduction, Scale, X, Y, Test, Center horizontally, Reset position, Show on mouse-over, Faded opacity) and Tracked saves.
+Switch on Save indicator (Combat). It is off by default. Its page has Save row (Time left, Damage reduction, Scale, Horizontal offset, Vertical offset, Test, Center horizontally, Reset position, Fade until mouse-over, Opacity when faded) and Tracked saves.
 
 - [ ] Solo, Sentinel: an icon below the centre of the screen with seconds inside and `-30%` under it; the number falls by 2 per stack in combat and turns orange at `-18%`.
 - [ ] Ardent Defender or Guardian of Ancient Kings: its own icon with `-30%` / `-50%`, stronger saves left of weaker ones, Sentinel left of a fixed 30% save.
@@ -326,12 +326,12 @@ Switch on Party calls (Party and raid). It is off by default.
 - [ ] Solo and in a raid: no panel. Party: the panel shows with the calls for your role. Open its settings page: every enabled call shows, above the window.
 - [ ] Show when solo on (Panel group, off by default): solo, the panel shows the calls for your role, combat state and zone, all greyed; clicking one sends nothing; the fold strip and the padlock work. Join a party: the buttons turn normal and send. In a raid: no panel either way.
 - [ ] Icons: no question marks on the eight built-in calls.
-- [ ] **In a running Mythic+ key, click Lust out of combat and in combat: the line arrives in party chat with the red cross in front, no `ADDON_ACTION_BLOCKED`, BugSack empty. If it is blocked, note where and switch On click to Put in chat.**
+- [ ] **In a running Mythic+ key, click Lust out of combat and in combat: the line arrives in party chat with the red cross in front, no `ADDON_ACTION_BLOCKED`, BugSack empty. If it is blocked, note where and switch Click action to Put in chat.**
 - [ ] After a click every button greys for 3 s and the clicked one for 5 s; clicks on a grey button send nothing.
 - [ ] Swap spec tank > healer: Save me goes, OOM comes. Skip shows only out of combat in a running key; Wipe only in combat.
 - [ ] Put in chat: a click opens the chat line on Party with the call typed in; Enter sends it.
 - [ ] Editor: pick a call in the list, change its label, message, icon (spell id and a texture path), mark, roles, When and Where: the panel follows at once. Reset to default restores a built-in call. Add call adds a row (no button until it has a message); Delete call removes it; the arrows move the selected call in the list and on the panel.
-- [ ] Look: background opacity and border, edge padding, icon size, spacing, labels and label size. Grow Right/Left/Down/Up with Buttons per row and New rows go: the panel wraps that way and its starting corner stays put when buttons show or hide; drag, reload, the panel is where it was left.
+- [ ] Appearance: background opacity and border, edge margin, icon size, button gap, button labels and label size. Button direction Right/Left/Down/Up with Buttons per row and Next row goes: the panel wraps that way and its starting corner stays put when buttons show or hide; drag, reload, the panel is where it was left.
 - [ ] With the settings page open the preview panel never covers the window.
 - [ ] A Cyrillic message at the length limit arrives without a broken last letter.
 - [ ] Dungeon Finder group: does a call reach the group?
@@ -340,7 +340,7 @@ Switch on Party calls (Party and raid). It is off by default.
 
 Switch on the Raid marker panel (Show when solo) and Party calls; join a party so both show. `/console taintLog 1` before the first fight.
 
-- [ ] **First: in combat, with Show on mouse-over on for the raid marker panel, move the mouse on and off it: it fades and comes back, no `ADDON_ACTION_BLOCKED`. If blocked, note it: the raid panel then fades out of combat only.**
+- [ ] **First: in combat, with Fade until mouse-over on for the raid marker panel, move the mouse on and off it: it fades and comes back, no `ADDON_ACTION_BLOCKED`. If blocked, note it: the raid panel then fades out of combat only.**
 - [ ] Drag feel, all three panels (raid marker panel, Party calls, Save indicator sample): a gold ghost rectangle follows the cursor smoothly, the panel itself stays put until release, then jumps to the ghost spot; no jitter. Near a dockable edge (and when dragged over another panel) the ghost jumps to the docking spot while you drag and a thin gold line shows in the gap, only along the part of the edges that face each other; moving away removes the line. Wiggle the mouse around the snap distance: the ghost stays snapped, no flicker, and lets go only after you pull about 24 px away. Along the edge the ghost lines up with the target's left edge, right edge or centre and holds that until you move about 24 px off it. Release where the line shows: it docks there. Release the mouse outside the game window or over another frame: the drag still ends. Drag Party calls away from the raid marker panel: it undocks. Pull a target dummy mid-drag: the drag ends where the ghost was.
 - [ ] Drag Party calls next to each edge of the raid marker panel: it snaps within 16 px with a 6 px gap and stays docked. Drag the raid marker panel: Party calls moves with it. Drop the raid marker panel near another panel's edge: it snaps on release. Screen edges do not snap; the panel stays on screen anyway.
 - [ ] No page has Lock position. Out of Move panels mode a fresh panel does not drag. Drag starts in combat: nothing moves.
@@ -351,12 +351,12 @@ Switch on the Raid marker panel (Show when solo) and Party calls; join a party s
 - [ ] Lock never over a button: Party calls docked Above, then Below the raid marker panel, merge off and on, and the group moved to the screen top: the padlock never covers Lust or any other button. Merged: hovering Party calls shows the padlock on the raid panel's strip, and unlocking drags the whole group.
 - [ ] Mouselook: hold right mouse over each panel and turn the camera, out of and in combat, with the padlock showing and without: the camera turns, no stutter, nothing sticks.
 - [ ] Esc: in Move panels mode Esc ends the mode; with one panel unlocked Esc locks it. Press Esc once more: the game menu opens. `/console taintLog 1`, then check Logs/taint.log: no ToggleGameMenu line blaming LittleThings.
-- [ ] Save indicator Show on mouse-over with Faded opacity 0 and 3 or more saves up at once (for example Sentinel, Pain Suppression and a personal): the row vanishes until the mouse is over any icon, including the icons past the second; opacity 0.5 keeps it half visible.
+- [ ] Save indicator Fade until mouse-over with Opacity when faded 0 and 3 or more saves up at once (for example Sentinel, Pain Suppression and a personal): the row vanishes until the mouse is over any icon, including the icons past the second; opacity 0.5 keeps it half visible.
 - [ ] Change the raid marker panel's Scale and Vertical, and Reset position: the docked Party calls follows.
 - [ ] Merge with docked panels on (raid marker panel page): one background and border around both, no gap; the raid panel draws no own background. Merge off: both backgrounds back, gap 6. Tick and untick Merge on the Party calls page while it is docked: same result, and both pages show the same state. Undock Party calls: its Merge checkbox greys out with "Dock this panel to another one first." Drop Party calls about 10 px under the raid marker panel: it docks (its page shows Undock). Drop it right on top of the raid marker panel (over the world-marker row, over the left part, over the right part): it moves out to the nearest edge and docks there, never staying on top.
-- [ ] Fold handle: an 18 px strip inside the left edge of the raid marker panel and of Party calls, as tall as the panel, with a thin divider on its right and "-" (expanded) or "+" (folded); the glyph turns gold on hover. Party calls' strip shows its glyph too, also in Move panels mode. No button sits under the strip; markers and icons start right of it. The handle is always visible; with Show on mouse-over and opacity 0 the panel vanishes but the handle stays faintly visible (0.35) and clickable.
+- [ ] Fold handle: an 18 px strip inside the left edge of the raid marker panel and of Party calls, as tall as the panel, with a thin divider on its right and "-" (expanded) or "+" (folded); the glyph turns gold on hover. Party calls' strip shows its glyph too, also in Move panels mode. No button sits under the strip; markers and icons start right of it. The handle is always visible; with Fade until mouse-over and opacity 0 the panel vanishes but the handle stays faintly visible (0.35) and clickable.
 - [ ] Dock Party calls below, above and right of the raid marker panel, merge off: each panel keeps its own handle and folds only itself; Role, Pull and the mana bar click through to their buttons. Merge on: Party calls shows no handle and no strip; the raid handle folds and unfolds both panels together, in and out of combat. Merge on with Hide in combat: at the pull Party calls keeps its layout (no handle, no strip, icons do not shift) and its fold state; it gets its own handle only while the raid marker panel is hidden out of combat. Right-click on the raid handle does nothing.
-- [ ] Fold the raid marker panel (horizontal and vertical): the handle and the panel's top-left corner stay put, the border shrinks right and down to handle + target row + Clear all, at once. Fold Party calls: handle + icons, no labels; it keeps its anchored corner (top-left unless Grow left/up).
+- [ ] Fold the raid marker panel (horizontal and vertical): the handle and the panel's top-left corner stay put, the border shrinks right and down to handle + target row + Clear all, at once. Fold Party calls: handle + icons, no labels; it keeps its anchored corner (top-left unless Button direction left/up).
 - [ ] Merge on, then make the raid marker panel hide (leave the party with Show when solo off): Party calls draws its own background and its own scale; join again: merged again.
 - [ ] Party calls docked: `/reload` in combat (target dummy): Party calls shows at its last docked spot for the whole fight and docks again after combat.
 - [ ] Party calls docked: drag the raid marker panel, then hide it: Party calls stays where it was last docked, not where it was first docked.
@@ -365,7 +365,7 @@ Switch on the Raid marker panel (Show when solo) and Party calls; join a party s
 - [ ] Collapse while merged, in and out of combat: the merged background follows the new size; if it lags in combat it is right after combat.
 - [ ] Collapse Party calls in and out of combat: labels hide and show.
 - [ ] Placement mode on, then collapse: placement mode ends.
-- [ ] Show on mouse-over with Faded opacity 0 on both: both vanish; hovering either shows the whole group; clicking a faded target marker still sets it.
+- [ ] Fade until mouse-over with Opacity when faded 0 on both: both vanish; hovering either shows the whole group; clicking a faded target marker still sets it.
 - [ ] Hide in combat on the raid marker panel with Party calls docked and merged: in combat the raid panel and the merged background hide, Party calls stays where it was docked; after combat the merged background is back.
 - [ ] Reload: dock, merge, collapse, mouse-over and opacity are all as left.
 - [ ] **After all of the above, `Logs/taint.log` has no LittleThings entries.**

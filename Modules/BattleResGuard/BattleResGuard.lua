@@ -190,7 +190,7 @@ function BattleResGuard.Pages(page)
     local group = page:Group("Ask before release as")
     group:Check(RoleOption("TANK", "Tank", "Ask first while you are a tank", "Release asks first while your current specialization is a tank."))
     group:Check(RoleOption("HEALER", "Healer", "Ask first while you are a healer", "Release asks first while your current specialization is a healer."))
-    group:Check(RoleOption("DAMAGER", "Damage", "Ask first while you deal damage", "Release asks first while your current specialization deals damage."))
+    group:Check(RoleOption("DAMAGER", "Damage dealer", "Ask first while you deal damage", "Release asks first while your current specialization deals damage."))
 end
 
 BattleResGuard.key = "battleResGuard"

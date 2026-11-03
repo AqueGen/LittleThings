@@ -9,7 +9,7 @@ local ApplicantSort = {}
 
 local CHOICES = {
     option = "by",
-    label = "Mythic+ sort by",
+    label = "Sort applicants by",
     order = { "rating", "itemLevel", "dungeon" },
     names = {
         rating = "Rating, then item level",

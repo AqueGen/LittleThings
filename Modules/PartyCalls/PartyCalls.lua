@@ -264,25 +264,25 @@ local function GrowSet(value)
 end
 
 local function Look(page)
-    local look = page:Group("Look")
-    look:Slider(Option("bgAlpha", { label = "Background", min = 0, max = 1, step = 0.05, format = "%.2f",
+    local look = page:Group("Appearance")
+    look:Slider(Option("bgAlpha", { label = "Background opacity", min = 0, max = 1, step = 0.05, format = "%.2f",
         hint = "Opacity of the panel background", tooltip = "Opacity of the panel background. 0 hides it." }))
     look:Check(Option("border", { label = "Border", hint = "A thin line around the panel", tooltip = "A thin line around the panel." }))
-    look:Slider(Option("pad", { label = "Edge padding", min = 0, max = 12, hint = "Space between the edge and the buttons", tooltip = "Space between the edge and the buttons." }))
+    look:Slider(Option("pad", { label = "Edge margin", min = 0, max = 12, hint = "Space between the edge and the buttons", tooltip = "Space between the edge and the buttons." }))
     look:Slider(Option("iconSize", { label = "Icon size", min = 20, max = 56, hint = "Size of each icon", tooltip = "Size of each icon." }))
-    look:Slider(Option("gap", { label = "Spacing", min = 0, max = 20, hint = "Space between buttons", tooltip = "Space between buttons." }))
-    look:Check(Option("labels", { label = "Labels", hint = "Short text under each icon", tooltip = "The short text under each icon." }))
+    look:Slider(Option("gap", { label = "Button gap", min = 0, max = 20, hint = "Space between buttons", tooltip = "Space between buttons." }))
+    look:Check(Option("labels", { label = "Button labels", hint = "Short text under each icon", tooltip = "The short text under each icon." }))
     look:Dropdown(Option("labelSize", { label = "Label size", hint = "Size of the text under each icon",
         options = { { text = "Small", value = "small" }, { text = "Normal", value = "normal" }, { text = "Large", value = "large" } },
         enabled = function() return Db().labels end }))
-    look:Dropdown({ label = "Grow", default = DEFAULTS.grow,
+    look:Dropdown({ label = "Button direction", default = DEFAULTS.grow,
         options = { { text = "Right", value = "right" }, { text = "Left", value = "left" },
             { text = "Down", value = "down" }, { text = "Up", value = "up" } },
         hint = "Direction a row of buttons grows", tooltip = "Where a row of buttons goes from the panel's corner. That corner stays in place when buttons show or hide.",
         get = function() return Db().grow end, set = GrowSet })
     look:Slider(Option("perRow", { label = "Buttons per row", min = 1, max = 20,
         hint = "Buttons in a row before a new one starts", tooltip = "After this many buttons the next one starts a new row." }))
-    look:Dropdown(Option("wrap", { label = "New rows go", options = WrapOptions,
+    look:Dropdown(Option("wrap", { label = "Next row goes", options = WrapOptions,
         hint = "Where the next row starts", tooltip = "Where the next row starts." }))
 end
 
@@ -297,13 +297,13 @@ function PartyCalls.Pages(page)
         page.frame:HookScript("OnHide", function() PartyCalls.SetPreview(false) end)
     end
 
-    local panel = page:Group("Panel")
+    local panel = page:Group("Panel behaviour")
     panel:Check(Option("showSolo", { label = "Show when solo",
         hint = "Show the panel outside a group too", tooltip = "Shows the panel outside a group too. The buttons do nothing there." }))
     panel:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
         hint = "Size of the whole panel", tooltip = "Size of the whole panel.",
         enabled = function() return not Panel.Merged() end }))
-    panel:Dropdown(Option("click", { label = "On click",
+    panel:Dropdown(Option("click", { label = "Click action",
         options = { { text = "Send to party", value = "send" }, { text = "Put in chat, Enter sends", value = "chat" },
             { text = "Put in chat while in combat", value = "chatInCombat" } },
         hint = "Send at once, or put the call in the chat line", tooltip = "Send posts the call at once. Put in chat opens the chat line on Party with the call typed in; press Enter to send it." }))
@@ -332,18 +332,18 @@ function PartyCalls.Pages(page)
             PartyCalls.Refresh()
         end })
     calls:Check(Field("enabled", { label = "Show this call", hint = "Hide a call without deleting it" }))
-    calls:Input(Field("label", { label = "Label", maxBytes = 16, hint = "Short text under the icon", tooltip = "Short text under the icon." }))
+    calls:Input(Field("label", { label = "Call label", maxBytes = 16, hint = "Short text under the icon", tooltip = "Short text under the icon." }))
     calls:Input(Field("message", { label = "Message", maxBytes = 249, width = 320,
         hint = "What goes to party chat", tooltip = "What goes to party chat. The raid mark is put in front of it." }))
     calls:Input(Field("icon", { label = "Icon", hint = "A spell id or a texture path", tooltip = "A spell id (for example 2825) or a texture path.",
         icon = function() return Rules.Texture(Selected().icon, C_Spell.GetSpellTexture, GetFileIDFromPath) end }))
     calls:Dropdown(Field("mark", { label = "Raid mark", options = MarkOptions(),
         hint = "Mark shown at the start of the message", tooltip = "Shown at the start of the message in everyone's chat." }))
-    calls:CheckGrid({ RoleSpec("TANK", "Tank"), RoleSpec("HEALER", "Healer"), RoleSpec("DAMAGER", "Damage") }, 3, 110)
-    calls:Dropdown(Field("combat", { label = "When", hint = "Show the call always, or only in or out of combat",
+    calls:CheckGrid({ RoleSpec("TANK", "Tank"), RoleSpec("HEALER", "Healer"), RoleSpec("DAMAGER", "Damage dealer") }, 3, 110)
+    calls:Dropdown(Field("combat", { label = "Show during", hint = "Show the call always, or only in or out of combat",
         options = { { text = "Always", value = "any" }, { text = "In combat", value = "in" },
             { text = "Out of combat", value = "out" } } }))
-    calls:Dropdown(Field("content", { label = "Where", hint = "Limit the call to dungeons or Mythic+",
+    calls:Dropdown(Field("content", { label = "Show in", hint = "Limit the call to dungeons or Mythic+",
         options = { { text = "Any group", value = "group" }, { text = "Any dungeon", value = "dungeon" },
             { text = "Mythic+", value = "mplus" } } }))
     calls:Button({ label = "Reset to default", hint = "Restores this call to its shipped state", tooltip = "Puts this built-in call back as it shipped.",

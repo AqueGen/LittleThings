@@ -218,14 +218,14 @@ function RaidMarkers.Pages(page)
     visibility:Check(Option("hideInCombat", { label = "Hide in combat", combatLocked = true,
         hint = "Hide the panel while in combat", tooltip = "Hides the panel while you are in combat. The game hides it, so this is safe in combat." }, Shared.ApplyCombatHide))
 
-    local group = page:Group("Raid marker panel")
+    local group = page:Group("Panel")
     group:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f", combatLocked = true,
         hint = "Size of the whole panel", tooltip = "Size of the whole panel." }, Shared.Place))
-    group:Check(Option("vertical", { label = "Vertical", combatLocked = true,
+    group:Check(Option("vertical", { label = "Vertical layout", combatLocked = true,
         hint = "One column instead of a row", tooltip = "One column: each target marker next to the world marker of the same symbol, the other buttons below." }, Shared.Layout))
-    group:Slider(Option("pullLeft", { label = "Pull, left click (seconds)", min = 3, max = 60,
+    group:Slider(Option("pullLeft", { label = "Pull timer, left click (seconds)", min = 3, max = 60,
         hint = "Countdown on a left click of the pull button", tooltip = "Countdown length when the pull button is left-clicked." }))
-    group:Slider(Option("pullRight", { label = "Pull, right click (seconds)", min = 3, max = 60,
+    group:Slider(Option("pullRight", { label = "Pull timer, right click (seconds)", min = 3, max = 60,
         hint = "Countdown on a right click of the pull button", tooltip = "Countdown length when the pull button is right-clicked." }))
     ns.PanelDock.FadeOptions(group, ns.db.raidMarkerPanel, ApplyDockOptions)
     group:Button({ label = "Reset position", combatLocked = true,
@@ -234,22 +234,22 @@ function RaidMarkers.Pages(page)
 
     ns.PanelDock.Options(page, ns.db.raidMarkerPanel, ApplyDockOptions, Shared.DOCK_ID)
 
-    local helpers = page:Group("Tank helpers")
-    helpers:Check(Option("healerMana", { label = "Healer mana", combatLocked = true,
+    local helpers = page:Group("Tank extras")
+    helpers:Check(Option("healerMana", { label = "Healer mana bar", combatLocked = true,
         hint = "Healer mana bar under the group buttons", tooltip = "A bar under the group buttons with your party healer's mana. Party only." }, Shared.Layout))
-    helpers:Dropdown(Option("manaText", { label = "Mana text", combatLocked = true,
+    helpers:Dropdown(Option("manaText", { label = "Mana bar text", combatLocked = true,
         options = { { text = "None", value = "none" }, { text = "Percent", value = "percent" },
             { text = "Value", value = "value" }, { text = "Both", value = "both" } },
         enabled = function() return ns.db.raidMarkerPanel.healerMana end,
         hint = "What the healer mana bar shows", tooltip = "What the healer mana bar shows on top of it. None keeps the bar thin." }, Shared.Layout))
-    helpers:Check(Option("groupDown", { label = "Dead or offline count", combatLocked = true,
+    helpers:Check(Option("groupDown", { label = "Dead and offline count", combatLocked = true,
         hint = "Count of dead or offline party members", tooltip = "A red count next to the group buttons when party members are dead or offline. Party only." }, Shared.Layout))
 
     local options = { { text = "None", value = 0 } }
     for n = 1, 8 do
         options[n + 1] = { text = _G["WORLD_MARKER" .. n] or ("World marker " .. n), value = n }
     end
-    local placement = page:Group("Placement order")
+    local placement = page:Group("World marker order")
     for i, label in ipairs(ORDINALS) do
         placement:Dropdown({ label = label, options = options, default = i, combatLocked = true,
             hint = "World marker placed at this step", tooltip = "World marker placed at this step by the placement mode and the next world marker key. None skips the step.",

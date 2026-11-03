@@ -60,7 +60,7 @@ local function Build(rows)
     page = Widgets.NewPage(host)
     for _, row in ipairs(rows) do
         local group = page:Group(Rules.Title(row, ns.MODULES))
-        group:Note(row.tooltip)
+        group:Note(row.hint or row.tooltip)
         group:Check(EnableSpec(row))
     end
     page.frame:Show()

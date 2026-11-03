@@ -235,14 +235,14 @@ function PanelDock.Fade(id, frame, db)
 end
 
 function PanelDock.FadeOptions(group, db, apply)
-    group:Check({ label = "Show on mouse-over",
+    group:Check({ label = "Fade until mouse-over",
         hint = "Fade the panel until the mouse is over it", tooltip = "Fades the panel and the panels docked to it until the mouse is over any of them.",
         get = function() return db.fade and true or false end,
         set = function(value)
             db.fade = value
             apply()
         end })
-    group:Slider({ label = "Faded opacity", min = 0, max = 1, step = 0.05, format = "%.2f",
+    group:Slider({ label = "Opacity when faded", min = 0, max = 1, step = 0.05, format = "%.2f",
         hint = "How visible the panel stays while faded", tooltip = "How visible the panel stays while the mouse is away.",
         get = function() return db.fadeAlpha or 0 end,
         set = function(value)
@@ -271,7 +271,7 @@ function PanelDock.Options(page, db, apply, id)
     local function InGroup()
         return (Docked() and Lib().dock.panels[db.dockTo] ~= nil) or #dock.Members(id) > 0
     end
-    local group = page:Group("Docking")
+    local group = page:Group("Docking to other panels")
     group:Check({ label = "Merge with docked panels", combatLocked = true,
         hint = "One shared background behind docked panels",
         tooltip = function()

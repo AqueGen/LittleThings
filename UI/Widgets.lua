@@ -74,6 +74,8 @@ local function AddHint(group, spec, owner, controlEnd, height, indent)
     return Height, function(enabled) text:SetAlpha(enabled and 1 or 0.5) end
 end
 
+Widgets.AddHint = AddHint
+
 local function AskReload(spec, valueText)
     if spec.reload then
         StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", spec.name or spec.label, valueText)

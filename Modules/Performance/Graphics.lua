@@ -116,9 +116,9 @@ end
 
 function Graphics.Pages(page)
     local group = page:Group("Graphics")
-    group:Button({ label = "Optimize graphics", text = "Optimize my FPS", combatLocked = true, onClick = Optimize,
+    group:Button({ label = "Optimize graphics", text = "Optimize graphics", combatLocked = true, onClick = Optimize,
         hint = "Lowers settings that cost the most frames", tooltip = "Lowers the settings that cost the most frames and matter least in combat: shadows, ambient occlusion, depth and compute effects, view distance, environment detail and ground clutter. Textures stay high and particles stay at Ultra so spell effects remain readable. A window lists every change before it is made." })
-    group:Button({ label = "Restore graphics", text = "Restore my settings", combatLocked = true, onClick = Restore,
+    group:Button({ label = "Restore graphics", text = "Restore graphics", combatLocked = true, onClick = Restore,
         hint = "Puts your graphics settings back", tooltip = "Puts back the values these settings had before the first Optimize, after showing what will change." })
 end
 

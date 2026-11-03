@@ -294,7 +294,7 @@ local function load(state, db)
   ns.PanelDock = setmetatable({
     Fade = function(id, frame, fadeDb) state.fades[#state.fades + 1] = { id, frame, fadeDb } end,
     Options = function(page, optionsDb, apply, id)
-      page:Group("Docking")
+      page:Group("Docking to other panels")
       state.dockOptions = { db = optionsDb, apply = apply, id = id }
     end,
   }, { __index = realDock })
@@ -564,7 +564,7 @@ describe("RaidMarkers", function()
 
   it("puts the visibility options in their own group first, all off by default", function()
     local specs, byLabel, _, titles = pages(addon)
-    assert.same({ "Visibility", "Raid marker panel", "Docking", "Tank helpers", "Placement order" }, titles)
+    assert.same({ "Visibility", "Panel", "Docking to other panels", "Tank extras", "World marker order" }, titles)
     for i, option in ipairs(VISIBILITY) do
       local spec = byLabel[option[2]]
       assert.equals(specs[i], spec)
@@ -907,9 +907,9 @@ describe("RaidMarkers", function()
 
   it("pairs each target marker with the world marker of the same symbol in one centred column", function()
     local _, specs = pages(addon)
-    specs["Vertical"].set(true)
+    specs["Vertical layout"].set(true)
     column(addon, 64, 5)
-    specs["Vertical"].set(false)
+    specs["Vertical layout"].set(false)
     local clearTarget = clears(addon)
     placed(clearTarget, target(1).parent, 224, 0, 60)
     assert.same({ 284, 26 }, { target(1).parent.width, target(1).parent.height })
@@ -928,7 +928,7 @@ describe("RaidMarkers", function()
     wide.module.Enable()
     column(wide, 86, 16)
     local _, specs = pages(wide)
-    specs["Vertical"].set(false)
+    specs["Vertical layout"].set(false)
     local clearTarget = clears(wide)
     assert.same({ 60, 26 }, { clearTarget.width, clearTarget.height })
   end)
@@ -967,7 +967,7 @@ describe("RaidMarkers", function()
     assert.same({ "SetPoint", "TOPLEFT", panel, "BOTTOMLEFT", 0, -4 }, tipAt({ 100, 900, 500, 960 }, 1))
     assert.same({ "SetPoint", "BOTTOMLEFT", panel, "TOPLEFT", 0, 4 }, tipAt({ 100, 50, 500, 110 }, 1))
     local _, specs = pages(addon)
-    specs["Vertical"].set(true)
+    specs["Vertical layout"].set(true)
     assert.same({ "SetPoint", "TOPRIGHT", panel, "TOPLEFT", -4, 0 }, tipAt({ 1700, 100, 1760, 500 }, 1))
     assert.same({ "SetPoint", "TOPLEFT", panel, "TOPRIGHT", 4, 0 }, tipAt({ 1700, 100, 1760, 500 }, 0.5))
   end)
@@ -1063,7 +1063,7 @@ describe("RaidMarkers", function()
     local _, specs = pages(addon)
     state.combat = true
     specs["Scale"].set(1.5)
-    specs["Vertical"].set(true)
+    specs["Vertical layout"].set(true)
     assert.same({}, addon.blocked)
     assert.equals(1, panel.scale)
     local sized = panel.calls.SetSize
@@ -1081,12 +1081,12 @@ describe("RaidMarkers", function()
     addon.fire("GROUP_ROSTER_UPDATE")
     local specs, byLabel, page = pages(addon)
     local panel = addon.panel()
-    byLabel["Healer mana"].set(true)
-    byLabel["Dead or offline count"].set(true)
+    byLabel["Healer mana bar"].set(true)
+    byLabel["Dead and offline count"].set(true)
     state.roles, state.present = { party1 = "HEALER" }, { player = true, party1 = true, party2 = true }
     state.power, state.powerMax = { party1 = MANA, party2 = MANA }, { party1 = MANA_MAX, party2 = MANA_MAX }
     state.dead, state.names = { party2 = true }, { party2 = SECRET }
-    byLabel["Mana text"].set("both")
+    byLabel["Mana bar text"].set("both")
     state.percent = { party1 = MANA_PCT, party2 = MANA_PCT }
 
     local Move = addon.ns.PanelMove
@@ -1253,12 +1253,12 @@ describe("RaidMarkers", function()
     end
     addon.ns.PanelDock.Options = nil
     addon.module.Pages({ Group = function(_, title) return group(title) end })
-    local panelLabels = table.concat(groups["Raid marker panel"].labels, "|")
+    local panelLabels = table.concat(groups["Panel"].labels, "|")
     assert.is_nil(panelLabels:find("Lock position", 1, true))
     assert.is_nil(panelLabels:find("Move", 1, true))
     assert.is_truthy(panelLabels:find("Scale|Vertical", 1, true))
-    assert.is_truthy(panelLabels:find("Show on mouse-over|Faded opacity|Reset position", 1, true))
-    assert.same({ "Merge with docked panels", "Undock" }, groups["Docking"].labels)
+    assert.is_truthy(panelLabels:find("Fade until mouse-over|Opacity when faded|Reset position", 1, true))
+    assert.same({ "Merge with docked panels", "Undock" }, groups["Docking to other panels"].labels)
   end)
 
   it("drops its own border in Move panels mode and paints it back after, and takes mouse-down for the ghost", function()
@@ -1441,7 +1441,7 @@ describe("RaidMarkers", function()
       return found
     end
 
-    it("offers a Placement order group of 8 combat-locked dropdowns", function()
+    it("offers a World marker order group of 8 combat-locked dropdowns", function()
       _G.WORLD_MARKER1 = "Blue Square"
       local named = load(state)
       named.module.Enable()
@@ -1569,7 +1569,7 @@ describe("RaidMarkers", function()
       setOrder(addon, {})
       local m, b = mode(), {}
       assert.same({ 0.5, 0.5, 0.5 }, m.label.color)
-      assert.equals("Placement order is empty", m.reason)
+      assert.equals("World marker order is empty", m.reason)
       snippet(m, b, "LeftButton", true)
       assert.same({}, b)
       assert.is_nil(m.attrs["lt-active"])
@@ -1737,9 +1737,9 @@ describe("RaidMarkers", function()
   describe("tank helpers", function()
     local function helpers(a, mana, down, text)
       local _, byLabel = pages(a)
-      byLabel["Healer mana"].set(mana)
-      byLabel["Dead or offline count"].set(down)
-      if text then byLabel["Mana text"].set(text) end
+      byLabel["Healer mana bar"].set(mana)
+      byLabel["Dead and offline count"].set(down)
+      if text then byLabel["Mana bar text"].set(text) end
     end
 
     local function inParty(a)
@@ -1752,7 +1752,7 @@ describe("RaidMarkers", function()
 
     it("offers two combat-locked checkboxes, both off", function()
       local _, byLabel = pages(addon)
-      local mana, down = byLabel["Healer mana"], byLabel["Dead or offline count"]
+      local mana, down = byLabel["Healer mana bar"], byLabel["Dead and offline count"]
       assert.equals("A bar under the group buttons with your party healer's mana. Party only.", mana.tooltip)
       assert.equals("A red count next to the group buttons when party members are dead or offline. Party only.", down.tooltip)
       for _, spec in ipairs({ mana, down }) do
@@ -1882,19 +1882,19 @@ describe("RaidMarkers", function()
 
     it("offers a Mana text dropdown under Healer mana, Percent by default, greyed while the bar is off", function()
       local specs, byLabel = pages(addon)
-      local spec = byLabel["Mana text"]
+      local spec = byLabel["Mana bar text"]
       local index
       for i, entry in ipairs(specs) do
         if entry == spec then index = i end
       end
-      assert.equals(byLabel["Healer mana"], specs[index - 1])
+      assert.equals(byLabel["Healer mana bar"], specs[index - 1])
       assert.equals("percent", spec.default)
       assert.equals("percent", spec.get())
       assert.is_true(spec.combatLocked)
       assert.same({ { text = "None", value = "none" }, { text = "Percent", value = "percent" },
         { text = "Value", value = "value" }, { text = "Both", value = "both" } }, spec.options)
       assert.is_false(spec.enabled())
-      byLabel["Healer mana"].set(true)
+      byLabel["Healer mana bar"].set(true)
       assert.is_true(spec.enabled())
     end)
 
@@ -1953,7 +1953,7 @@ describe("RaidMarkers", function()
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, bar.lastPoint)
       assert.same({ 284 + 2 + 130 + 8 + 18, 54 + 2 + 12 + 8 }, { addon.panel().width, addon.panel().height })
       local _, specs = pages(addon)
-      specs["Vertical"].set(true)
+      specs["Vertical layout"].set(true)
       assert.same({ 50, 12 }, { bar.width, bar.height })
       assert.same({ 64 + 8 + 18, 278 + 2 + 82 + 14 + 8 }, { addon.panel().width, addon.panel().height })
       helpers(addon, false, false, "both")
@@ -2328,7 +2328,7 @@ describe("RaidMarkers", function()
       local row1 = addon.ns.RaidMarkerPanel.row1
       assert.same({ "TOPLEFT", addon.panel(), "TOPLEFT", 22, -4 }, row1.lastPoint)
       local _, specs = pages(addon)
-      specs["Vertical"].set(true)
+      specs["Vertical layout"].set(true)
       assert.same({ "TOPLEFT", addon.panel(), "TOPLEFT", 22, -4 }, row1.lastPoint)
     end)
 
@@ -2337,7 +2337,7 @@ describe("RaidMarkers", function()
       assert.same({ panel.width, panel.height, 310, 34 },
         { handle.attrs["lt-full-w"], handle.attrs["lt-full-h"], handle.attrs["lt-collapsed-w"], handle.attrs["lt-collapsed-h"] })
       local _, specs = pages(addon)
-      specs["Vertical"].set(true)
+      specs["Vertical layout"].set(true)
       assert.same({ panel.width, panel.height, 62, 258 },
         { handle.attrs["lt-full-w"], handle.attrs["lt-full-h"], handle.attrs["lt-collapsed-w"], handle.attrs["lt-collapsed-h"] })
       assert.equals(18 + 64 + 8, panel.width)
@@ -2524,13 +2524,13 @@ describe("RaidMarkers preview", function()
     addon.module.Preview.Refresh()
     local panel = previewPanel()
     assert.is_true(panel.width > panel.height)
-    byLabel["Vertical"].set(true)
+    byLabel["Vertical layout"].set(true)
     assert.is_true(panel.height > panel.width)
     byLabel["Scale"].set(1.5)
     assert.equals(1.5, panel.scale)
     assert.same({ panel.width * 1.5, panel.height * 1.5 }, { pane.fit[2], pane.fit[3] })
-    byLabel["Healer mana"].set(true)
-    byLabel["Mana text"].set("value")
+    byLabel["Healer mana bar"].set(true)
+    byLabel["Mana bar text"].set("value")
     local bar
     for _, f in ipairs(addon.children(panel)) do
       if f.kind == "StatusBar" then bar = f end
@@ -2551,7 +2551,7 @@ describe("RaidMarkers preview", function()
     local live = addon.panel()
     local sized = live.calls.SetSize
     state.combat = true
-    byLabel["Vertical"].set(true)
+    byLabel["Vertical layout"].set(true)
     local panel = previewPanel()
     assert.is_true(panel.height > panel.width)
     assert.equals(sized, live.calls.SetSize)
