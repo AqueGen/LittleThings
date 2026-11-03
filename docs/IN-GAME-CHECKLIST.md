@@ -324,6 +324,7 @@ Switch on Group chat on Enter (Party and raid). It is off by default.
 Switch on Party calls (Party and raid). It is off by default.
 
 - [ ] Solo and in a raid: no panel. Party: the panel shows with the calls for your role. Open its settings page: every enabled call shows, above the window.
+- [ ] Show when solo on (Panel group, off by default): solo, the panel shows the calls for your role, combat state and zone, all greyed; clicking one sends nothing; the fold strip and the padlock work. Join a party: the buttons turn normal and send. In a raid: no panel either way.
 - [ ] Icons: no question marks on the eight built-in calls.
 - [ ] **In a running Mythic+ key, click Lust out of combat and in combat: the line arrives in party chat with the red cross in front, no `ADDON_ACTION_BLOCKED`, BugSack empty. If it is blocked, note where and switch On click to Put in chat.**
 - [ ] After a click every button greys for 3 s and the clicked one for 5 s; clicks on a grey button send nothing.

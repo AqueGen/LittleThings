@@ -223,7 +223,9 @@ function Rules.Visible(call, state)
 end
 
 function Rules.PanelShown(state)
-    return state.preview or (state.party and not state.raid and state.anyVisible) or false
+    if state.preview then return true end
+    if state.raid then return false end
+    return (state.party or state.showSolo == true) and state.anyVisible or false
 end
 
 function Rules.Remaining(now, lastAny, lastById, id)

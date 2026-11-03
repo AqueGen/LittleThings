@@ -7,7 +7,8 @@ local Panel = ns.PartyCallPanel
 local PartyCalls = {}
 
 local DEFAULTS = { scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
-    gap = 4, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down", merge = false, fade = false, fadeAlpha = 0, collapsed = false }
+    gap = 4, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down", merge = false, fade = false, fadeAlpha = 0, collapsed = false,
+    showSolo = false }
 
 local active, previewing, moving, inCombat = false, false, false, false
 local previewWindow
@@ -23,6 +24,11 @@ end
 
 local function Remaining(id)
     return Rules.Remaining(GetTime(), lastAny, lastById, id)
+end
+
+local function Grey(id)
+    if not IsInGroup() and not previewing and not moving then return 1 end
+    return Remaining(id)
 end
 
 local function CurrentState()
@@ -63,7 +69,8 @@ function PartyCalls.Refresh()
         Panel.MoveClearOf(previewWindow)
     end
     local shown = Rules.PanelShown({ party = IsInGroup(), raid = IsInRaid(), preview = previewing or moving,
-        anyVisible = #ids > 0 })
+        showSolo = ns.db.partyCallOptions.showSolo, anyVisible = #ids > 0 })
+    Panel.Paint(Grey)
     Panel.panel:SetShown(shown and true or false)
     Panel.panel:SetFrameStrata(previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
     local lib = LibStub("LibVelvet-1.0")
@@ -80,7 +87,7 @@ local function ApplyDock()
 end
 
 local function Repaint()
-    if not Panel.Paint(Remaining) and ticker then
+    if (not Panel.Paint(Grey) or not IsInGroup()) and ticker then
         ticker:Cancel()
         ticker = nil
     end
@@ -291,6 +298,8 @@ function PartyCalls.Pages(page)
     end
 
     local panel = page:Group("Panel")
+    panel:Check(Option("showSolo", { label = "Show when solo",
+        tooltip = "Shows the panel outside a group too. The buttons do nothing there." }))
     panel:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
         tooltip = "Size of the whole panel.",
         enabled = function() return not Panel.Merged() end }))
