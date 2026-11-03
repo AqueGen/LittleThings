@@ -327,6 +327,8 @@ Switch on Party calls (Party and raid). It is off by default.
 - [ ] After a click every button greys for 3 s and the clicked one for 5 s; clicks on a grey button send nothing.
 - [ ] Swap spec tank > healer: Save me goes, OOM comes. Skip shows only out of combat in a running key; Wipe only in combat.
 - [ ] Put in chat: a click opens the chat line on Party with the call typed in; Enter sends it.
-- [ ] Editor: change the label, message, icon (spell id and a texture path), mark, roles, When and Where of a call: the panel follows at once. Reset to default restores it. A custom slot shown with an empty message adds no button.
+- [ ] Editor: pick a call in the list, change its label, message, icon (spell id and a texture path), mark, roles, When and Where: the panel follows at once. Reset to default restores a built-in call. Add call adds a row (no button until it has a message); Delete call removes it; the arrows move the selected call in the list and on the panel.
+- [ ] Look: background opacity and border, edge padding, icon size, spacing, labels and label size. Grow Right/Left/Down/Up with Buttons per row and New rows go: the panel wraps that way and its starting corner stays put when buttons show or hide; drag, reload, the panel is where it was left.
+- [ ] With the settings page open the preview panel never covers the window.
 - [ ] A Cyrillic message at the length limit arrives without a broken last letter.
 - [ ] Dungeon Finder group: does a call reach the group?

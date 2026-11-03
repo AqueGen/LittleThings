@@ -6,10 +6,11 @@ local Panel = ns.PartyCallPanel
 
 local PartyCalls = {}
 
-local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 160, locked = false, scale = 1,
-    vertical = false, click = "send" }
+local DEFAULTS = { locked = false, scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
+    gap = 2, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down" }
 
 local active, previewing, inCombat = false, false, false
+local previewWindow
 local lastAny, lastById = nil, {}
 local events, ticker
 
@@ -17,7 +18,7 @@ local function InitializeDb()
     ns.db.partyCallOptions = ns.db.partyCallOptions or {}
     local db = ns.db.partyCallOptions
     ns.ApplyDefaults(db, DEFAULTS)
-    db.calls = Rules.Fill(db.calls or {})
+    Rules.Fill(db)
 end
 
 local function Remaining(id)
@@ -37,7 +38,7 @@ end
 
 local function VisibleIds()
     local calls, state, ids = ns.db.partyCallOptions.calls, CurrentState(), {}
-    for _, id in ipairs(Rules.Order()) do
+    for _, id in ipairs(ns.db.partyCallOptions.order) do
         local call = calls[id]
         if previewing and call.enabled and Rules.Text(call) or not previewing and Rules.Visible(call, state) then
             ids[#ids + 1] = id
@@ -57,6 +58,9 @@ function PartyCalls.Refresh()
     Panel.Update()
     local ids = VisibleIds()
     Panel.Layout(ids)
+    if previewing and previewWindow then
+        Panel.MoveClearOf(previewWindow)
+    end
     local shown = Rules.PanelShown({ party = IsInGroup(), raid = IsInRaid(), preview = previewing,
         anyVisible = #ids > 0 })
     Panel.panel:SetShown(shown and true or false)
@@ -185,18 +189,15 @@ local function Field(key, spec)
     return spec
 end
 
-local function CallOptions()
-    local options = {}
-    for n, id in ipairs(Rules.Order()) do
+local function CallItems()
+    local items = {}
+    for n, id in ipairs(Db().order) do
         local call = Db().calls[id]
-        local text = call.label
-        if not Rules.IsBuiltin(id) then
-            local slot = "Custom " .. (n - #Rules.BUILTIN)
-            text = text ~= "" and slot .. ": " .. text or slot
-        end
-        options[n] = { text = text, value = id }
+        items[n] = { id = id, text = call.label ~= "" and call.label or "(no label)",
+            icon = Rules.Texture(call.icon, C_Spell.GetSpellTexture, GetFileIDFromPath),
+            desaturate = call.desaturate, dim = not call.enabled or not Rules.Text(call) }
     end
-    return options
+    return items
 end
 
 local function MarkOptions()
@@ -216,9 +217,54 @@ local function RoleSpec(role, label)
         end }
 end
 
+local HORIZONTAL = { right = true, left = true }
+
+local function WrapOptions()
+    if HORIZONTAL[Db().grow] then
+        return { { text = "Down", value = "down" }, { text = "Up", value = "up" } }
+    end
+    return { { text = "Right", value = "right" }, { text = "Left", value = "left" } }
+end
+
+local function GrowSet(value)
+    local db = Db()
+    db.grow = value
+    if HORIZONTAL[value] == HORIZONTAL[db.wrap] then
+        db.wrap = HORIZONTAL[value] and "down" or "right"
+    end
+    PartyCalls.Refresh()
+end
+
+local function Look(page)
+    local look = page:Group("Look")
+    look:Slider(Option("bgAlpha", { label = "Background", min = 0, max = 1, step = 0.05, format = "%.2f",
+        tooltip = "Opacity of the panel background. 0 hides it." }))
+    look:Check(Option("border", { label = "Border", tooltip = "A thin line around the panel." }))
+    look:Slider(Option("pad", { label = "Edge padding", min = 0, max = 12, tooltip = "Space between the edge and the buttons." }))
+    look:Slider(Option("iconSize", { label = "Icon size", min = 20, max = 56, tooltip = "Size of each icon." }))
+    look:Slider(Option("gap", { label = "Spacing", min = 0, max = 20, tooltip = "Space between buttons." }))
+    look:Check(Option("labels", { label = "Labels", tooltip = "The short text under each icon." }))
+    look:Dropdown(Option("labelSize", { label = "Label size",
+        options = { { text = "Small", value = "small" }, { text = "Normal", value = "normal" }, { text = "Large", value = "large" } },
+        enabled = function() return Db().labels end }))
+    look:Dropdown({ label = "Grow", default = DEFAULTS.grow,
+        options = { { text = "Right", value = "right" }, { text = "Left", value = "left" },
+            { text = "Down", value = "down" }, { text = "Up", value = "up" } },
+        tooltip = "Where a row of buttons goes from the panel's corner. That corner stays in place when buttons show or hide.",
+        get = function() return Db().grow end, set = GrowSet })
+    look:Slider(Option("perRow", { label = "Buttons per row", min = 1, max = 20,
+        tooltip = "After this many buttons the next one starts a new row." }))
+    look:Dropdown(Option("wrap", { label = "New rows go", options = WrapOptions,
+        tooltip = "Where the next row starts." }))
+end
+
 function PartyCalls.Pages(page)
     InitializeDb()
     if page.frame then
+        previewWindow = page.frame
+        while previewWindow:GetParent() and previewWindow:GetParent() ~= UIParent do
+            previewWindow = previewWindow:GetParent()
+        end
         page.frame:HookScript("OnShow", function() PartyCalls.SetPreview(true) end)
         page.frame:HookScript("OnHide", function() PartyCalls.SetPreview(false) end)
     end
@@ -228,30 +274,31 @@ function PartyCalls.Pages(page)
         tooltip = "Drag the panel to place it, then lock it so it cannot be dragged." }))
     panel:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
         tooltip = "Size of the whole panel." }))
-    panel:Check(Option("vertical", { label = "Vertical", tooltip = "Buttons in one column." }))
     panel:Dropdown(Option("click", { label = "On click",
         options = { { text = "Send to party", value = "send" }, { text = "Put in chat, Enter sends", value = "chat" },
             { text = "Put in chat while in combat", value = "chatInCombat" } },
         tooltip = "Send posts the call at once. Put in chat opens the chat line on Party with the call typed in; press Enter to send it." }))
     panel:Button({ label = "Reset position", tooltip = "Moves the panel back above the centre of the screen.",
         onClick = function()
-            local db = Db()
-            db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
             if Panel.panel then
-                Panel.Place()
+                Panel.ResetPosition()
             end
         end })
 
+    Look(page)
+
     local calls = page:Group("Calls")
-    calls:Dropdown({ label = "Call", options = CallOptions,
-        tooltip = "Pick a call to edit. The first eight are built in; the custom slots are yours.",
-        get = function() return selected end,
-        set = function(value)
-            local focus = GetCurrentKeyBoardFocus()
-            if focus then
-                focus:ClearFocus()
-            end
-            selected = value
+    calls:List({ items = CallItems,
+        selected = function() return selected end,
+        select = function(id) selected = id end,
+        move = function(id, delta)
+            Rules.Move(Db(), id, delta)
+            PartyCalls.Refresh()
+        end })
+    calls:Button({ label = "Add call", tooltip = "A new call of your own at the end of the list.",
+        onClick = function()
+            selected = Rules.AddCustom(Db())
+            PartyCalls.Refresh()
         end })
     calls:Check(Field("enabled", { label = "Show this call" }))
     calls:Input(Field("label", { label = "Label", maxBytes = 16, tooltip = "Short text under the icon." }))
@@ -272,6 +319,17 @@ function PartyCalls.Pages(page)
         visible = function() return Rules.IsBuiltin(selected) end,
         onClick = function()
             Rules.Reset(Db().calls, selected)
+            PartyCalls.Refresh()
+        end })
+    calls:Button({ label = "Delete call", tooltip = "Removes this call of your own.",
+        visible = function() return not Rules.IsBuiltin(selected) end,
+        onClick = function()
+            local index
+            for i, id in ipairs(Db().order) do
+                if id == selected then index = i end
+            end
+            Rules.Remove(Db(), selected)
+            selected = Db().order[math.min(index or 1, #Db().order)]
             PartyCalls.Refresh()
         end })
 end

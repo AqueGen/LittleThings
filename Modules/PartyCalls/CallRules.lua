@@ -7,7 +7,6 @@ Rules.QUESTION = "Interface\\Icons\\INV_Misc_QuestionMark"
 Rules.MAX_BYTES = 255
 Rules.GLOBAL_COOLDOWN = 3
 Rules.CALL_COOLDOWN = 5
-Rules.CUSTOM_SLOTS = 6
 
 local ALL = { TANK = true, HEALER = true, DAMAGER = true }
 local FIELDS = { "enabled", "label", "message", "icon", "mark", "combat", "content", "desaturate" }
@@ -31,24 +30,17 @@ Rules.BUILTIN = {
 Rules.BUILTIN[2].desaturate = true
 
 local defaults = {}
-local order = {}
 for _, call in ipairs(Rules.BUILTIN) do
     defaults[call.id] = call
-    order[#order + 1] = call.id
 end
-for n = 1, Rules.CUSTOM_SLOTS do
-    local id = "custom" .. n
-    defaults[id] = Call(id, "", "", "", 0, nil, "any", "group")
-    defaults[id].enabled = false
-    order[#order + 1] = id
-end
-
-function Rules.Order()
-    return order
-end
+local CUSTOM = Call(nil, "", "", "", 0, nil, "any", "group")
 
 function Rules.IsBuiltin(id)
-    return not id:find("^custom")
+    return defaults[id] ~= nil
+end
+
+local function IsCustom(id)
+    return type(id) == "string" and id:match("^c%d+$") ~= nil
 end
 
 local function FillOne(call, default)
@@ -57,7 +49,6 @@ local function FillOne(call, default)
             call[key] = default[key]
         end
     end
-    call.id = default.id
     call.roles = call.roles or {}
     for role, on in pairs(default.roles) do
         if call.roles[role] == nil then
@@ -67,15 +58,115 @@ local function FillOne(call, default)
     return call
 end
 
-function Rules.Fill(calls)
-    for _, id in ipairs(order) do
-        calls[id] = FillOne(calls[id] or {}, defaults[id])
+function Rules.Fill(db)
+    local calls = db.calls or {}
+    for id in pairs(calls) do
+        if not defaults[id] and not IsCustom(id) then
+            calls[id] = nil
+        end
     end
-    return calls
+    for id, default in pairs(defaults) do
+        calls[id] = FillOne(calls[id] or {}, default)
+        calls[id].id = id
+    end
+    for id, call in pairs(calls) do
+        if IsCustom(id) then
+            FillOne(call, CUSTOM).id = id
+        end
+    end
+    local order, seen = {}, {}
+    for _, id in ipairs(db.order or {}) do
+        if calls[id] and not seen[id] then
+            order[#order + 1], seen[id] = id, true
+        end
+    end
+    for _, call in ipairs(Rules.BUILTIN) do
+        if not seen[call.id] then
+            order[#order + 1], seen[call.id] = call.id, true
+        end
+    end
+    for id in pairs(calls) do
+        if not seen[id] then
+            order[#order + 1] = id
+        end
+    end
+    db.calls, db.order = calls, order
+    return db
 end
 
 function Rules.Reset(calls, id)
     calls[id] = FillOne({}, defaults[id])
+    calls[id].id = id
+end
+
+function Rules.AddCustom(db)
+    db.nextCustom = (db.nextCustom or 0) + 1
+    local id = "c" .. db.nextCustom
+    db.calls[id] = FillOne({}, CUSTOM)
+    db.calls[id].id = id
+    db.order[#db.order + 1] = id
+    return id
+end
+
+local function IndexOf(order, id)
+    for i, value in ipairs(order) do
+        if value == id then
+            return i
+        end
+    end
+end
+
+function Rules.Remove(db, id)
+    local index = IndexOf(db.order, id)
+    if not IsCustom(id) or not index then
+        return false
+    end
+    table.remove(db.order, index)
+    db.calls[id] = nil
+    return true
+end
+
+function Rules.Move(db, id, delta)
+    local from = IndexOf(db.order, id)
+    local to = from and from + delta
+    if not to or to < 1 or to > #db.order then
+        return false
+    end
+    db.order[from], db.order[to] = db.order[to], db.order[from]
+    return true
+end
+
+local HORIZONTAL = { right = true, left = true }
+
+function Rules.Grid(count, o)
+    local grow = o.grow or "right"
+    local horizontal = HORIZONTAL[grow] or false
+    local wrap = o.wrap
+    if horizontal == (HORIZONTAL[wrap] or false) or not wrap then
+        wrap = horizontal and "down" or "right"
+    end
+    local perRow = math.max(1, o.perRow or 1)
+    local hDir = horizontal and grow or wrap
+    local vDir = horizontal and wrap or grow
+    local anchor = (vDir == "up" and "BOTTOM" or "TOP") .. (hDir == "left" and "RIGHT" or "LEFT")
+    local xs, ys = hDir == "left" and -1 or 1, vDir == "up" and 1 or -1
+    local stepW, stepH = o.cellW + o.gap, o.cellH + o.gap
+    local cells = {}
+    for i = 0, count - 1 do
+        local along, across = i % perRow, math.floor(i / perRow)
+        local col, row = along, across
+        if not horizontal then
+            col, row = across, along
+        end
+        cells[i + 1] = { x = xs * (o.pad + col * stepW), y = ys * (o.pad + row * stepH) }
+    end
+    local n = math.max(count, 1)
+    local alongN, acrossN = math.min(n, perRow), math.ceil(n / perRow)
+    local cols, rows = alongN, acrossN
+    if not horizontal then
+        cols, rows = acrossN, alongN
+    end
+    return cells, cols * stepW - o.gap + 2 * o.pad, rows * stepH - o.gap + 2 * o.pad, anchor
 end
 
 local function Cut(text)

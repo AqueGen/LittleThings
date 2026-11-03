@@ -7,13 +7,71 @@ local function state(role, combat, dungeon, mplus)
   return { role = role, combat = combat, dungeon = dungeon, mplus = mplus }
 end
 
+local function fresh()
+  return Rules.Fill({})
+end
+
 describe("CallRules", function()
-  it("lists 8 built-ins then 6 custom slots", function()
-    local order = Rules.Order()
-    assert.equals(14, #order)
-    assert.equals("lust", order[1])
-    assert.equals("brb", order[8])
-    assert.equals("custom6", order[14])
+  it("starts with the 8 built-ins in order", function()
+    local db = fresh()
+    assert.equals(8, #db.order)
+    assert.equals("lust", db.order[1])
+    assert.equals("brb", db.order[8])
+  end)
+
+  it("drops unknown calls and repairs the order", function()
+    local db = Rules.Fill({ calls = { custom1 = { message = "x" } }, order = { "oom", "gone", "oom" } })
+    assert.is_nil(db.calls.custom1)
+    assert.equals("oom", db.order[1])
+    assert.equals(8, #db.order)
+  end)
+
+  it("adds custom calls at the end, on, for everyone, anywhere", function()
+    local db = fresh()
+    local a, b = Rules.AddCustom(db), Rules.AddCustom(db)
+    assert.are_not.equal(a, b)
+    assert.equals(b, db.order[10])
+    local call = db.calls[a]
+    assert.is_true(call.enabled)
+    assert.is_true(call.roles.HEALER)
+    assert.equals("any", call.combat)
+    assert.equals("group", call.content)
+    assert.equals(0, call.mark)
+    assert.is_false(Rules.IsBuiltin(a))
+    assert.is_true(Rules.IsBuiltin("lust"))
+  end)
+
+  it("keeps custom calls after a fill", function()
+    local db = fresh()
+    local id = Rules.AddCustom(db)
+    db.calls[id].message = "Hi"
+    Rules.Fill(db)
+    assert.equals("Hi", db.calls[id].message)
+    assert.equals(id, db.order[9])
+  end)
+
+  it("never reuses an id after a delete", function()
+    local db = fresh()
+    local a = Rules.AddCustom(db)
+    assert.is_true(Rules.Remove(db, a))
+    assert.are_not.equal(a, Rules.AddCustom(db))
+  end)
+
+  it("removes only custom calls", function()
+    local db = fresh()
+    local id = Rules.AddCustom(db)
+    assert.is_false(Rules.Remove(db, "lust"))
+    assert.is_true(Rules.Remove(db, id))
+    assert.is_nil(db.calls[id])
+    assert.equals(8, #db.order)
+  end)
+
+  it("moves calls within the order and stops at the ends", function()
+    local db = fresh()
+    assert.is_true(Rules.Move(db, "lustNext", -1))
+    assert.equals("lustNext", db.order[1])
+    assert.is_false(Rules.Move(db, "lustNext", -1))
+    assert.is_false(Rules.Move(db, "brb", 1))
   end)
 
   it("prefixes the mark", function()
@@ -39,7 +97,7 @@ describe("CallRules", function()
   end)
 
   it("filters by role, combat and content", function()
-    local calls = Rules.Fill({})
+    local calls = fresh().calls
     assert.is_true(Rules.Visible(calls.skip, state("HEALER", false, true, true)))
     assert.is_false(Rules.Visible(calls.skip, state("HEALER", true, true, true)))
     assert.is_false(Rules.Visible(calls.skip, state("HEALER", false, true, false)))
@@ -50,20 +108,12 @@ describe("CallRules", function()
     assert.is_false(Rules.Visible(calls.lust, state("TANK", false, false, false)))
   end)
 
-  it("hides an enabled custom slot with no message", function()
-    local calls = Rules.Fill({})
-    calls.custom1.enabled = true
-    assert.is_false(Rules.Visible(calls.custom1, state("TANK", false, false, false)))
-    calls.custom1.message = "Hi"
-    assert.is_true(Rules.Visible(calls.custom1, state("TANK", false, false, false)))
-  end)
-
-  it("keeps custom slots off by default", function()
-    local calls = Rules.Fill({})
-    assert.is_false(calls.custom3.enabled)
-    assert.is_true(calls.custom3.roles.HEALER)
-    assert.equals("any", calls.custom3.combat)
-    assert.equals("group", calls.custom3.content)
+  it("hides a custom call with no message", function()
+    local db = fresh()
+    local id = Rules.AddCustom(db)
+    assert.is_false(Rules.Visible(db.calls[id], state("TANK", false, false, false)))
+    db.calls[id].message = "Hi"
+    assert.is_true(Rules.Visible(db.calls[id], state("TANK", false, false, false)))
   end)
 
   it("shows the panel only in a party with a visible call, or in preview", function()
@@ -103,19 +153,65 @@ describe("CallRules", function()
   end)
 
   it("reset restores a built-in after edits", function()
-    local calls = Rules.Fill({})
-    calls.lust.message = "x"
-    calls.lust.roles.TANK = false
-    Rules.Reset(calls, "lust")
-    assert.equals("LUST NOW", calls.lust.message)
-    assert.is_true(calls.lust.roles.TANK)
+    local db = fresh()
+    db.calls.lust.message = "x"
+    db.calls.lust.roles.TANK = false
+    Rules.Reset(db.calls, "lust")
+    assert.equals("LUST NOW", db.calls.lust.message)
+    assert.is_true(db.calls.lust.roles.TANK)
   end)
 
   it("fills missing fields without sharing the default roles table", function()
-    local calls = Rules.Fill({ lust = { message = "Go" } })
-    assert.equals("Go", calls.lust.message)
-    assert.equals(7, calls.lust.mark)
-    calls.lust.roles.TANK = false
-    assert.is_true(Rules.Fill({}).lust.roles.TANK)
+    local db = Rules.Fill({ calls = { lust = { message = "Go" } } })
+    assert.equals("Go", db.calls.lust.message)
+    assert.equals(7, db.calls.lust.mark)
+    db.calls.lust.roles.TANK = false
+    assert.is_true(fresh().calls.lust.roles.TANK)
+  end)
+end)
+
+describe("CallRules.Grid", function()
+  local base = { cellW = 10, cellH = 20, gap = 2, pad = 1 }
+  local function opts(grow, wrap, perRow)
+    return { grow = grow, wrap = wrap, perRow = perRow, cellW = base.cellW, cellH = base.cellH, gap = base.gap, pad = base.pad }
+  end
+
+  it("grows right and wraps down from the top left", function()
+    local cells, w, h, anchor = Rules.Grid(5, opts("right", "down", 3))
+    assert.equals("TOPLEFT", anchor)
+    assert.same({ x = 1, y = -1 }, cells[1])
+    assert.same({ x = 25, y = -1 }, cells[3])
+    assert.same({ x = 1, y = -23 }, cells[4])
+    assert.equals(3 * 10 + 2 * 2 + 2, w)
+    assert.equals(2 * 20 + 2 + 2, h)
+  end)
+
+  it("grows left and wraps up from the bottom right", function()
+    local cells, _, _, anchor = Rules.Grid(4, opts("left", "up", 3))
+    assert.equals("BOTTOMRIGHT", anchor)
+    assert.same({ x = -1, y = 1 }, cells[1])
+    assert.same({ x = -13, y = 1 }, cells[2])
+    assert.same({ x = -1, y = 23 }, cells[4])
+  end)
+
+  it("grows down in columns and wraps right", function()
+    local cells, w, h, anchor = Rules.Grid(3, opts("down", "right", 2))
+    assert.equals("TOPLEFT", anchor)
+    assert.same({ x = 1, y = -23 }, cells[2])
+    assert.same({ x = 13, y = -1 }, cells[3])
+    assert.equals(2 * 10 + 2 + 2, w)
+    assert.equals(2 * 20 + 2 + 2, h)
+  end)
+
+  it("fixes a wrap on the same axis as the growth", function()
+    local _, _, _, anchor = Rules.Grid(3, opts("up", "down", 2))
+    assert.equals("BOTTOMLEFT", anchor)
+  end)
+
+  it("sizes an empty panel as one cell", function()
+    local cells, w, h = Rules.Grid(0, opts("right", "down", 8))
+    assert.equals(0, #cells)
+    assert.equals(12, w)
+    assert.equals(22, h)
   end)
 end)

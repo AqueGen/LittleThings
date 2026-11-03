@@ -275,6 +275,91 @@ function Group:Input(spec)
     end, spec.visible)
 end
 
+local LIST_ROW_H = 24
+
+local function ArrowButton(parent, texture, onClick)
+    local button = CreateFrame("Button", nil, parent)
+    button:SetSize(20, 20)
+    button:SetNormalTexture(texture .. "-Up")
+    button:SetPushedTexture(texture .. "-Down")
+    button:SetHighlightTexture(texture .. "-Highlight", "ADD")
+    button:SetScript("OnClick", onClick)
+    return button
+end
+
+function Group:List(spec)
+    local group = self
+    local width = spec.width or (LABEL_W + CONTROL_W)
+    local holder = CreateFrame("Frame", nil, self.frame)
+    local rows = {}
+    local function Row(index)
+        if rows[index] then return rows[index] end
+        local row = CreateFrame("Button", nil, holder)
+        row:SetSize(width, LIST_ROW_H)
+        row:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, -(index - 1) * LIST_ROW_H)
+        row.back = row:CreateTexture(nil, "BACKGROUND")
+        row.back:SetAllPoints()
+        row.back:SetColorTexture(unpack(T.selected))
+        row:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
+        row.icon = row:CreateTexture(nil, "ARTWORK")
+        row.icon:SetSize(LIST_ROW_H - 4, LIST_ROW_H - 4)
+        row.icon:SetPoint("LEFT", 2, 0)
+        row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.text:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
+        row.text:SetPoint("RIGHT", row, "RIGHT", -48, 0)
+        row.text:SetJustifyH("LEFT")
+        row.text:SetWordWrap(false)
+        row:SetScript("OnClick", function(self)
+            local focus = GetCurrentKeyBoardFocus()
+            if focus then focus:ClearFocus() end
+            spec.select(self.id)
+            group.page:Refresh()
+        end)
+        if spec.move then
+            row.up = ArrowButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollUp", function()
+                spec.move(row.id, -1)
+                group.page:Refresh()
+            end)
+            row.up:SetPoint("RIGHT", row, "RIGHT", -24, 0)
+            row.down = ArrowButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollDown", function()
+                spec.move(row.id, 1)
+                group.page:Refresh()
+            end)
+            row.down:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+        end
+        rows[index] = row
+        return row
+    end
+    local count = 0
+    local function Height()
+        return math.max(count, 1) * LIST_ROW_H
+    end
+    self:Add(holder, Height, function()
+        local items = spec.items()
+        count = #items
+        holder:SetSize(width, Height())
+        local selected = spec.selected()
+        for index, item in ipairs(items) do
+            local row = Row(index)
+            row.id = item.id
+            row.icon:SetTexture(item.icon)
+            row.icon:SetDesaturated(item.desaturate and true or false)
+            row.text:SetText(item.text)
+            row:SetAlpha(item.dim and 0.5 or 1)
+            row.back:SetShown(item.id == selected)
+            if row.up then
+                row.up:SetShown(item.id == selected)
+                row.down:SetShown(item.id == selected)
+            end
+            row:Show()
+        end
+        for index = count + 1, #rows do
+            rows[index]:Hide()
+        end
+    end, spec.visible)
+end
+
 function Group:Button(spec)
     local group = self
     local button = Widgets.Button(self.frame, spec.text or spec.label, spec.width or 180)
