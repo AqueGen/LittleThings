@@ -6,7 +6,7 @@ local Rules = ns.CallRules
 local Panel = {}
 ns.PartyCallPanel = Panel
 
-local CELL, ICON, LABEL_H, GAP, PAD = 44, 32, 12, 2, 4
+local CELL, ICON, LABEL_H, GAP, PAD = 56, 32, 12, 2, 4
 local CELL_H = ICON + LABEL_H + GAP
 
 Panel.buttons = {}
@@ -101,7 +101,7 @@ end
 function Panel.Update()
     for id, button in pairs(Panel.buttons) do
         local call = Db().calls[id]
-        button.icon:SetTexture(Rules.Texture(call.icon, C_Spell.GetSpellTexture))
+        button.icon:SetTexture(Rules.Texture(call.icon, C_Spell.GetSpellTexture, GetFileIDFromPath))
         button.icon:SetDesaturated(call.desaturate and true or false)
         button.label:SetText(call.label)
     end

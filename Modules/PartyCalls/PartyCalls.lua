@@ -50,10 +50,14 @@ function PartyCalls.Refresh()
     if not Panel.panel then
         return
     end
+    if not active then
+        Panel.panel:Hide()
+        return
+    end
     Panel.Update()
     local ids = VisibleIds()
     Panel.Layout(ids)
-    local shown = active and Rules.PanelShown({ party = IsInGroup(), raid = IsInRaid(), preview = previewing,
+    local shown = Rules.PanelShown({ party = IsInGroup(), raid = IsInRaid(), preview = previewing,
         anyVisible = #ids > 0 })
     Panel.panel:SetShown(shown and true or false)
     Panel.panel:SetFrameStrata(previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
@@ -67,12 +71,10 @@ local function Repaint()
 end
 
 local function OpenInChat(text)
-    ChatFrameUtil.OpenChat("")
-    local editBox = ChatFrameUtil.GetActiveWindow()
+    local editBox = ChatFrameUtil.OpenChat(text)
     if editBox then
         editBox:SetChatType("PARTY")
         editBox:UpdateHeader()
-        editBox:SetText(text)
     end
 end
 
@@ -87,7 +89,7 @@ function PartyCalls.Click(id)
     if Rules.ClickPath(ns.db.partyCallOptions.click, InCombatLockdown()) == "chat" then
         OpenInChat(text)
     else
-        SendChatMessage(text, "PARTY")
+        C_ChatInfo.SendChatMessage(text, "PARTY")
     end
     local now = GetTime()
     lastAny, lastById[id] = now, now
@@ -105,6 +107,7 @@ local handlers = {
     PLAYER_SPECIALIZATION_CHANGED = PartyCalls.Refresh,
     CHALLENGE_MODE_START = PartyCalls.Refresh,
     CHALLENGE_MODE_COMPLETED = PartyCalls.Refresh,
+    CHALLENGE_MODE_RESET = PartyCalls.Refresh,
     PLAYER_REGEN_DISABLED = function()
         inCombat = true
         PartyCalls.Refresh()
@@ -243,13 +246,19 @@ function PartyCalls.Pages(page)
     calls:Dropdown({ label = "Call", options = CallOptions,
         tooltip = "Pick a call to edit. The first eight are built in; the custom slots are yours.",
         get = function() return selected end,
-        set = function(value) selected = value end })
+        set = function(value)
+            local focus = GetCurrentKeyBoardFocus()
+            if focus then
+                focus:ClearFocus()
+            end
+            selected = value
+        end })
     calls:Check(Field("enabled", { label = "Show this call" }))
     calls:Input(Field("label", { label = "Label", maxBytes = 16, tooltip = "Short text under the icon." }))
     calls:Input(Field("message", { label = "Message", maxBytes = 249, width = 320,
         tooltip = "What goes to party chat. The raid mark is put in front of it." }))
     calls:Input(Field("icon", { label = "Icon", tooltip = "A spell id (for example 2825) or a texture path.",
-        icon = function() return Rules.Texture(Selected().icon, C_Spell.GetSpellTexture) end }))
+        icon = function() return Rules.Texture(Selected().icon, C_Spell.GetSpellTexture, GetFileIDFromPath) end }))
     calls:Dropdown(Field("mark", { label = "Raid mark", options = MarkOptions(),
         tooltip = "Shown at the start of the message in everyone's chat." }))
     calls:CheckGrid({ RoleSpec("TANK", "Tank"), RoleSpec("HEALER", "Healer"), RoleSpec("DAMAGER", "Damage") }, 3, 110)

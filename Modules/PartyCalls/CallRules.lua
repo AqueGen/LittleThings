@@ -151,12 +151,12 @@ function Rules.ClickPath(mode, inCombat)
     return "send"
 end
 
-function Rules.Texture(icon, spellTexture)
+function Rules.Texture(icon, spellTexture, fileId)
     local id = type(icon) == "number" and icon or type(icon) == "string" and icon:match("^%s*(%d+)%s*$")
     if id then
         return spellTexture(tonumber(id)) or Rules.QUESTION
     end
-    if type(icon) == "string" and icon:find("[\\/]") then
+    if type(icon) == "string" and icon:find("[\\/]") and fileId(icon) then
         return icon
     end
     return Rules.QUESTION

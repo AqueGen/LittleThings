@@ -90,14 +90,16 @@ describe("CallRules", function()
 
   it("resolves icons", function()
     local tex = function(id) return id == 2825 and 136012 or nil end
-    assert.equals(136012, Rules.Texture(2825, tex))
-    assert.equals(136012, Rules.Texture("2825", tex))
-    assert.equals(Rules.QUESTION, Rules.Texture(999, tex))
-    assert.equals("Interface\\Icons\\Foo", Rules.Texture("Interface\\Icons\\Foo", tex))
+    local file = function(path) return path == "Interface\\Icons\\Foo" and 1 or nil end
+    assert.equals(136012, Rules.Texture(2825, tex, file))
+    assert.equals(136012, Rules.Texture("2825", tex, file))
+    assert.equals(Rules.QUESTION, Rules.Texture(999, tex, file))
+    assert.equals("Interface\\Icons\\Foo", Rules.Texture("Interface\\Icons\\Foo", tex, file))
+    assert.equals(Rules.QUESTION, Rules.Texture("Interface\\Icons\\Missing", tex, file))
     for _, junk in ipairs({ "abc", "", "  " }) do
-      assert.equals(Rules.QUESTION, Rules.Texture(junk, tex))
+      assert.equals(Rules.QUESTION, Rules.Texture(junk, tex, file))
     end
-    assert.equals(Rules.QUESTION, Rules.Texture(nil, tex))
+    assert.equals(Rules.QUESTION, Rules.Texture(nil, tex, file))
   end)
 
   it("reset restores a built-in after edits", function()

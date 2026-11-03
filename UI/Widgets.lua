@@ -250,7 +250,7 @@ function Group:Input(spec)
             return
         end
         local text = self:GetText()
-        if text ~= (spec.get() or "") then
+        if text ~= tostring(spec.get() or "") then
             spec.set(text)
             group.page:Refresh()
         end
@@ -266,7 +266,7 @@ function Group:Input(spec)
     end)
     self:Add(holder, 26, function()
         if not box:HasFocus() then
-            box:SetText(spec.get() or "")
+            box:SetText(tostring(spec.get() or ""))
         end
         if icon then icon:SetTexture(spec.icon()) end
         local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
