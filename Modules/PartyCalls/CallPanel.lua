@@ -105,7 +105,8 @@ local function ShowTip(button)
     local call = Db().calls[button.id]
     GameTooltip:SetOwner(button, "ANCHOR_TOP")
     GameTooltip:SetText(call.label ~= "" and call.label or "Call", 1, 1, 1)
-    GameTooltip:AddLine(Rules.Text(call) or "", 0.8, 0.8, 0.8, true)
+    local text = (Rules.Text(call) or ""):gsub("{rt(%d)}", "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_%1:0|t")
+    GameTooltip:AddLine(text, 0.8, 0.8, 0.8, true)
     GameTooltip:Show()
 end
 
