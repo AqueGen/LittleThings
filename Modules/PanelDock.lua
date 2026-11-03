@@ -4,11 +4,31 @@ local addonName, ns = ...
 local PanelDock = {}
 ns.PanelDock = PanelDock
 
-local TICK, ARROW_GAP = 0.1, 2
+local TICK, HANDLE_FLOOR = 0.1, 0.35
 local tickers = {}
+
+PanelDock.STRIP = 12
 
 local function Lib()
     return LibStub("LibVelvet-1.0")
+end
+
+function PanelDock.BuildHandle(handle, panel)
+    local T = Lib().T
+    handle:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    handle:SetPoint("BOTTOMRIGHT", panel, "BOTTOMLEFT", PanelDock.STRIP, 0)
+    local line = handle:CreateTexture(nil, "ARTWORK")
+    line:SetPoint("TOPLEFT", handle, "TOPRIGHT", -1, 0)
+    line:SetPoint("BOTTOMRIGHT", handle, "BOTTOMRIGHT", 0, 0)
+    line:SetColorTexture(unpack(T.divider))
+    local glyph = handle:CreateFontString(nil, "OVERLAY")
+    glyph:SetFontObject("GameFontNormalSmall")
+    glyph:SetPoint("CENTER", handle, "CENTER", 0, 0)
+    glyph:SetTextColor(unpack(T.muted))
+    glyph:SetText("-")
+    handle:SetScript("OnEnter", function() glyph:SetTextColor(unpack(Lib().T.gold)) end)
+    handle:SetScript("OnLeave", function() glyph:SetTextColor(unpack(Lib().T.muted)) end)
+    return glyph
 end
 
 function PanelDock.FadeAlpha(hovered, db)
@@ -16,110 +36,27 @@ function PanelDock.FadeAlpha(hovered, db)
     return db.fadeAlpha or 0
 end
 
+function PanelDock.HandleAlpha(alpha)
+    return math.max(alpha, HANDLE_FLOOR)
+end
+
+function PanelDock.HandleShown(root, merged)
+    return root or not merged
+end
+
 local function SetAlpha(id, frame, alpha)
     pcall(frame.SetAlpha, frame, alpha)
+    if frame.foldHandle then
+        pcall(frame.foldHandle.SetAlpha, frame.foldHandle, PanelDock.HandleAlpha(alpha))
+    end
     local merged = Lib().Dock.MergeFrame(id)
     if merged then merged:SetAlpha(alpha) end
 end
 
-local function ArrowOver(frame)
-    return frame.dockArrow ~= nil and frame.dockArrow:IsMouseOver()
-end
-
-local function Group(lib, id)
-    local panels, cur, seen = lib.dock.panels, id, {}
-    while not panels[cur].spec.root and not seen[cur] do
-        seen[cur] = true
-        local to = panels[cur].spec.get().dockTo
-        if not (to and panels[to]) then break end
-        cur = to
-    end
-    local ids = lib.Dock.Members(cur)
-    ids[#ids + 1] = cur
-    return ids
-end
-
 function PanelDock.Hovered(id, frame)
     local lib = Lib()
-    if not lib.dock.panels[id] then return frame:IsMouseOver() or ArrowOver(frame) end
-    if lib.Dock.Hovered(id) then return true end
-    for _, gid in ipairs(Group(lib, id)) do
-        local f = lib.dock.panels[gid].spec.frame
-        if f:IsShown() and ArrowOver(f) then return true end
-    end
-    return false
-end
-
-local SIDES = { "above", "below", "right", "left" }
-local OWN_EDGE = { Right = "left", Left = "right", Below = "above", Above = "below" }
-local TARGET_EDGE = { Right = "right", Left = "left", Below = "below", Above = "above" }
-
-function PanelDock.ArrowSide(blocked, room)
-    for _, side in ipairs(SIDES) do
-        if not blocked[side] and room[side] then return side end
-    end
-end
-
-function PanelDock.Blocked(id)
-    local panels, blocked = Lib().dock.panels, {}
-    local p = panels[id]
-    if not p then return blocked end
-    local pos = p.spec.get()
-    if not p.spec.root and pos.dockTo and panels[pos.dockTo] and OWN_EDGE[pos.side or ""] then
-        blocked[OWN_EDGE[pos.side]] = true
-    end
-    for other, q in pairs(panels) do
-        local o = other ~= id and not q.spec.root and q.spec.get()
-        if o and o.dockTo == id and TARGET_EDGE[o.side or ""] then blocked[TARGET_EDGE[o.side]] = true end
-    end
-    return blocked
-end
-
-local function GroupBounds(id, top, bottom)
-    local lib = Lib()
-    if not lib.dock.panels[id] then return top, bottom end
-    for _, gid in ipairs(Group(lib, id)) do
-        local f = lib.dock.panels[gid].spec.frame
-        local t, b = f:IsShown() and f:GetTop(), f:GetBottom()
-        if t and b then
-            local s = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
-            top, bottom = math.max(top, t * s), math.min(bottom, b * s)
-        end
-    end
-    return top, bottom
-end
-
-function PanelDock.PlaceArrow(arrow, panel, id, fullW, fullH)
-    local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    local w, h = fullW or panel:GetWidth(), fullH or panel:GetHeight()
-    local left, top = panel:GetLeft(), panel:GetTop()
-    local side, extra = "above", 0
-    if left and top then
-        local l, t = left * scale, top * scale
-        local r, b = l + w * scale, t - h * scale
-        local up, across = (arrow:GetHeight() + ARROW_GAP) * scale, (arrow:GetWidth() + ARROW_GAP) * scale
-        side = PanelDock.ArrowSide(PanelDock.Blocked(id), {
-            above = UIParent:GetTop() - t >= up, below = b - UIParent:GetBottom() >= up,
-            right = UIParent:GetRight() - r >= across, left = l - UIParent:GetLeft() >= across })
-        if not side then
-            local gt, gb = GroupBounds(id, t, b)
-            if UIParent:GetTop() - gt >= up then
-                side, extra = "above", (gt - t) / scale
-            else
-                side, extra = "below", (b - gb) / scale
-            end
-        end
-    end
-    arrow:ClearAllPoints()
-    if side == "below" then
-        arrow:SetPoint("TOPRIGHT", panel, "TOPLEFT", w, -(h + ARROW_GAP + extra))
-    elseif side == "right" then
-        arrow:SetPoint("TOPLEFT", panel, "TOPLEFT", w + ARROW_GAP, 0)
-    elseif side == "left" then
-        arrow:SetPoint("TOPRIGHT", panel, "TOPLEFT", -ARROW_GAP, 0)
-    else
-        arrow:SetPoint("BOTTOMRIGHT", panel, "TOPLEFT", w, ARROW_GAP + extra)
-    end
+    if not lib.dock.panels[id] then return frame:IsMouseOver() end
+    return lib.Dock.Hovered(id)
 end
 
 local function Tick(id, frame, db)

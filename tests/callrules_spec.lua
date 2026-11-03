@@ -208,6 +208,20 @@ describe("CallRules.Grid", function()
     assert.equals("BOTTOMLEFT", anchor)
   end)
 
+  it("leaves a left strip for the fold handle in front of the cells", function()
+    local o = opts("right", "down", 3)
+    o.strip = 12
+    local cells, w, h = Rules.Grid(4, o)
+    assert.same({ x = 13, y = -1 }, cells[1])
+    assert.same({ x = 13, y = -23 }, cells[4])
+    assert.same({ 3 * 10 + 2 * 2 + 2 + 12, 2 * 20 + 2 + 2 }, { w, h })
+    o = opts("left", "up", 3)
+    o.strip = 12
+    cells, w = Rules.Grid(2, o)
+    assert.same({ x = -1, y = 1 }, cells[1])
+    assert.equals(2 * 10 + 2 + 2 + 12, w)
+  end)
+
   it("sizes an empty panel as one cell", function()
     local cells, w, h = Rules.Grid(0, opts("right", "down", 8))
     assert.equals(0, #cells)

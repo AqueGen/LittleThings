@@ -30,11 +30,6 @@ local function Lib()
     return LibStub("LibVelvet-1.0")
 end
 
-local function ShowLabels()
-    local db = Db()
-    return db.labels and not db.collapsed
-end
-
 function Panel.Docked()
     return Db().dockTo ~= nil
 end
@@ -54,6 +49,23 @@ end
 function Panel.Merged()
     local root = MergedRoot()
     return root ~= nil and Lib().Dock.Merged(root)
+end
+
+local function MergedShown()
+    return Lib().Dock.MergeFrame(DOCK_ID) ~= nil
+end
+
+local function HandleShown()
+    return ns.PanelDock.HandleShown(false, MergedShown())
+end
+
+local function Folded()
+    local root = MergedShown() and MergedRoot()
+    return (root and Lib().dock.panels[root].spec.get() or Db()).collapsed
+end
+
+local function ShowLabels()
+    return Db().labels and not Folded()
 end
 
 local function CellSize()
@@ -118,7 +130,6 @@ function Panel.Place()
             SaveCorner()
         end
     end
-    ns.PanelDock.PlaceArrow(Panel.arrow, panel, DOCK_ID)
     if was ~= db.dockTo then
         Notify(was)
     end
@@ -266,13 +277,18 @@ function Panel.Build(onClick, onChange)
     local db = Db()
     Lib().Dock.Register(DOCK_ID, { frame = panel, root = false, get = Db, set = function() end,
         locked = function() return Db().locked end, onChange = onChange })
-    Panel.arrow = Lib().Dock.Arrow(panel, function()
+    local handle = CreateFrame("Button", nil, panel)
+    Panel.handle, panel.foldHandle = handle, handle
+    Panel.glyph = ns.PanelDock.BuildHandle(handle, panel)
+    handle:SetIgnoreParentAlpha(true)
+    handle:RegisterForClicks("LeftButtonUp")
+    handle:RegisterForDrag("LeftButton")
+    handle:SetScript("OnDragStart", StartDrag)
+    handle:SetScript("OnDragStop", StopDrag)
+    handle:SetScript("OnClick", function()
         db.collapsed = not db.collapsed
         onChange()
-    end, DOCK_ID)
-    Panel.arrow:SetFrameLevel(panel:GetFrameLevel() + 10)
-    panel.dockArrow = Panel.arrow
-    Panel.arrow:SetCollapsed(db.collapsed)
+    end)
     Panel.anchor = select(4, Rules.Grid(0, { grow = db.grow, wrap = db.wrap, perRow = 1, cellW = 0, cellH = 0, gap = 0, pad = 0 }))
     Panel.Place()
 end
@@ -293,7 +309,8 @@ function Panel.Update()
     local width = CellSize()
     local font = Font()
     PaintBackground()
-    Panel.arrow:SetCollapsed(db.collapsed)
+    Panel.handle:SetShown(HandleShown())
+    Panel.glyph:SetText(db.collapsed and "+" or "-")
     for id, call in pairs(db.calls) do
         local button = Ensure(id)
         button.icon:SetSize(db.iconSize, db.iconSize)
@@ -311,7 +328,7 @@ function Panel.Layout(ids)
     Panel.labelLines = LabelLines(ids)
     local width, height = CellSize()
     local cells, panelW, panelH, anchor = Rules.Grid(#ids, { grow = db.grow, wrap = db.wrap, perRow = db.perRow,
-        cellW = width, cellH = height, gap = db.gap, pad = db.pad })
+        cellW = width, cellH = height, gap = db.gap, pad = db.pad, strip = HandleShown() and ns.PanelDock.STRIP or 0 })
     if anchor ~= Panel.anchor then
         Panel.anchor = anchor
         if db.posX and not Panel.Docked() then

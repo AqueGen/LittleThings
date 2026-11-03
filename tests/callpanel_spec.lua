@@ -19,17 +19,17 @@ describe("PartyCallPanel docking", function()
   end
 
   before_each(function()
-    state = { combat = false, applied = {}, arrows = 0 }
+    state = { combat = false, applied = {}, rootDb = {} }
     rootChanges = 0
     rootFrame = newFrame()
     rootFrame.scale = 2
-    db = { scale = 1, posX = 300, posY = 400, calls = {}, bgAlpha = 0.6, border = true }
+    db = { scale = 1, posX = 300, posY = 400, calls = {}, bgAlpha = 0.6, border = true, iconSize = 32, labels = true, gap = 4, pad = 4 }
     _G.UIParent = newFrame()
     _G.InCombatLockdown = function() return state.combat end
     _G.CreateFrame = function(_, _, parent) return newFrame(parent) end
     local lib
     lib = { dock = { panels = {
-      raidMarkers = { spec = { root = true, frame = rootFrame, get = function() return {} end,
+      raidMarkers = { spec = { root = true, frame = rootFrame, get = function() return state.rootDb end,
         onChange = function() rootChanges = rootChanges + 1 end } },
     } }, Dock = {
       Register = function(id, spec) lib.dock.panels[id] = { spec = spec } end,
@@ -43,27 +43,71 @@ describe("PartyCallPanel docking", function()
         panel:SetPoint("TOPLEFT", rootFrame, "BOTTOMLEFT", 0, -6)
         panel.left, panel.top = state.dockedAt[1], state.dockedAt[2]
       end,
-      Arrow = function(parent)
-        local arrow = newFrame(parent)
-        function arrow:SetCollapsed() end
-        return arrow
-      end,
-    } }
+    }, T = { muted = { 0.7, 0.7, 0.7 }, gold = { 1, 0.82, 0 }, divider = { 0.2, 0.2, 0.2, 1 } } }
     _G.LibStub = function() return lib end
     ns = {
       db = { partyCallOptions = db },
       Widgets = { FLAT = { bgFile = "flat" } },
-      CallRules = { Grid = function() return {}, 0, 0, "TOPLEFT" end },
-      PanelDock = { PlaceArrow = function(_, _, id) state.arrows = state.arrows + 1 state.arrowId = id end },
+      CallRules = { Grid = function(_, o) state.grid = o return {}, 0, 0, "TOPLEFT" end },
     }
+    assert(loadfile("./Modules/PanelDock.lua"))("LittleThings", ns)
     assert(loadfile("./Modules/PartyCalls/CallPanel.lua"))("LittleThings", ns)
     Panel = ns.PartyCallPanel
   end)
 
   local function build()
-    Panel.Build(function() end, function() end)
+    state.changes = 0
+    Panel.Build(function() end, function() state.changes = state.changes + 1 end)
     return Panel.panel
   end
+
+  it("builds a plain fold handle as a strip inside the left edge, as tall as the panel", function()
+    local panel = build()
+    local handle = Panel.handle
+    assert.equals(panel, handle.parentFrame)
+    assert.equals(handle, panel.foldHandle)
+    assert.same({ { "TOPLEFT", panel, "TOPLEFT", 0, 0 }, { "BOTTOMRIGHT", panel, "BOTTOMLEFT", 12, 0 } }, handle.points)
+    Panel.Layout({})
+    assert.equals(12, state.grid.strip)
+  end)
+
+  it("folds its labels away on a click of its own handle and shows + while folded", function()
+    build()
+    Panel.Update()
+    Panel.Layout({})
+    assert.equals(32 + 2 + 12, state.grid.cellH)
+    Panel.handle.scripts.OnClick(Panel.handle)
+    assert.is_true(db.collapsed)
+    assert.equals(1, state.changes)
+    Panel.Update()
+    Panel.Layout({})
+    assert.equals(32, state.grid.cellH)
+    assert.is_true(Panel.handle:IsShown())
+    assert.equals("+", Panel.glyph.text)
+  end)
+
+  it("drops its handle and strip while merged and folds with the root's handle", function()
+    db.dockTo, db.side = "raidMarkers", "Below"
+    state.dockedAt = { 500, 700 }
+    build()
+    state.mergeFrame = {}
+    state.rootDb.collapsed = true
+    Panel.Update()
+    Panel.Layout({})
+    assert.is_false(Panel.handle:IsShown())
+    assert.equals(0, state.grid.strip)
+    assert.equals(32, state.grid.cellH)
+    state.rootDb.collapsed = false
+    db.collapsed = true
+    Panel.Layout({})
+    assert.equals(32 + 2 + 12, state.grid.cellH)
+    state.mergeFrame = nil
+    Panel.Update()
+    Panel.Layout({})
+    assert.is_true(Panel.handle:IsShown())
+    assert.equals(12, state.grid.strip)
+    assert.equals(32, state.grid.cellH)
+  end)
 
   it("places a fresh docked panel at its saved corner when built in combat", function()
     db.dockTo, db.side = "raidMarkers", "Below"
@@ -71,8 +115,6 @@ describe("PartyCallPanel docking", function()
     local panel = build()
     assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 300, 400 } }, panel.points)
     assert.same({ 300, 400 }, { db.posX, db.posY })
-    assert.equals(1, state.arrows)
-    assert.equals("partyCalls", state.arrowId)
   end)
 
   it("leaves a docked panel's points alone in combat once it has them", function()
@@ -84,7 +126,6 @@ describe("PartyCallPanel docking", function()
     Panel.Place()
     assert.equals(clears, panel.clears)
     assert.same({ { "TOPLEFT", rootFrame, "BOTTOMLEFT", 0, -6 } }, panel.points)
-    assert.equals(2, state.arrows)
   end)
 
   it("keeps its own background while the merged background is not shown", function()
@@ -130,7 +171,7 @@ describe("PartyCallPanel docking", function()
     assert.same({ 520, 650 }, { db.posX, db.posY })
   end)
 
-  it("tells the root when it docks, changes side or undocks so the root's arrow can move", function()
+  it("tells the root when it docks, changes side or undocks so the root can repaint", function()
     state.dockedAt = { 500, 700 }
     build()
     assert.equals(0, rootChanges)

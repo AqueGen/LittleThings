@@ -25,6 +25,7 @@ local function Build()
     local panel = CreateFrame("Frame", nil, host, "BackdropTemplate")
     Shared.PaintPanel(panel)
     panel:SetPoint("TOPLEFT", host, "TOPLEFT", 0, 0)
+    ns.PanelDock.BuildHandle(CreateFrame("Frame", nil, panel), panel)
     view = { panel = panel, row1 = Shared.NewRow(panel), row2 = Shared.NewRow(panel), block = Shared.NewRow(panel) }
     view.targetButtons, view.clearTarget = Shared.TargetCells(view.row1, Cell)
     view.worldButtons, view.modeButton, view.clearWorld = Shared.WorldCells(view.row2, Cell)

@@ -7,6 +7,7 @@ ns.RaidMarkerPanel = {}
 local Shared = ns.RaidMarkerPanel
 
 local SIZE, GAP, PAD = 26, 2, 4
+local STRIP = ns.PanelDock.STRIP
 local BAR_HEIGHT, TEXT_BAR_HEIGHT, DOWN_HEIGHT = 4, 12, 14
 local FLAT = ns.Widgets.FLAT
 local GOLD, BORDER = { 1, 0.82, 0, 1 }, { 0.4, 0.4, 0.4, 1 }
@@ -172,7 +173,7 @@ local function LayoutHorizontal(v)
         v.downText:SetPoint("LEFT", block, "RIGHT", GAP, 0)
         bw = bw + GAP + v.downText.cell
     end
-    v.panel:SetSize(width + GAP + bw + 2 * PAD, math.max(2 * SIZE + GAP, bh) + 2 * PAD)
+    v.panel:SetSize(width + GAP + bw + 2 * PAD + STRIP, math.max(2 * SIZE + GAP, bh) + 2 * PAD)
     return width
 end
 
@@ -208,14 +209,14 @@ local function LayoutVertical(v)
         v.downText:SetPoint("TOP", below, "BOTTOM", 0, -GAP)
         extra = extra + GAP + DOWN_HEIGHT
     end
-    v.panel:SetSize(width + 2 * PAD, height + GAP + 3 * step - GAP + extra + 2 * PAD)
+    v.panel:SetSize(width + 2 * PAD + STRIP, height + GAP + 3 * step - GAP + extra + 2 * PAD)
     return width
 end
 
 function Shared.Arrange(v)
     local db = ns.db.raidMarkerPanel
     v.row1:ClearAllPoints()
-    v.row1:SetPoint("TOPLEFT", v.panel, "TOPLEFT", PAD, -PAD)
+    v.row1:SetPoint("TOPLEFT", v.panel, "TOPLEFT", PAD + STRIP, -PAD)
     v.row2:ClearAllPoints()
     v.block:ClearAllPoints()
     v.manaBar:ClearAllPoints()
@@ -229,24 +230,24 @@ function Shared.Arrange(v)
     return LayoutHorizontal(v)
 end
 
-local function PaintArrow()
-    Shared.arrowGlyph:SetText(ns.db.raidMarkerPanel.collapsed and ">" or "v")
+local function PaintHandle()
+    Shared.handleGlyph:SetText(ns.db.raidMarkerPanel.collapsed and "+" or "-")
 end
 
 local function ApplyCollapse(width)
-    local db, panel, arrow = ns.db.raidMarkerPanel, Shared.panel, Shared.arrow
-    local w, h = Rules.CollapsedSize({ vertical = db.vertical, width = width, size = SIZE, gap = GAP, pad = PAD })
-    arrow:SetAttribute("lt-full-w", panel:GetWidth())
-    arrow:SetAttribute("lt-full-h", panel:GetHeight())
-    arrow:SetAttribute("lt-collapsed-w", w)
-    arrow:SetAttribute("lt-collapsed-h", h)
-    arrow:SetAttribute("lt-collapsed", db.collapsed)
+    local db, panel, handle = ns.db.raidMarkerPanel, Shared.panel, Shared.handle
+    local w, h = Rules.CollapsedSize({ vertical = db.vertical, width = width, size = SIZE, gap = GAP, pad = PAD, strip = STRIP })
+    handle:SetAttribute("lt-full-w", panel:GetWidth())
+    handle:SetAttribute("lt-full-h", panel:GetHeight())
+    handle:SetAttribute("lt-collapsed-w", w)
+    handle:SetAttribute("lt-collapsed-h", h)
+    handle:SetAttribute("lt-collapsed", db.collapsed)
     Shared.row2:SetShown(not db.collapsed)
     Shared.block:SetShown(not db.collapsed)
     if db.collapsed then
         panel:SetSize(w, h)
     end
-    PaintArrow()
+    PaintHandle()
 end
 
 function Shared.PaintBackground()
@@ -270,18 +271,10 @@ local function ChangeMembers(apply)
     end
 end
 
-function Shared.DockChanged()
-    Shared.PaintBackground()
-    local arrow = Shared.arrow
-    if arrow and not InCombatLockdown() then
-        ns.PanelDock.PlaceArrow(arrow, Shared.panel, DOCK_ID, arrow:GetAttribute("lt-full-w"), arrow:GetAttribute("lt-full-h"))
-    end
-end
-
 function Shared.ApplyDock()
     ChangeMembers(true)
     Lib().Dock.RefreshMerge(DOCK_ID)
-    Shared.DockChanged()
+    Shared.PaintBackground()
 end
 
 function Shared.Layout()
@@ -350,6 +343,18 @@ local function StopDrag(hidden)
     Lib().Dock.Drop(DOCK_ID)
 end
 
+local function DragStart()
+    if not ns.db.raidMarkerPanel.locked and not InCombatLockdown() then
+        StartDrag()
+    end
+end
+
+local function DragStop()
+    if dragging then
+        StopDrag()
+    end
+end
+
 local function Tick()
     Shared.RefreshWorld()
     Shared.RefreshHelpers()
@@ -392,7 +397,7 @@ function Shared.BuildFrame()
         return ns.db.raidMarkerPanel
     end
     Lib().Dock.Register(DOCK_ID, { frame = panel, root = true, get = Db, set = function() end,
-        locked = function() return Db().locked end, merged = function() return Db().merge end, onChange = Shared.DockChanged })
+        locked = function() return Db().locked end, merged = function() return Db().merge end, onChange = Shared.PaintBackground })
 
     local mover = CreateFrame("Frame", "LittleThingsRaidMarkersMover", UIParent)
     Shared.mover = mover
@@ -406,16 +411,8 @@ function Shared.BuildFrame()
 
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
-    panel:SetScript("OnDragStart", function()
-        if not ns.db.raidMarkerPanel.locked and not InCombatLockdown() then
-            StartDrag()
-        end
-    end)
-    panel:SetScript("OnDragStop", function()
-        if dragging then
-            StopDrag()
-        end
-    end)
+    panel:SetScript("OnDragStart", DragStart)
+    panel:SetScript("OnDragStop", DragStop)
     panel:SetScript("OnShow", function()
         if ns.db.raidMarkerPanel.point ~= "TOPLEFT" and not InCombatLockdown() then
             Shared.Place()
@@ -435,33 +432,27 @@ function Shared.BuildFrame()
     end)
 end
 
-function Shared.BuildArrow()
+function Shared.BuildHandle()
     local panel = Shared.panel
-    local arrow = CreateFrame("Button", "LittleThingsRaidMarkersCollapse", panel, "SecureHandlerClickTemplate")
-    Shared.arrow = arrow
-    arrow:SetSize(14, 14)
-    arrow:SetFrameLevel(panel:GetFrameLevel() + 10)
-    arrow:RegisterForClicks("AnyUp")
-    arrow:SetAlpha(0)
-    local glyph = arrow:CreateFontString(nil, "OVERLAY")
-    glyph:SetFontObject("GameFontNormalSmall")
-    glyph:SetPoint("CENTER")
-    glyph:SetTextColor(unpack(Lib().T.muted))
-    Shared.arrowGlyph = glyph
-    panel.dockArrow = arrow
-    SecureHandlerSetFrameRef(arrow, "panel", panel)
-    SecureHandlerSetFrameRef(arrow, "row2", Shared.row2)
-    SecureHandlerSetFrameRef(arrow, "block", Shared.block)
-    arrow:SetAttribute("_onclick", COLLAPSE_BODY)
-    arrow:SetScript("PostClick", function(self)
+    local handle = CreateFrame("Button", "LittleThingsRaidMarkersCollapse", panel, "SecureHandlerClickTemplate")
+    Shared.handle, panel.foldHandle = handle, handle
+    Shared.handleGlyph = ns.PanelDock.BuildHandle(handle, panel)
+    handle:SetIgnoreParentAlpha(true)
+    handle:RegisterForClicks("AnyUp")
+    handle:RegisterForDrag("LeftButton")
+    handle:SetScript("OnDragStart", DragStart)
+    handle:SetScript("OnDragStop", DragStop)
+    SecureHandlerSetFrameRef(handle, "panel", panel)
+    SecureHandlerSetFrameRef(handle, "row2", Shared.row2)
+    SecureHandlerSetFrameRef(handle, "block", Shared.block)
+    handle:SetAttribute("_onclick", COLLAPSE_BODY)
+    handle:SetScript("PostClick", function(self)
         ns.db.raidMarkerPanel.collapsed = self:GetAttribute("lt-collapsed") and true or false
-        PaintArrow()
-        Shared.ApplyOutOfCombat(Shared.ApplyDock)
-    end)
-    C_Timer.NewTicker(0.1, function()
-        if panel:IsShown() then
-            arrow:SetAlpha((ns.PanelDock.Hovered(DOCK_ID, panel) or arrow:IsMouseOver()) and 1 or 0)
+        PaintHandle()
+        if InCombatLockdown() and Lib().Dock.MergeFrame(DOCK_ID) then
+            ChangeMembers(false)
         end
+        Shared.ApplyOutOfCombat(Shared.ApplyDock)
     end)
 end
 

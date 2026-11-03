@@ -151,6 +151,8 @@ function Rules.Grid(count, o)
     local anchor = (vDir == "up" and "BOTTOM" or "TOP") .. (hDir == "left" and "RIGHT" or "LEFT")
     local xs, ys = hDir == "left" and -1 or 1, vDir == "up" and 1 or -1
     local stepW, stepH = o.cellW + o.gap, o.cellH + o.gap
+    local strip = o.strip or 0
+    local lead = hDir == "left" and 0 or strip
     local cells = {}
     for i = 0, count - 1 do
         local along, across = i % perRow, math.floor(i / perRow)
@@ -158,7 +160,7 @@ function Rules.Grid(count, o)
         if not horizontal then
             col, row = across, along
         end
-        cells[i + 1] = { x = xs * (o.pad + col * stepW), y = ys * (o.pad + row * stepH) }
+        cells[i + 1] = { x = xs * (o.pad + col * stepW) + lead, y = ys * (o.pad + row * stepH) }
     end
     local n = math.max(count, 1)
     local alongN, acrossN = math.min(n, perRow), math.ceil(n / perRow)
@@ -166,7 +168,7 @@ function Rules.Grid(count, o)
     if not horizontal then
         cols, rows = acrossN, alongN
     end
-    return cells, cols * stepW - o.gap + 2 * o.pad, rows * stepH - o.gap + 2 * o.pad, anchor
+    return cells, cols * stepW - o.gap + 2 * o.pad + strip, rows * stepH - o.gap + 2 * o.pad, anchor
 end
 
 local function Cut(text)

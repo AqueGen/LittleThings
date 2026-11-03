@@ -56,10 +56,10 @@ local ALLOWED = {
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
     "CreateTexture", "CreateMaskTexture", "CreateFontString", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
     "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetShown",
-    "HookScript", "IsMouseOver", "GetFrameLevel" },
+    "HookScript", "IsMouseOver", "GetFrameLevel", "SetAlpha" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateMaskTexture", "CreateFontString", "SetHighlightTexture",
     "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetFrameLevel",
-    "SetAlpha", "IsMouseOver", "SetFontString" },
+    "SetAlpha", "IsMouseOver", "SetFontString", "SetIgnoreParentAlpha", "RegisterForDrag" },
   Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "AddMaskTexture",
     "SetBlendMode", "Hide", "SetShown" },
   MaskTexture = { "SetTexture", "SetAllPoints" },
@@ -182,6 +182,7 @@ function IMPL:SetVertexColor(...) self.vertexColor = { ... } end
 function IMPL:SetAtlas(atlas) self.atlas = atlas end
 function IMPL:AddMaskTexture(mask) self.masks = rawget(self, "masks") or {} self.masks[#self.masks + 1] = mask end
 function IMPL:SetAlpha(alpha) self.alpha = alpha end
+function IMPL:SetIgnoreParentAlpha(on) self.ignoreParentAlpha = on end
 function IMPL:SetStatusBarTexture(texture) self.barTexture = texture end
 function IMPL:SetStatusBarColor(...) self.barColor = { ... } end
 function IMPL:SetMinMaxValues(low, high) self.minMax = { low, high } end
@@ -265,7 +266,7 @@ local function load(state, db)
     state.dockCalls[#state.dockCalls + 1] = { name, id, combat = state.combat }
   end
   local dockLib
-  dockLib = { T ={ muted = { 0.72, 0.74, 0.78 } }, dock = { panels = {} }, Dock = {
+  dockLib = { T = { muted = { 0.72, 0.74, 0.78 }, gold = { 1, 0.82, 0 }, divider = { 0.19, 0.21, 0.247, 1 } }, dock = { panels = {} }, Dock = {
     Register = function(id, spec) state.dockSpec = spec dockLib.dock.panels[id] = { spec = spec } end,
     Snap = function(id) dockCall("Snap", id) return state.snap[1], state.snap[2] end,
     Drop = function(id) dockCall("Drop", id) end,
@@ -277,21 +278,15 @@ local function load(state, db)
   } }
   state.snap = state.snap or { 0, 0 }
   _G.LibStub = function(name) assert(name == "LibVelvet-1.0") return dockLib end
-  ns.PanelDock = {
+  assert(loadfile("Modules/PanelDock.lua"))("LittleThings", ns)
+  local realDock = ns.PanelDock
+  ns.PanelDock = setmetatable({
     Fade = function(id, frame, fadeDb) state.fades[#state.fades + 1] = { id, frame, fadeDb } end,
-    PlaceArrow = function(arrow, panel, id, w, h)
-      state.arrowPlaced = { arrow, panel, panel.setPoints }
-      state.arrowArgs = { id, w, h, combat = state.combat }
-    end,
-    Hovered = function(id, frame)
-      assert(id == "raidMarkers" and frame.name == "LittleThingsRaidMarkers")
-      return state.hovered == true
-    end,
     Options = function(page, optionsDb, apply, id)
       page:Group("Docking")
       state.dockOptions = { db = optionsDb, apply = apply, id = id }
     end,
-  }
+  }, { __index = realDock })
   state.clearedBindings = {}
   _G.ClearOverrideBindings = function(owner)
     if state.combat then frames.blocked[#frames.blocked + 1] = "ClearOverrideBindings" end
@@ -446,12 +441,8 @@ local function load(state, db)
   return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance, all = all,
     groupButtons = groupButtons, blocked = frames.blocked, tick = tick, eventFrame = eventFrame, children = children,
     mover = function() return named("LittleThingsRaidMarkersMover") end,
-    arrow = function() return named("LittleThingsRaidMarkersCollapse") end,
-    arrowTicker = function()
-      for _, t in ipairs(tickers) do
-        if t.interval == 0.1 then return t end
-      end
-    end,
+    handle = function() return named("LittleThingsRaidMarkersCollapse") end,
+    realFade = realDock.Fade,
     manaBar = function()
       for _, f in ipairs(frames) do
         if f.kind == "StatusBar" then return f end
@@ -840,7 +831,7 @@ describe("RaidMarkers", function()
     assert.same({ 66, 0 }, offsets(pull))
     assert.same({ 0, -28 }, offsets(role))
     assert.same({ 130, 54 }, { block.width, block.height })
-    assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { panel.width, panel.height })
+    assert.same({ 284 + 2 + 130 + 8 + 12, 54 + 8 }, { panel.width, panel.height })
   end)
 
   local function clears(a)
@@ -894,7 +885,7 @@ describe("RaidMarkers", function()
     assert.same({ width, 82 }, { block.width, block.height })
     assert.same({ "TOPLEFT", row1, "BOTTOMLEFT", 0, -2 }, block.lastPoint)
     local panel = a.panel()
-    assert.same({ width + 8, 278 + 2 + 82 + 8 }, { panel.width, panel.height })
+    assert.same({ width + 8 + 12, 278 + 2 + 82 + 8 }, { panel.width, panel.height })
   end
 
   it("pairs each target marker with the world marker of the same symbol in one centred column", function()
@@ -934,7 +925,7 @@ describe("RaidMarkers", function()
     assert.same({ 81, 0 }, offsets(pull))
     assert.same({ 160, 26 }, { role.width, role.height })
     assert.equals("Ready", ready.label.text)
-    assert.same({ 284 + 2 + 160 + 8, 54 + 8 }, { wide.panel().width, wide.panel().height })
+    assert.same({ 284 + 2 + 160 + 8 + 12, 54 + 8 }, { wide.panel().width, wide.panel().height })
   end)
 
   it("anchors every tooltip beside the panel on the side with more room", function()
@@ -1132,15 +1123,36 @@ describe("RaidMarkers", function()
     panel.scripts.OnDragStart(panel)
     panel.scripts.OnDragStop(panel)
     panel.scripts.OnShow(panel)
-    local arrow = addon.arrow()
-    onclick(arrow, "LeftButton", false)
-    arrow.scripts.PostClick(arrow, "LeftButton", false)
-    onclick(arrow, "LeftButton", false)
-    arrow.scripts.PostClick(arrow, "LeftButton", false)
-    addon.arrowTicker().fn()
+    local handle = addon.handle()
+    handle.scripts.OnEnter(handle)
+    handle.scripts.OnLeave(handle)
+    handle.scripts.OnDragStart(handle)
+    handle.scripts.OnDragStop(handle)
+    onclick(handle, "LeftButton", false)
+    handle.scripts.PostClick(handle, "LeftButton", false)
+    onclick(handle, "LeftButton", false)
+    handle.scripts.PostClick(handle, "LeftButton", false)
+    local folded = 0
+    state.dockMembers = { "partyCalls" }
+    _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() folded = folded + 1 end } }
+    state.mergeFrame = { SetAlpha = noop }
+    onclick(handle, "LeftButton", false)
+    handle.scripts.PostClick(handle, "LeftButton", false)
+    assert.equals(1, folded)
+    onclick(handle, "LeftButton", false)
+    handle.scripts.PostClick(handle, "LeftButton", false)
+    assert.equals(2, folded)
     state.dockOptions.apply()
     state.dockSpec.onChange()
     addon.tick()
+    assert.is_true(panel:IsShown())
+    addon.realFade("raidMarkers", panel, { fade = true, fadeAlpha = 0 })
+    assert.equals(0, panel.alpha)
+    assert.equals(0.35, handle.alpha)
+    state.hovered = true
+    addon.realFade("raidMarkers", panel, { fade = true, fadeAlpha = 0 })
+    assert.equals(1, handle.alpha)
+    state.hovered, state.mergeFrame, state.dockMembers = false, nil, {}
     local bar = addon.manaBar()
     assert.is_true(rawequal(MANA, bar.value))
     local formatted = addon.manaText().formatted
@@ -1723,7 +1735,7 @@ describe("RaidMarkers", function()
       inParty(addon)
       assert.is_false(addon.manaBar().shown)
       assert.is_false(addon.downText().shown)
-      assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { addon.panel().width, addon.panel().height })
+      assert.same({ 284 + 2 + 130 + 8 + 12, 54 + 8 }, { addon.panel().width, addon.panel().height })
     end)
 
     it("puts the bar under the group block and the count right of it in the horizontal layout", function()
@@ -1736,14 +1748,14 @@ describe("RaidMarkers", function()
       assert.is_false(a.downText().shown)
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, a.manaBar().lastPoint)
       assert.same({ 116, 4 }, { a.manaBar().width, a.manaBar().height })
-      assert.same({ 284 + 2 + 130 + 8, 60 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 284 + 2 + 130 + 8 + 12, 60 + 8 }, { a.panel().width, a.panel().height })
       helpers(a, true, true)
       assert.is_true(a.downText().shown)
       assert.same({ "LEFT", block, "RIGHT", 2, 0 }, a.downText().lastPoint)
-      assert.same({ 284 + 2 + 130 + 2 + 31 + 8, 60 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 284 + 2 + 130 + 2 + 31 + 8 + 12, 60 + 8 }, { a.panel().width, a.panel().height })
       helpers(a, false, true)
       assert.is_false(a.manaBar().shown)
-      assert.same({ 284 + 2 + 130 + 2 + 31 + 8, 54 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 284 + 2 + 130 + 2 + 31 + 8 + 12, 54 + 8 }, { a.panel().width, a.panel().height })
     end)
 
     it("stacks the bar and the count under the group block in the vertical layout", function()
@@ -1755,10 +1767,10 @@ describe("RaidMarkers", function()
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, bar.lastPoint)
       assert.same({ 50, 4 }, { bar.width, bar.height })
       assert.same({ "TOP", bar, "BOTTOM", 0, -2 }, text.lastPoint)
-      assert.same({ 64 + 8, 278 + 2 + 82 + 6 + 16 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 64 + 8 + 12, 278 + 2 + 82 + 6 + 16 + 8 }, { a.panel().width, a.panel().height })
       helpers(a, false, true)
       assert.same({ "TOP", block, "BOTTOM", 0, -2 }, text.lastPoint)
-      assert.same({ 64 + 8, 278 + 2 + 82 + 16 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 64 + 8 + 12, 278 + 2 + 82 + 16 + 8 }, { a.panel().width, a.panel().height })
     end)
 
     it("offers a Mana text dropdown under Healer mana, Percent by default, greyed while the bar is off", function()
@@ -1832,14 +1844,14 @@ describe("RaidMarkers", function()
       assert.same({ "CENTER" }, text.lastPoint)
       assert.same({ 116, 12 }, { bar.width, bar.height })
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, bar.lastPoint)
-      assert.same({ 284 + 2 + 130 + 8, 54 + 2 + 12 + 8 }, { addon.panel().width, addon.panel().height })
+      assert.same({ 284 + 2 + 130 + 8 + 12, 54 + 2 + 12 + 8 }, { addon.panel().width, addon.panel().height })
       local _, specs = pages(addon)
       specs["Vertical"].set(true)
       assert.same({ 50, 12 }, { bar.width, bar.height })
-      assert.same({ 64 + 8, 278 + 2 + 82 + 14 + 8 }, { addon.panel().width, addon.panel().height })
+      assert.same({ 64 + 8 + 12, 278 + 2 + 82 + 14 + 8 }, { addon.panel().width, addon.panel().height })
       helpers(addon, false, false, "both")
       assert.is_false(bar.shown)
-      assert.same({ 64 + 8, 278 + 2 + 82 + 8 }, { addon.panel().width, addon.panel().height })
+      assert.same({ 64 + 8 + 12, 278 + 2 + 82 + 8 }, { addon.panel().width, addon.panel().height })
     end)
 
     it("puts a 12 px healer role icon left of the bar, its alpha following the bar", function()
@@ -2086,8 +2098,8 @@ describe("RaidMarkers", function()
   describe("docking and collapse", function()
     local function block() return addon.button("Ready check").parent end
     local function row2() return world(1).parent end
-    local function glyph(arrow)
-      for _, child in ipairs(addon.children(arrow)) do
+    local function glyph(handle)
+      for _, child in ipairs(addon.children(handle)) do
         if child.kind == "FontString" then return child end
       end
     end
@@ -2172,57 +2184,68 @@ describe("RaidMarkers", function()
       assert.equals(1, #calls("RefreshMerge"))
     end)
 
-    it("builds a secure collapse arrow with refs to the panel, the world row and the group block", function()
-      local arrow, panel = addon.arrow(), addon.panel()
-      assert.equals("SecureHandlerClickTemplate", arrow.template)
-      assert.equals(panel, arrow.parent)
-      assert.equals(panel, arrow.attrs["frameref-panel"])
-      assert.equals(row2(), arrow.attrs["frameref-row2"])
-      assert.equals(block(), arrow.attrs["frameref-block"])
+    it("builds a secure fold handle strip inside the left edge with refs to the panel, the world row and the group block", function()
+      local handle, panel = addon.handle(), addon.panel()
+      assert.equals("SecureHandlerClickTemplate", handle.template)
+      assert.equals(panel, handle.parent)
+      assert.equals(panel, handle.attrs["frameref-panel"])
+      assert.equals(row2(), handle.attrs["frameref-row2"])
+      assert.equals(block(), handle.attrs["frameref-block"])
       assert.equals("SecureFrameTemplate", block().template)
       assert.equals("SecureFrameTemplate", row2().template)
       assert.equals("SecureFrameTemplate,BackdropTemplate", panel.template)
-      assert.same({ arrow, panel, panel.setPoints }, state.arrowPlaced)
-      local _, specs = pages(addon)
-      state.arrowPlaced = nil
-      specs["Scale"].set(1.5)
-      assert.same({ arrow, panel, panel.setPoints }, state.arrowPlaced)
-      assert.equals(arrow, panel.dockArrow)
+      assert.same({ { "TOPLEFT", panel, "TOPLEFT", 0, 0 }, { "BOTTOMRIGHT", panel, "BOTTOMLEFT", 12, 0 } }, handle.points)
+      assert.equals(handle, panel.foldHandle)
+      assert.is_true(handle.ignoreParentAlpha)
+      assert.is_nil(rawget(handle, "alpha"))
       assert.equals(block(), addon.manaBar().parent)
       assert.equals(block(), addon.downText().parent)
-      assert.same({ "AnyUp" }, arrow.clicks)
-      assert.equals("v", glyph(arrow).text)
+      assert.same({ "AnyUp" }, handle.clicks)
+      assert.equals("-", glyph(handle).text)
+      handle.scripts.OnEnter(handle)
+      assert.same({ 1, 0.82, 0 }, glyph(handle).color)
+      handle.scripts.OnLeave(handle)
+      assert.same({ 0.72, 0.74, 0.78 }, glyph(handle).color)
     end)
 
-    it("stores the full and collapsed sizes for both layouts", function()
-      local arrow, panel = addon.arrow(), addon.panel()
-      assert.same({ panel.width, panel.height, 292, 34 },
-        { arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"], arrow.attrs["lt-collapsed-w"], arrow.attrs["lt-collapsed-h"] })
+    it("starts the content right of the strip in both layouts", function()
+      local row1 = addon.ns.RaidMarkerPanel.row1
+      assert.same({ "TOPLEFT", addon.panel(), "TOPLEFT", 16, -4 }, row1.lastPoint)
       local _, specs = pages(addon)
       specs["Vertical"].set(true)
-      assert.same({ panel.width, panel.height, 44, 258 },
-        { arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"], arrow.attrs["lt-collapsed-w"], arrow.attrs["lt-collapsed-h"] })
+      assert.same({ "TOPLEFT", addon.panel(), "TOPLEFT", 16, -4 }, row1.lastPoint)
     end)
 
-    it("collapses and expands in combat through the secure snippet and saves the state after the click", function()
-      local arrow, panel, db = addon.arrow(), addon.panel(), addon.ns.db.raidMarkerPanel
+    it("stores the full and collapsed sizes with the strip for both layouts", function()
+      local handle, panel = addon.handle(), addon.panel()
+      assert.same({ panel.width, panel.height, 304, 34 },
+        { handle.attrs["lt-full-w"], handle.attrs["lt-full-h"], handle.attrs["lt-collapsed-w"], handle.attrs["lt-collapsed-h"] })
+      local _, specs = pages(addon)
+      specs["Vertical"].set(true)
+      assert.same({ panel.width, panel.height, 56, 258 },
+        { handle.attrs["lt-full-w"], handle.attrs["lt-full-h"], handle.attrs["lt-collapsed-w"], handle.attrs["lt-collapsed-h"] })
+      assert.equals(12 + 64 + 8, panel.width)
+    end)
+
+    it("folds and unfolds in combat through the secure snippet and saves the state after the click", function()
+      local handle, panel, db = addon.handle(), addon.panel(), addon.ns.db.raidMarkerPanel
       local full = { panel.width, panel.height }
       state.dockCalls = {}
       state.combat = true
-      onclick(arrow, "LeftButton", false)
-      arrow.scripts.PostClick(arrow, "LeftButton", false)
+      onclick(handle, "LeftButton", false)
+      handle.scripts.PostClick(handle, "LeftButton", false)
       assert.is_false(row2():IsShown())
       assert.is_false(block():IsShown())
-      assert.same({ 292, 34 }, { panel.width, panel.height })
+      assert.same({ 304, 34 }, { panel.width, panel.height })
       assert.is_true(db.collapsed)
-      assert.equals(">", glyph(arrow).text)
-      onclick(arrow, "LeftButton", false)
-      arrow.scripts.PostClick(arrow, "LeftButton", false)
+      assert.equals("+", glyph(handle).text)
+      onclick(handle, "LeftButton", false)
+      handle.scripts.PostClick(handle, "LeftButton", false)
       assert.is_true(row2():IsShown())
       assert.is_true(block():IsShown())
       assert.same(full, { panel.width, panel.height })
       assert.is_false(db.collapsed)
-      assert.equals("v", glyph(arrow).text)
+      assert.equals("-", glyph(handle).text)
       assert.same({}, addon.blocked)
       assert.same({}, state.dockCalls)
       state.combat = false
@@ -2230,34 +2253,33 @@ describe("RaidMarkers", function()
       assert.equals(1, #calls("RefreshMerge"))
     end)
 
+    it("folds the merged members from the click in combat, and leaves unmerged members alone", function()
+      local handle, changed = addon.handle(), 0
+      state.dockMembers = { "partyCalls" }
+      _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() changed = changed + 1 end } }
+      state.dockCalls = {}
+      state.combat = true
+      onclick(handle, "LeftButton", false)
+      handle.scripts.PostClick(handle, "LeftButton", false)
+      assert.equals(0, changed)
+      state.mergeFrame = {}
+      onclick(handle, "LeftButton", false)
+      handle.scripts.PostClick(handle, "LeftButton", false)
+      assert.equals(1, changed)
+      assert.same({}, addon.blocked)
+      assert.same({}, state.dockCalls)
+    end)
+
     it("restores a saved collapse when the panel is built", function()
       local saved = load(state, { raidMarkerPanel = { collapsed = true } })
       saved.module.Enable()
-      local arrow, panel = saved.named("LittleThingsRaidMarkersCollapse"), saved.panel()
-      assert.is_true(arrow.attrs["lt-collapsed"])
-      assert.is_false(arrow.attrs["frameref-row2"]:IsShown())
-      assert.is_false(arrow.attrs["frameref-block"]:IsShown())
-      assert.same({ 292, 34 }, { panel.width, panel.height })
-      onclick(arrow, "LeftButton", false)
-      assert.same({ arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"] }, { panel.width, panel.height })
-    end)
-
-    it("shows the arrow by alpha only, on a 0.1 s tick, while the group or the arrow is hovered", function()
-      local arrow, panel = addon.arrow(), addon.panel()
-      local hover = addon.arrowTicker().fn
-      panel:Show()
-      state.combat = true
-      hover()
-      assert.equals(0, arrow.alpha)
-      state.hovered = true
-      hover()
-      assert.equals(1, arrow.alpha)
-      state.hovered = false
-      arrow.mouseOver = true
-      hover()
-      assert.equals(1, arrow.alpha)
-      assert.same({}, addon.blocked)
-      assert.is_nil(rawget(panel, "hooks"))
+      local handle, panel = saved.named("LittleThingsRaidMarkersCollapse"), saved.panel()
+      assert.is_true(handle.attrs["lt-collapsed"])
+      assert.is_false(handle.attrs["frameref-row2"]:IsShown())
+      assert.is_false(handle.attrs["frameref-block"]:IsShown())
+      assert.same({ 304, 34 }, { panel.width, panel.height })
+      onclick(handle, "LeftButton", false)
+      assert.same({ handle.attrs["lt-full-w"], handle.attrs["lt-full-h"] }, { panel.width, panel.height })
     end)
 
     for _, case in ipairs({
@@ -2312,18 +2334,6 @@ describe("RaidMarkers", function()
       assert.same({}, state.dockCalls)
     end)
 
-    it("re-places its arrow at the full size on a dock change, only out of combat", function()
-      local arrow = addon.arrow()
-      state.arrowArgs = nil
-      state.dockSpec.onChange()
-      assert.same({ "raidMarkers", arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"], combat = false }, state.arrowArgs)
-      assert.is_number(arrow.attrs["lt-full-w"])
-      state.arrowArgs = nil
-      state.combat = true
-      state.dockSpec.onChange()
-      assert.is_nil(state.arrowArgs)
-      assert.same({}, addon.blocked)
-    end)
   end)
 end)
 
