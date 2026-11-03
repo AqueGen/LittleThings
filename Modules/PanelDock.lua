@@ -5,10 +5,10 @@ local PanelDock = {}
 ns.PanelDock = PanelDock
 
 local TICK = 0.1
-local tickers, blocked = {}, {}
+local tickers = {}
 
-local function Dock()
-    return LibStub("LibVelvet-1.0").Dock
+local function Lib()
+    return LibStub("LibVelvet-1.0")
 end
 
 function PanelDock.FadeAlpha(hovered, db)
@@ -16,12 +16,18 @@ function PanelDock.FadeAlpha(hovered, db)
     return db.fadeAlpha or 0
 end
 
+local function SetAlpha(id, frame, alpha)
+    pcall(frame.SetAlpha, frame, alpha)
+    local merged = Lib().Dock.MergeFrame(id)
+    if merged then merged:SetAlpha(alpha) end
+end
+
 local function Tick(id, frame, db)
     if not frame:IsShown() then return end
-    local combat = InCombatLockdown()
-    if combat and blocked[frame] then return end
-    local ok = pcall(frame.SetAlpha, frame, PanelDock.FadeAlpha(Dock().Hovered(id), db))
-    if not ok and combat then blocked[frame] = true end
+    local lib = Lib()
+    local hovered
+    if lib.dock.panels[id] then hovered = lib.Dock.Hovered(id) else hovered = frame:IsMouseOver() end
+    SetAlpha(id, frame, PanelDock.FadeAlpha(hovered, db))
 end
 
 function PanelDock.Fade(id, frame, db)
@@ -30,26 +36,32 @@ function PanelDock.Fade(id, frame, db)
         tickers[frame] = nil
     end
     if not db.fade then
-        pcall(frame.SetAlpha, frame, 1)
+        SetAlpha(id, frame, 1)
         return
     end
     tickers[frame] = C_Timer.NewTicker(TICK, function() Tick(id, frame, db) end)
+    Tick(id, frame, db)
 end
 
 function PanelDock.Options(page, db, apply, id)
-    local dock = Dock()
+    assert(id, "PanelDock.Options needs a dock id")
+    local dock = Lib().Dock
     local function Docked()
         return db.dockTo ~= nil
     end
     local group = page:Group("Docking")
     group:Check({ label = "Merge with docked panels", combatLocked = true,
-        tooltip = "Draws one shared background behind this panel and the panels docked to it, with no gap between them.",
+        tooltip = function()
+            local text = "Draws one shared background behind this panel and the panels docked to it, with no gap between them."
+            if Docked() then text = text .. "\nSet on the panel this one is docked to." end
+            return text
+        end,
         get = function() return db.merge and true or false end,
         set = function(value)
             db.merge = value
             apply()
         end,
-        enabled = function() return Docked() or #dock.Members(id) > 0 end })
+        enabled = function() return not Docked() and #dock.Members(id) > 0 end })
     group:Check({ label = "Show on mouse-over",
         tooltip = "Fades the panel and the panels docked to it until the mouse is over any of them.",
         get = function() return db.fade and true or false end,
