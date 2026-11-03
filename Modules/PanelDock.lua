@@ -4,7 +4,7 @@ local addonName, ns = ...
 local PanelDock = {}
 ns.PanelDock = PanelDock
 
-local TICK = 0.1
+local TICK, ARROW_GAP = 0.1, 2
 local tickers = {}
 
 local function Lib()
@@ -22,13 +22,54 @@ local function SetAlpha(id, frame, alpha)
     if merged then merged:SetAlpha(alpha) end
 end
 
+local function ArrowOver(frame)
+    return frame.dockArrow ~= nil and frame.dockArrow:IsMouseOver()
+end
+
+local function Group(lib, id)
+    local panels, cur, seen = lib.dock.panels, id, {}
+    while not panels[cur].spec.root and not seen[cur] do
+        seen[cur] = true
+        local to = panels[cur].spec.get().dockTo
+        if not (to and panels[to]) then break end
+        cur = to
+    end
+    local ids = lib.Dock.Members(cur)
+    ids[#ids + 1] = cur
+    return ids
+end
+
+function PanelDock.Hovered(id, frame)
+    local lib = Lib()
+    if not lib.dock.panels[id] then return frame:IsMouseOver() or ArrowOver(frame) end
+    if lib.Dock.Hovered(id) then return true end
+    for _, gid in ipairs(Group(lib, id)) do
+        local f = lib.dock.panels[gid].spec.frame
+        if f:IsShown() and ArrowOver(f) then return true end
+    end
+    return false
+end
+
+function PanelDock.ArrowSide(top, screenTop, need)
+    if top and screenTop - top < need then return "below" end
+    return "above"
+end
+
+function PanelDock.PlaceArrow(arrow, panel)
+    local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local top = panel:GetTop()
+    local side = PanelDock.ArrowSide(top and top * scale, UIParent:GetTop(), (arrow:GetHeight() + ARROW_GAP) * scale)
+    arrow:ClearAllPoints()
+    if side == "below" then
+        arrow:SetPoint("TOPRIGHT", panel, "BOTTOMRIGHT", 0, -ARROW_GAP)
+    else
+        arrow:SetPoint("BOTTOMRIGHT", panel, "TOPRIGHT", 0, ARROW_GAP)
+    end
+end
+
 local function Tick(id, frame, db)
     if not frame:IsShown() then return end
-    local lib = Lib()
-    local hovered
-    if lib.dock.panels[id] then hovered = lib.Dock.Hovered(id) else hovered = frame:IsMouseOver() end
-    hovered = hovered or (frame.dockArrow ~= nil and frame.dockArrow:IsMouseOver())
-    SetAlpha(id, frame, PanelDock.FadeAlpha(hovered, db))
+    SetAlpha(id, frame, PanelDock.FadeAlpha(PanelDock.Hovered(id, frame), db))
 end
 
 function PanelDock.Fade(id, frame, db)

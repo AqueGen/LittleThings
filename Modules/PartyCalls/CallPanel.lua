@@ -107,6 +107,7 @@ function Panel.Place()
         panel:SetPoint("CENTER", UIParent, "CENTER", 0, 160)
     end
     Lib().Dock.Apply(DOCK_ID)
+    ns.PanelDock.PlaceArrow(Panel.arrow, panel)
 end
 
 local function Cursor()
@@ -253,8 +254,6 @@ function Panel.Build(onClick, onChange)
         onChange()
     end, DOCK_ID)
     Panel.arrow:SetFrameLevel(panel:GetFrameLevel() + 10)
-    Panel.arrow:ClearAllPoints()
-    Panel.arrow:SetPoint("BOTTOMRIGHT", panel, "TOPRIGHT", 0, 2)
     panel.dockArrow = Panel.arrow
     Panel.arrow:SetCollapsed(db.collapsed)
     Panel.anchor = select(4, Rules.Grid(0, { grow = db.grow, wrap = db.wrap, perRow = 1, cellW = 0, cellH = 0, gap = 0, pad = 0 }))

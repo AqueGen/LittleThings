@@ -293,6 +293,7 @@ function Shared.Place()
         panel:ClearAllPoints()
         panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", db.x, db.y)
     end
+    ns.PanelDock.PlaceArrow(Shared.arrow, panel)
     Shared.ApplyDock()
 end
 
@@ -426,7 +427,6 @@ function Shared.BuildArrow()
     local arrow = CreateFrame("Button", "LittleThingsRaidMarkersCollapse", panel, "SecureHandlerClickTemplate")
     Shared.arrow = arrow
     arrow:SetSize(14, 14)
-    arrow:SetPoint("BOTTOMRIGHT", panel, "TOPRIGHT", 0, 2)
     arrow:SetFrameLevel(panel:GetFrameLevel() + 10)
     arrow:RegisterForClicks("AnyUp")
     arrow:SetAlpha(0)
@@ -445,10 +445,9 @@ function Shared.BuildArrow()
         PaintArrow()
         Shared.ApplyOutOfCombat(Shared.ApplyDock)
     end)
-    local dock = Lib().Dock
     C_Timer.NewTicker(0.1, function()
         if panel:IsShown() then
-            arrow:SetAlpha((dock.Hovered(DOCK_ID) or arrow:IsMouseOver()) and 1 or 0)
+            arrow:SetAlpha((ns.PanelDock.Hovered(DOCK_ID, panel) or arrow:IsMouseOver()) and 1 or 0)
         end
     end)
 end

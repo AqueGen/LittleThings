@@ -279,6 +279,11 @@ local function load(state, db)
   _G.LibStub = function(name) assert(name == "LibVelvet-1.0") return dockLib end
   ns.PanelDock = {
     Fade = function(id, frame, fadeDb) state.fades[#state.fades + 1] = { id, frame, fadeDb } end,
+    PlaceArrow = function(arrow, panel) state.arrowPlaced = { arrow, panel, panel.setPoints } end,
+    Hovered = function(id, frame)
+      assert(id == "raidMarkers" and frame.name == "LittleThingsRaidMarkers")
+      return state.hovered == true
+    end,
     Options = function(page, optionsDb, apply, id)
       page:Group("Docking")
       state.dockOptions = { db = optionsDb, apply = apply, id = id }
@@ -2174,7 +2179,11 @@ describe("RaidMarkers", function()
       assert.equals("SecureFrameTemplate", block().template)
       assert.equals("SecureFrameTemplate", row2().template)
       assert.equals("SecureFrameTemplate,BackdropTemplate", panel.template)
-      assert.same({ "BOTTOMRIGHT", panel, "TOPRIGHT", 0, 2 }, arrow.lastPoint)
+      assert.same({ arrow, panel, panel.setPoints }, state.arrowPlaced)
+      local _, specs = pages(addon)
+      state.arrowPlaced = nil
+      specs["Scale"].set(1.5)
+      assert.same({ arrow, panel, panel.setPoints }, state.arrowPlaced)
       assert.equals(arrow, panel.dockArrow)
       assert.equals(block(), addon.manaBar().parent)
       assert.equals(block(), addon.downText().parent)
