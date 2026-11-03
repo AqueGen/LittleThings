@@ -287,6 +287,12 @@ function Dock.RefreshMerge(rootId)
     end
 end
 
+function Dock.MergeFrame(id)
+    local p = panels[topOf(id)]
+    local frame = p and p.mergeFrame
+    return frame and frame:IsShown() and frame or nil
+end
+
 function Dock.Hovered(id)
     local top = topOf(id)
     local p = panels[top]
