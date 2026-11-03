@@ -20,7 +20,7 @@ local WINDOWS_KEY = "damageMeterWindows"
 local EXTRAS = { { key = WINDOWS_KEY, label = "Meter windows", after = "damageMeter" } }
 
 local frame, menu, scroll, host, unlock
-local pages, builders, entries, headers, panes = {}, {}, {}, {}, {}
+local pages, builders, entries, headers, panes, headerPages = {}, {}, {}, {}, {}, {}
 local current
 
 local function Saved()
@@ -41,8 +41,23 @@ local function Row(key)
     end
 end
 
+local function HasPage(key)
+    for _, module in ipairs(ns.ModulesFor(key)) do
+        if module.Pages or module.Preview then return true end
+    end
+    return false
+end
+
 local function Model()
-    return MenuModel.Build(ns.MODULES, EXTRAS, IsOn)
+    return MenuModel.Build(ns.MODULES, EXTRAS, IsOn, HasPage)
+end
+
+local function GroupPageOf(key)
+    for _, group in ipairs(Model()) do
+        for _, switch in ipairs(group.switches) do
+            if switch == key then return group.page end
+        end
+    end
 end
 
 local function SwitchSpec(row)
@@ -99,10 +114,23 @@ local function BuildModulePage(page, row)
     end)
 end
 
+local function BuildGroupPage(page, key)
+    for _, group in ipairs(Model()) do
+        if group.page == key then
+            local box = page:Group(group.title)
+            for _, switch in ipairs(group.switches) do
+                box:Check(SwitchSpec(Row(switch)))
+            end
+        end
+    end
+end
+
 local function BuildPage(key)
     local page = Widgets.NewPage(host)
     local ok = xpcall(function()
-        if builders[key] then
+        if key:find("^group:") then
+            BuildGroupPage(page, key)
+        elseif builders[key] then
             builders[key](page)
         else
             BuildModulePage(page, Row(key))
@@ -117,6 +145,10 @@ local function Paint()
     for key, entry in pairs(entries) do
         UI.PaintNav(entry, key == current and "selected" or (entry.enabled and "normal" or "muted"))
     end
+    for key, header in pairs(headerPages) do
+        UI.PaintNav(header, key == current and "selected" or "normal")
+        if key ~= current then header.label:SetTextColor(unpack(UI.HEADER)) end
+    end
 end
 
 local function Entry(item)
@@ -130,14 +162,20 @@ local function LayoutMenu()
     local y = -PAD
     for _, group in ipairs(Model()) do
         local header = headers[group.title]
-        if not header then
+        if not header and group.page then
+            header = UI.NavEntry(menu, group.title, MENU_W - 2 * PAD + 10, HEADER_H)
+            header.label:SetFontObject("GameFontNormalSmall")
+            header:SetScript("OnClick", function() Window.Show(group.page) end)
+            headerPages[group.page] = header
+            headers[group.title] = header
+        elseif not header then
             header = menu:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             header:SetTextColor(unpack(UI.HEADER))
             header:SetText(group.title)
             headers[group.title] = header
         end
         header:ClearAllPoints()
-        header:SetPoint("TOPLEFT", menu, "TOPLEFT", PAD, y)
+        header:SetPoint("TOPLEFT", menu, "TOPLEFT", group.page and PAD - 10 or PAD, y)
         y = y - HEADER_H
         for _, item in ipairs(group.entries) do
             local entry = entries[item.key] or Entry(item)
@@ -354,7 +392,7 @@ end
 
 function Window.Show(key)
     if not frame then Build() end
-    key = key or current or Model()[1].entries[1].key
+    key = key and GroupPageOf(key) or key or current or Model()[1].entries[1].key
     if current and pages[current] and current ~= key then
         pages[current].frame:Hide()
     end

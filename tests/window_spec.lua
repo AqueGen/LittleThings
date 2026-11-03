@@ -44,11 +44,13 @@ describe("settings window preview zone", function()
             MODULES = {
                 { key = "raidMarkers", group = "Party and raid", label = "Raid marker panel", live = true, tooltip = "Panel." },
                 { key = "groupChat", group = "Party and raid", label = "Group chat", live = true, tooltip = "Chat." },
+                { key = "groupLeader", group = "Party and raid", label = "Group leader icons", live = true, hint = "Mark the leader", tooltip = "Crown." },
             },
             IsOn = function(key) return ns.db[key] == true end,
             IsAvailable = function() return true end,
             ModulesFor = function(key)
                 if key == "raidMarkers" then return { { key = key, Preview = preview } } end
+                if key == "groupChat" then return { { key = key, Pages = function() end } } end
                 return {}
             end,
         }
@@ -177,6 +179,19 @@ describe("settings window preview zone", function()
         page:Refresh()
         assert.equals(660, holder.width)
         assert.equals(36, holder.height)
+    end)
+
+    it("opens a switch-only module on its group page, which lists the switch with its hint", function()
+        ns.Window.Show("groupLeader")
+        local header = button("Party and raid")
+        assert.is_not_nil(header)
+        assert.is_nil(button("Group leader icons"))
+        local selected = header.label.color
+        ns.Window.Show("raidMarkers")
+        assert.same(LibStub("LibVelvet-1.0").HEADER, header.label.color)
+        header.scripts.OnClick(header)
+        assert.same(selected, header.label.color)
+        assert.not_same(LibStub("LibVelvet-1.0").HEADER, selected)
     end)
 
     it("does not refresh a preview while its page is not open", function()
