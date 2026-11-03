@@ -222,6 +222,59 @@ function Group:Dropdown(spec)
     end, spec.visible)
 end
 
+function Group:Input(spec)
+    local group = self
+    local holder = CreateFrame("Frame", nil, self.frame)
+    local width = spec.width or CONTROL_W
+    holder:SetSize(LABEL_W + width + 28, 26)
+    holder:EnableMouse(true)
+    Hover(holder, spec)
+    local label = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    label:SetPoint("LEFT")
+    label:SetWidth(LABEL_W - 8)
+    label:SetJustifyH("LEFT")
+    label:SetText(spec.label)
+    local box = UI.Input(holder, width)
+    box:SetPoint("LEFT", holder, "LEFT", LABEL_W, 0)
+    if spec.maxBytes then box:SetMaxBytes(spec.maxBytes) end
+    HookHover(box, spec)
+    local icon
+    if spec.icon then
+        icon = holder:CreateTexture(nil, "ARTWORK")
+        icon:SetSize(22, 22)
+        icon:SetPoint("LEFT", box, "RIGHT", 6, 0)
+    end
+    local function Commit(self)
+        if Locked(spec) then
+            self:SetText(spec.get() or "")
+            return
+        end
+        local text = self:GetText()
+        if text ~= (spec.get() or "") then
+            spec.set(text)
+            group.page:Refresh()
+        end
+    end
+    box:SetScript("OnEnterPressed", function(self)
+        Commit(self)
+        self:ClearFocus()
+    end)
+    box:HookScript("OnEditFocusLost", Commit)
+    box:SetScript("OnEscapePressed", function(self)
+        self:SetText(spec.get() or "")
+        self:ClearFocus()
+    end)
+    self:Add(holder, 26, function()
+        if not box:HasFocus() then
+            box:SetText(spec.get() or "")
+        end
+        if icon then icon:SetTexture(spec.icon()) end
+        local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
+        box:SetEnabled(enabled)
+        label:SetTextColor(unpack(enabled and T.text or T.muted))
+    end, spec.visible)
+end
+
 function Group:Button(spec)
     local group = self
     local button = Widgets.Button(self.frame, spec.text or spec.label, spec.width or 180)
@@ -256,7 +309,7 @@ end
 
 function Group:Scoped(predicate)
     local group, proxy = self, {}
-    for _, name in ipairs({ "Check", "Slider", "Dropdown", "Button", "Note" }) do
+    for _, name in ipairs({ "Check", "Slider", "Dropdown", "Input", "Button", "Note" }) do
         proxy[name] = function(_, spec)
             if type(spec) == "string" then spec = { text = spec } end
             local own = spec.visible
