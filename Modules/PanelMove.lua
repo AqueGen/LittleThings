@@ -4,8 +4,8 @@ local addonName, ns = ...
 local PanelMove = {}
 ns.PanelMove = PanelMove
 
-local BADGE, INSET, TICK, SEAM = 22, 3, 0.1, 1
-local BRIGHT = { 1, 0.93, 0.55, 1 }
+local BADGE, TICK, SEAM = 20, 0.1, 1
+local GREY = { 0.85, 0.85, 0.85 }
 local GOLD = { 1, 0.82, 0, 1 }
 
 local MODULES = { "raidMarkers", "partyCalls", "saveIndicator" }
@@ -180,18 +180,29 @@ local function PaintOverlays(combat)
 end
 
 local function BuildLock()
-    lock = CreateFrame("Button", "LittleThingsMoveLock", UIParent, "BackdropTemplate")
+    lock = CreateFrame("Button", "LittleThingsMoveLock", UIParent)
     lock:SetFrameStrata("FULLSCREEN_DIALOG")
-    lock:SetBackdrop(ns.Widgets.FLAT)
-    local bg = ns.Widgets.THEME.bg
-    lock:SetBackdropColor(bg[1], bg[2], bg[3], 0.95)
-    lock:SetBackdropBorderColor(unpack(GOLD))
+    lock.shadow = lock:CreateTexture(nil, "BACKGROUND")
+    lock.shadow:SetPoint("TOPLEFT", lock, "TOPLEFT", 1, -1)
+    lock.shadow:SetPoint("BOTTOMRIGHT", lock, "BOTTOMRIGHT", 1, -1)
+    lock.shadow:SetAtlas("QuestSharing-Padlock")
+    lock.shadow:SetVertexColor(0, 0, 0, 0.8)
     lock.icon = lock:CreateTexture(nil, "ARTWORK")
-    lock.icon:SetPoint("TOPLEFT", lock, "TOPLEFT", INSET, -INSET)
-    lock.icon:SetPoint("BOTTOMRIGHT", lock, "BOTTOMRIGHT", -INSET, INSET)
+    lock.icon:SetAllPoints()
     lock.icon:SetAtlas("QuestSharing-Padlock")
-    lock:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(BRIGHT)) end)
-    lock:SetScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(GOLD)) end)
+    local function Paint(self)
+        local color = (self.hover or unlocked[hoverId]) and GOLD or GREY
+        self.icon:SetVertexColor(color[1], color[2], color[3])
+    end
+    lock.Paint = Paint
+    lock:SetScript("OnEnter", function(self)
+        self.hover = true
+        Paint(self)
+    end)
+    lock:SetScript("OnLeave", function(self)
+        self.hover = false
+        Paint(self)
+    end)
     lock:RegisterForClicks("LeftButtonUp")
     lock:SetScript("OnClick", function()
         if hoverId then PanelMove.SetUnlocked(hoverId, not unlocked[hoverId]) end
@@ -230,8 +241,7 @@ local function PaintLock(combat)
     lock:SetSize(size, size)
     lock:ClearAllPoints()
     lock:SetPoint(point, UIParent, "BOTTOMLEFT", x, y)
-    local color = unlocked[hoverId] and GOLD or { 1, 1, 1 }
-    lock.icon:SetVertexColor(color[1], color[2], color[3])
+    lock:Paint()
     lock:Show()
 end
 
