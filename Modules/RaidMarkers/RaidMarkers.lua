@@ -223,9 +223,9 @@ function RaidMarkers.Pages(page)
         hint = "Size of the whole panel", tooltip = "Size of the whole panel." }, Shared.Place))
     group:Check(Option("vertical", { label = "Vertical layout", combatLocked = true,
         hint = "One column instead of a row", tooltip = "One column: each target marker next to the world marker of the same symbol, the other buttons below." }, Shared.Layout))
-    group:Slider(Option("pullLeft", { label = "Pull timer, left click (seconds)", min = 3, max = 60,
+    group:Slider(Option("pullLeft", { label = "Pull timer, left click", min = 3, max = 60, format = "%d s",
         hint = "Countdown on a left click of the pull button", tooltip = "Countdown length when the pull button is left-clicked." }))
-    group:Slider(Option("pullRight", { label = "Pull timer, right click (seconds)", min = 3, max = 60,
+    group:Slider(Option("pullRight", { label = "Pull timer, right click", min = 3, max = 60, format = "%d s",
         hint = "Countdown on a right click of the pull button", tooltip = "Countdown length when the pull button is right-clicked." }))
     ns.PanelDock.FadeOptions(group, ns.db.raidMarkerPanel, ApplyDockOptions)
     group:Button({ label = "Reset position", combatLocked = true,

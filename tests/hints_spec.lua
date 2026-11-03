@@ -45,6 +45,15 @@ describe("option hints", function()
         assert.equals(0.5, frames.text("What it does").alpha)
     end)
 
+    it("shows only the label in a slider caption and the formatted value beside the slider", function()
+        local value = 10
+        page:Group("Group"):Slider({ label = "Pull timer, left click", min = 3, max = 60, format = "%d s",
+            get = function() return value end, set = function() end })
+        page:Refresh()
+        assert.is_not_nil(frames.text("Pull timer, left click"))
+        assert.is_not_nil(frames.text("10 s"))
+    end)
+
     it("puts the hint under the control on a page with a preview", function()
         page.hintsBelow = true
         check({ label = "Option", hint = "What it does" })

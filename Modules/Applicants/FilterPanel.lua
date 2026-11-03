@@ -365,7 +365,7 @@ function Filter.Pages(page)
             Place()
         end })
     for _, key in ipairs({ "x", "y" }) do
-        group:Slider({ label = "Filter panel " .. (key == "x" and "horizontal" or "vertical") .. " offset", min = -800, max = 800,
+        group:Slider({ label = "Panel " .. (key == "x" and "horizontal" or "vertical") .. " offset", min = -800, max = 800,
             hint = "Pixels to move the panel from its side", tooltip = "Pixels to move the panel from its side of the group finder. X moves it right, Y moves it up. Dragging the panel sets these for you.",
             get = function() return Position()[key] end,
             set = function(value)

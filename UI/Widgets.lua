@@ -21,6 +21,7 @@ Widgets.FLAT = UI.FLAT
 local T = Widgets.THEME
 local PAD, GAP, TITLE_H = UI.PAD, UI.GAP, 32
 local LABEL_W, CONTROL_W, NOTE_W = 170, 220, 540
+local VALUE_GAP, VALUE_W = 8, 44
 
 local function Locked(spec)
     return spec.combatLocked and InCombatLockdown()
@@ -174,18 +175,26 @@ end
 
 function Group:Slider(spec)
     local holder = CreateFrame("Frame", nil, self.frame)
-    holder:SetSize(LABEL_W + CONTROL_W, 22)
+    local controlEnd = LABEL_W + CONTROL_W + VALUE_GAP + VALUE_W
+    holder:SetSize(controlEnd, 22)
     holder:EnableMouse(true)
     Hover(holder, spec)
     local label = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     label:SetPoint("LEFT")
     label:SetWidth(LABEL_W - 8)
     label:SetJustifyH("LEFT")
+    label:SetWordWrap(false)
+    label:SetText(spec.label)
     local slider = UI.Slider(holder, CONTROL_W)
     slider:SetPoint("LEFT", holder, "LEFT", LABEL_W, 0)
+    local readout = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    readout:SetPoint("LEFT", holder, "LEFT", LABEL_W + CONTROL_W + VALUE_GAP, 0)
+    readout:SetWidth(VALUE_W)
+    readout:SetJustifyH("LEFT")
+    readout:SetWordWrap(false)
     local format = spec.format or "%d"
     local function Caption(value)
-        label:SetText(spec.label .. ": " .. format:format(value))
+        readout:SetText(format:format(value))
     end
     HookHover(slider.widget, spec)
     slider:Setup(spec.min, spec.max, spec.step or 1)
@@ -201,12 +210,13 @@ function Group:Slider(spec)
         spec.set(value)
         Caption(value)
     end
-    local height, paintHint = AddHint(self, spec, holder, LABEL_W + CONTROL_W, 24, 0)
+    local height, paintHint = AddHint(self, spec, holder, controlEnd, 24, 0)
     self:Add(holder, height, function()
         SetShown(spec.get())
         local locked = Locked(spec) or (spec.enabled and not spec.enabled())
         slider:SetEnabled(not locked)
         label:SetTextColor(unpack(locked and T.muted or T.text))
+        readout:SetTextColor(unpack(locked and T.muted or T.text))
         paintHint(not locked)
     end, spec.visible)
 end
