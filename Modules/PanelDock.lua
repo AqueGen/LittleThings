@@ -59,30 +59,96 @@ function PanelDock.Hovered(id, frame)
     return lib.Dock.Hovered(id)
 end
 
+local seam
+local seamGhost, seamTarget = {}, {}
+
+local function SeamFrame()
+    if seam then return seam end
+    seam = CreateFrame("Frame", "LittleThingsDockSeam", UIParent)
+    seam:SetFrameStrata("TOOLTIP")
+    local line = seam:CreateTexture(nil, "OVERLAY")
+    line:SetAllPoints()
+    line:SetColorTexture(1, 0.82, 0, 1)
+    seam:Hide()
+    return seam
+end
+
+function PanelDock.ShowSeam(tid, side, left, top, w, h)
+    local target = tid and side and Lib().dock.panels[tid]
+    local f = target and target.spec.frame
+    local tl, tt, tr, tb
+    if f and f:IsVisible() then tl, tt, tr, tb = f:GetLeft(), f:GetTop(), f:GetRight(), f:GetBottom() end
+    if not tl then
+        if seam then seam:Hide() end
+        return false
+    end
+    local s = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    seamTarget.l, seamTarget.t, seamTarget.r, seamTarget.b = tl * s, tt * s, tr * s, tb * s
+    seamGhost.l, seamGhost.t, seamGhost.r, seamGhost.b = left, top, left + w, top - h
+    local l, t, r, b = ns.PanelMove.SeamRect(side, seamGhost, seamTarget)
+    local line = SeamFrame()
+    line:ClearAllPoints()
+    line:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", l, t)
+    line:SetSize(r - l, t - b)
+    line:Show()
+    return true
+end
+
+local function Cursor()
+    local scale = UIParent:GetEffectiveScale()
+    local x, y = GetCursorPosition()
+    return x / scale, y / scale
+end
+
 function PanelDock.GhostDrag(id, panel, opts)
     local mover = CreateFrame("Frame", opts.name, UIParent)
     mover:Hide()
-    mover:SetMovable(true)
     mover:SetClampedToScreen(true)
     mover:SetFrameStrata("TOOLTIP")
     local outline = mover:CreateTexture(nil, "OVERLAY")
     outline:SetAllPoints()
     outline:SetColorTexture(1, 0.82, 0, 0.3)
     local drag = { mover = mover, active = false }
+    local rect = { x = 0, y = 0, w = 0, h = 0 }
+    local grabX, grabY, lastX, lastY
+    function drag.Follow()
+        if not IsMouseButtonDown("LeftButton") then
+            drag.Stop()
+            return
+        end
+        local cx, cy = Cursor()
+        if cx == lastX and cy == lastY then return end
+        lastX, lastY = cx, cy
+        local left, top = cx - grabX, cy - grabY
+        local tid, side
+        if opts.snapped then
+            rect.x, rect.y = left - UIParent:GetLeft(), UIParent:GetTop() - top
+            local x, y
+            x, y, tid, side = Lib().Dock.Snap(id, rect)
+            left, top = x + UIParent:GetLeft(), UIParent:GetTop() - y
+        end
+        mover:ClearAllPoints()
+        mover:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+        PanelDock.ShowSeam(tid, side, left, top, rect.w, rect.h)
+    end
     function drag.Start()
         if drag.active or not ns.PanelMove.CanDrag(id) or not panel:GetLeft() then return end
         local s = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
-        mover:SetSize(panel:GetWidth() * s, panel:GetHeight() * s)
+        rect.w, rect.h = panel:GetWidth() * s, panel:GetHeight() * s
+        mover:SetSize(rect.w, rect.h)
         mover:ClearAllPoints()
         mover:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", panel:GetLeft() * s, panel:GetBottom() * s)
+        local cx, cy = Cursor()
+        grabX, grabY, lastX, lastY = cx - panel:GetLeft() * s, cy - panel:GetTop() * s, cx, cy
         mover:Show()
-        mover:StartMoving()
+        mover:SetScript("OnUpdate", drag.Follow)
         drag.active = true
     end
     function drag.Stop(hidden)
         if not drag.active then return end
         drag.active = false
-        mover:StopMovingOrSizing()
+        mover:SetScript("OnUpdate", nil)
+        if seam then seam:Hide() end
         local deferred = hidden == true or InCombatLockdown()
         opts.release(mover, deferred)
         mover:Hide()

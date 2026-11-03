@@ -27,6 +27,7 @@ describe("PartyCallPanel docking", function()
     db = { scale = 1, posX = 300, posY = 400, calls = {}, bgAlpha = 0.6, border = true, iconSize = 32, labels = true, gap = 4, pad = 4 }
     _G.UIParent = newFrame()
     _G.InCombatLockdown = function() return state.combat end
+    _G.GetCursorPosition = function() return 0, 0 end _G.IsMouseButtonDown = function() return true end
     _G.CreateFrame = function(_, name, parent)
       local f = newFrame(parent)
       f.name = name

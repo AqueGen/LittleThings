@@ -62,6 +62,7 @@ describe("save indicator preview", function()
         created, on = {}, true
         _G.CreateFrame = function(kind, name, parent, template) return newFrame(kind, name, parent, template) end
         _G.InCombatLockdown = function() return false end
+        _G.GetCursorPosition = function() return 0, 0 end _G.IsMouseButtonDown = function() return true end
         _G.UIParent = newFrame("Frame")
         _G.C_Spell = { GetSpellTexture = function(id) return id end }
         _G.UnitClass = function() return "Priest", "PRIEST" end

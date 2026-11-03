@@ -84,18 +84,47 @@ describe("PanelDock.GhostDrag", function()
     calls = {}
     _G.UIParent = Frames.new()
     function UIParent:GetEffectiveScale() return 0.8 end
-    _G.CreateFrame = function(_, name, parent) local f = Frames.new(parent) f.name = name return f end
+    state.created = {}
+    _G.CreateFrame = function(_, name, parent)
+      local f = Frames.new(parent)
+      f.name = name
+      state.created[#state.created + 1] = f
+      return f
+    end
     _G.InCombatLockdown = function() return state.combat end
-    _G.LibStub = function() return { Dock = {
-      Snap = function(id) calls[#calls + 1] = { "Snap", id } return 40, 60 end,
+    _G.GetCursorPosition = function() return 0, 0 end _G.IsMouseButtonDown = function() return true end
+    state.target = Frames.new()
+    function state.target:IsVisible() return true end
+    function state.target:GetEffectiveScale() return 0.8 end
+    function state.target:GetLeft() return 10 end
+    function state.target:GetTop() return 20 end
+    function state.target:GetRight() return 30 end
+    function state.target:GetBottom() return 5 end
+    _G.LibStub = function() return { dock = { panels = { raidMarkers = { spec = { frame = state.target } } } }, Dock = {
+      Snap = function(id, rect)
+        calls[#calls + 1] = { "Snap", id, rect and { rect.x, rect.y, rect.w, rect.h } }
+        if rect then return state.snapTo[1], state.snapTo[2], state.tid, state.side end
+        return 40, 60
+      end,
       Drop = function(id) calls[#calls + 1] = { "Drop", id } end,
     } } end
+    state.snapTo = { 40, 60 }
+    function UIParent:GetLeft() return 0 end
+    function UIParent:GetTop() return 1080 end
+    state.cursor, state.down = { 0, 0 }, true
+    _G.GetCursorPosition = function() return state.cursor[1], state.cursor[2] end
+    _G.IsMouseButtonDown = function() return state.down end
     ns.PanelMove = { Moving = function() return false end,
-      CanDrag = function(id) assert(id == "panelId") return state.can and not state.combat end }
+      CanDrag = function(id) assert(id == "panelId") return state.can and not state.combat end,
+      SeamRect = function(side, ghost, target)
+        state.seamArgs = { side, ghost.l, ghost.t, ghost.r, ghost.b, target.l, target.t, target.r, target.b }
+        return 8, 4, 24, 2
+      end }
     panel = Frames.new()
     function panel:GetEffectiveScale() return 1.6 end
     function panel:GetLeft() return 100 end
     function panel:GetBottom() return 50 end
+    function panel:GetTop() return 70 end
     panel.width, panel.height = 30, 20
   end)
 
@@ -131,10 +160,58 @@ describe("PanelDock.GhostDrag", function()
   it("moves only the mover over the panel's screen rect", function()
     make(true)
     drag.Start()
-    assert.is_true(drag.mover.shown and drag.mover.moving)
+    assert.is_true(drag.mover.shown)
+    assert.equals(drag.Follow, drag.mover.scripts.OnUpdate)
     assert.same({ 60, 40 }, { drag.mover.width, drag.mover.height })
     assert.same({ { "BOTTOMLEFT", UIParent, "BOTTOMLEFT", 200, 100 } }, drag.mover.points)
     assert.same({}, panel.points)
+  end)
+
+  local function seamFrame()
+    for _, f in ipairs(state.created) do
+      if f.name == "LittleThingsDockSeam" then return f end
+    end
+  end
+
+  it("moves the ghost with the cursor and snaps it live, never the panel", function()
+    make(true)
+    drag.Start()
+    state.cursor = { 80, 80 }
+    drag.mover.scripts.OnUpdate(drag.mover)
+    assert.same({ "Snap", "panelId", { 300, 840, 60, 40 } }, calls[1])
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 40, 1020 } }, drag.mover.points)
+    assert.same({}, panel.points)
+    drag.mover.scripts.OnUpdate(drag.mover)
+    assert.equals(1, #calls)
+  end)
+
+  it("draws the gold seam only while the ghost would dock, and hides it on release", function()
+    make(true)
+    drag.Start()
+    state.cursor, state.tid, state.side = { 80, 80 }, "raidMarkers", "Below"
+    drag.mover.scripts.OnUpdate(drag.mover)
+    local seam = seamFrame()
+    assert.is_true(seam.shown)
+    assert.same({ "Below", 40, 1020, 100, 980, 10, 20, 30, 5 }, state.seamArgs)
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 8, 4 } }, seam.points)
+    assert.same({ 16, 2 }, { seam.width, seam.height })
+    state.cursor, state.tid, state.side = { 90, 90 }, nil, nil
+    drag.mover.scripts.OnUpdate(drag.mover)
+    assert.is_false(seam.shown)
+    state.cursor, state.tid, state.side = { 80, 80 }, "raidMarkers", "Below"
+    drag.mover.scripts.OnUpdate(drag.mover)
+    assert.is_true(seam.shown)
+    drag.Stop()
+    assert.is_false(seam.shown)
+  end)
+
+  it("ends the drag when the mouse button is up", function()
+    make(true)
+    drag.Start()
+    state.down = false
+    drag.mover.scripts.OnUpdate(drag.mover)
+    assert.is_false(drag.active)
+    assert.is_nil(drag.mover.scripts.OnUpdate)
   end)
 
   it("places at the mover on release, then snaps and drops, and hides the mover", function()
@@ -259,6 +336,7 @@ describe("PanelDock.GhostDrag with the Velvet dock", function()
     function UIParent:GetTop() return 1080 end
     _G.CreateFrame = function(_, _, parent) return rectFrame(parent) end
     _G.InCombatLockdown = function() return false end
+    _G.GetCursorPosition = function() return 0, 0 end _G.IsMouseButtonDown = function() return true end
     Frames.loadVelvet()
     local lib = LibStub("LibVelvet-1.0")
     local root, member = rectFrame(UIParent), rectFrame(UIParent)
@@ -295,6 +373,7 @@ describe("PanelDock.GhostDrag with the Velvet dock", function()
     function UIParent:GetTop() return 1080 end
     _G.CreateFrame = function(_, _, parent) return rectFrame(parent) end
     _G.InCombatLockdown = function() return false end
+    _G.GetCursorPosition = function() return 0, 0 end _G.IsMouseButtonDown = function() return true end
     Frames.loadVelvet()
     local lib = LibStub("LibVelvet-1.0")
     local root, member = rectFrame(UIParent), rectFrame(UIParent)

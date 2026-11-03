@@ -74,7 +74,7 @@ local ALLOWED = {
 local MOVER = "LittleThingsRaidMarkersMover"
 local PLAIN_UIPARENT_CHILDREN = set({ MOVER, "LittleThingsMovePanels", "LittleThingsMoveLock", "LittleThingsPanelUnlock",
   "LittleThingsMoveOutlineraidMarkers", "LittleThingsMoveOutlinepartyCalls", "LittleThingsMoveOutlinesaveIndicator",
-  "LittleThingsMoveSeamraidMarkers", "LittleThingsMoveSeampartyCalls" })
+  "LittleThingsMoveSeamraidMarkers", "LittleThingsMoveSeampartyCalls", "LittleThingsDockSeam" })
 
 local FILES = {}
 for line in io.lines("LittleThings.toc") do
@@ -253,6 +253,8 @@ local function load(state, db)
     GetLeft = function() return 0 end, GetTop = function() return 1080 end }
   _G.CreateFrame = function(kind, name, parent, template) return new_object(frames, kind, name, template, parent) end
   _G.InCombatLockdown = function() return state.combat end
+  _G.GetCursorPosition = function() return (state.cursor or { 0, 0 })[1], (state.cursor or { 0, 0 })[2] end
+  _G.IsMouseButtonDown = function() return state.mouseUp ~= true end
   _G.IsInGroup = function() return state.group end
   _G.IsInRaid = function() return state.raid end
   _G.UnitIsGroupLeader = function() return state.leader end
@@ -973,13 +975,13 @@ describe("RaidMarkers", function()
     local panel, mover = addon.panel(), addon.mover()
     startDrag(panel)
     assert.is_true(mover:IsShown())
-    assert.equals(1, mover.calls.StartMoving)
+    assert.is_function(mover.scripts.OnUpdate)
     assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 200, 100 }, mover.lastPoint)
     assert.same({ 600, 120 }, { mover.width, mover.height })
     mover.left, mover.bottom = 401, 301
     state.snap = { 402, 600 }
     panel.scripts.OnDragStop(panel)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
     assert.is_false(mover:IsShown())
     assert.is_nil(panel.calls.StartMoving)
     assert.is_nil(panel.calls.StopMovingOrSizing)
@@ -994,13 +996,13 @@ describe("RaidMarkers", function()
     startDrag(panel)
     mover.left, mover.bottom = 401, 301
     panel.scripts.OnHide(panel)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
     assert.is_false(mover:IsShown())
     local db = addon.ns.db.raidMarkerPanel
     assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 1])
     assert.same({ "TOPLEFT", "TOPLEFT", 100, -540 }, { db.point, db.relativePoint, db.x, db.y })
     panel.scripts.OnDragStop(panel)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
   end)
 
   it("keeps the mover a separate childless frame never anchored to the panel", function()
@@ -1025,12 +1027,12 @@ describe("RaidMarkers", function()
     startDrag(panel)
     mover.left, mover.bottom = 401, 301
     addon.fire("PLAYER_REGEN_DISABLED")
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
     assert.is_false(mover:IsShown())
     assert.is_false(addon.ns.PanelMove.CanDrag("raidMarkers"))
     state.combat = true
     panel.scripts.OnDragStop(panel)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
     assert.same({}, addon.blocked)
   end)
 
@@ -1038,12 +1040,12 @@ describe("RaidMarkers", function()
     local panel, mover = addon.panel(), addon.mover()
     startDrag(panel)
     state.combat = true
-    assert.is_nil(mover.calls.StopMovingOrSizing)
+    assert.is_function(mover.scripts.OnUpdate)
     local placed = panel.setPoints
     mover.left, mover.bottom = 401, 301
     panel.scripts.OnDragStop(panel)
     assert.same({}, addon.blocked)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
     assert.is_false(mover:IsShown())
     assert.equals(placed, panel.setPoints)
     local db = addon.ns.db.raidMarkerPanel
