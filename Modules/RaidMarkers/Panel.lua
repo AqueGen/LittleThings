@@ -257,17 +257,31 @@ function Shared.PaintBackground()
     end
 end
 
-function Shared.ApplyDock()
+local function ChangeMembers(apply)
     local lib = Lib()
     for _, id in ipairs(lib.Dock.Members(DOCK_ID)) do
-        lib.Dock.Apply(id)
+        if apply then
+            lib.Dock.Apply(id)
+        end
         local change = lib.dock.panels[id].spec.onChange
         if change then
             change()
         end
     end
-    lib.Dock.RefreshMerge(DOCK_ID)
+end
+
+function Shared.DockChanged()
     Shared.PaintBackground()
+    local arrow = Shared.arrow
+    if arrow and not InCombatLockdown() then
+        ns.PanelDock.PlaceArrow(arrow, Shared.panel, DOCK_ID, arrow:GetAttribute("lt-full-w"), arrow:GetAttribute("lt-full-h"))
+    end
+end
+
+function Shared.ApplyDock()
+    ChangeMembers(true)
+    Lib().Dock.RefreshMerge(DOCK_ID)
+    Shared.DockChanged()
 end
 
 function Shared.Layout()
@@ -293,7 +307,6 @@ function Shared.Place()
         panel:ClearAllPoints()
         panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", db.x, db.y)
     end
-    ns.PanelDock.PlaceArrow(Shared.arrow, panel)
     Shared.ApplyDock()
 end
 
@@ -379,7 +392,7 @@ function Shared.BuildFrame()
         return ns.db.raidMarkerPanel
     end
     Lib().Dock.Register(DOCK_ID, { frame = panel, root = true, get = Db, set = function() end,
-        locked = function() return Db().locked end, merged = function() return Db().merge end, onChange = Shared.PaintBackground })
+        locked = function() return Db().locked end, merged = function() return Db().merge end, onChange = Shared.DockChanged })
 
     local mover = CreateFrame("Frame", "LittleThingsRaidMarkersMover", UIParent)
     Shared.mover = mover
@@ -456,6 +469,7 @@ function Shared.HideMergeInCombat()
     local merged = ns.db.raidMarkerPanel.hideInCombat and Lib().Dock.MergeFrame(DOCK_ID)
     if merged then
         merged:Hide()
+        ChangeMembers(false)
         Shared.pending[Shared.ApplyDock] = true
     end
 end

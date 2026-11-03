@@ -279,7 +279,10 @@ local function load(state, db)
   _G.LibStub = function(name) assert(name == "LibVelvet-1.0") return dockLib end
   ns.PanelDock = {
     Fade = function(id, frame, fadeDb) state.fades[#state.fades + 1] = { id, frame, fadeDb } end,
-    PlaceArrow = function(arrow, panel) state.arrowPlaced = { arrow, panel, panel.setPoints } end,
+    PlaceArrow = function(arrow, panel, id, w, h)
+      state.arrowPlaced = { arrow, panel, panel.setPoints }
+      state.arrowArgs = { id, w, h, combat = state.combat }
+    end,
     Hovered = function(id, frame)
       assert(id == "raidMarkers" and frame.name == "LittleThingsRaidMarkers")
       return state.hovered == true
@@ -2293,6 +2296,33 @@ describe("RaidMarkers", function()
       state.combat = false
       addon.fire("PLAYER_REGEN_ENABLED")
       assert.equals(1, #calls("RefreshMerge"))
+    end)
+
+    it("tells docked members when it hides the merged background at combat start", function()
+      local changed = 0
+      state.dockMembers = { "partyCalls" }
+      _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() changed = changed + 1 end } }
+      local merged = { shown = true }
+      function merged:Hide() self.shown = false end
+      state.mergeFrame = merged
+      addon.ns.db.raidMarkerPanel.hideInCombat = true
+      state.dockCalls = {}
+      addon.fire("PLAYER_REGEN_DISABLED")
+      assert.equals(1, changed)
+      assert.same({}, state.dockCalls)
+    end)
+
+    it("re-places its arrow at the full size on a dock change, only out of combat", function()
+      local arrow = addon.arrow()
+      state.arrowArgs = nil
+      state.dockSpec.onChange()
+      assert.same({ "raidMarkers", arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"], combat = false }, state.arrowArgs)
+      assert.is_number(arrow.attrs["lt-full-w"])
+      state.arrowArgs = nil
+      state.combat = true
+      state.dockSpec.onChange()
+      assert.is_nil(state.arrowArgs)
+      assert.same({}, addon.blocked)
     end)
   end)
 end)

@@ -83,31 +83,48 @@ local function SaveCorner()
     if not panel:GetLeft() then
         return
     end
-    db.posX = math.floor((anchor:find("RIGHT") and panel:GetRight() or panel:GetLeft()) + 0.5)
-    db.posY = math.floor((anchor:find("BOTTOM") and panel:GetBottom() or panel:GetTop()) + 0.5)
+    local k = panel:GetScale() / db.scale
+    db.posX = math.floor((anchor:find("RIGHT") and panel:GetRight() or panel:GetLeft()) * k + 0.5)
+    db.posY = math.floor((anchor:find("BOTTOM") and panel:GetBottom() or panel:GetTop()) * k + 0.5)
+end
+
+local function Notify(id)
+    local p = id and Lib().dock.panels[id]
+    if p and p.spec.onChange then
+        p.spec.onChange()
+    end
 end
 
 function Panel.Place()
     local db = Db()
     local panel = Panel.panel
-    if Panel.wasDocked and not db.dockTo then
+    local was, wasSide = Panel.dockedTo, Panel.dockedSide
+    if was and not db.dockTo then
         SaveCorner()
     end
-    Panel.wasDocked = db.dockTo ~= nil
+    Panel.dockedTo, Panel.dockedSide = db.dockTo, db.side
     local root = MergedRoot()
-    local rootPanel = root and Lib().Dock.Merged(root) and Lib().dock.panels[root]
-    panel:SetScale(rootPanel and rootPanel.spec.frame:GetScale() or db.scale)
-    if db.dockTo and InCombatLockdown() then
-        return
+    local rootFrame = root and Lib().Dock.Merged(root) and Lib().dock.panels[root].spec.frame
+    panel:SetScale(rootFrame and rootFrame:IsShown() and rootFrame:GetScale() or db.scale)
+    if not (db.dockTo and InCombatLockdown() and panel:GetNumPoints() > 0) then
+        panel:ClearAllPoints()
+        if db.posX and db.posY then
+            panel:SetPoint(Panel.anchor or "TOPLEFT", UIParent, "BOTTOMLEFT", db.posX, db.posY)
+        else
+            panel:SetPoint("CENTER", UIParent, "CENTER", 0, 160)
+        end
+        Lib().Dock.Apply(DOCK_ID)
+        if db.dockTo and not InCombatLockdown() then
+            SaveCorner()
+        end
     end
-    panel:ClearAllPoints()
-    if db.posX and db.posY then
-        panel:SetPoint(Panel.anchor or "TOPLEFT", UIParent, "BOTTOMLEFT", db.posX, db.posY)
-    else
-        panel:SetPoint("CENTER", UIParent, "CENTER", 0, 160)
+    ns.PanelDock.PlaceArrow(Panel.arrow, panel, DOCK_ID)
+    if was ~= db.dockTo then
+        Notify(was)
     end
-    Lib().Dock.Apply(DOCK_ID)
-    ns.PanelDock.PlaceArrow(Panel.arrow, panel)
+    if was ~= db.dockTo or wasSide ~= db.side then
+        Notify(db.dockTo)
+    end
 end
 
 local function Cursor()
@@ -262,7 +279,7 @@ end
 
 local function PaintBackground()
     local db, panel = Db(), Panel.panel
-    if Panel.Merged() then
+    if Lib().Dock.MergeFrame(DOCK_ID) then
         panel:SetBackdrop(nil)
         return
     end

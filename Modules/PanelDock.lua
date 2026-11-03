@@ -50,20 +50,75 @@ function PanelDock.Hovered(id, frame)
     return false
 end
 
-function PanelDock.ArrowSide(top, screenTop, need)
-    if top and screenTop - top < need then return "below" end
-    return "above"
+local SIDES = { "above", "below", "right", "left" }
+local OWN_EDGE = { Right = "left", Left = "right", Below = "above", Above = "below" }
+local TARGET_EDGE = { Right = "right", Left = "left", Below = "below", Above = "above" }
+
+function PanelDock.ArrowSide(blocked, room)
+    for _, side in ipairs(SIDES) do
+        if not blocked[side] and room[side] then return side end
+    end
 end
 
-function PanelDock.PlaceArrow(arrow, panel)
+function PanelDock.Blocked(id)
+    local panels, blocked = Lib().dock.panels, {}
+    local p = panels[id]
+    if not p then return blocked end
+    local pos = p.spec.get()
+    if not p.spec.root and pos.dockTo and panels[pos.dockTo] and OWN_EDGE[pos.side or ""] then
+        blocked[OWN_EDGE[pos.side]] = true
+    end
+    for other, q in pairs(panels) do
+        local o = other ~= id and not q.spec.root and q.spec.get()
+        if o and o.dockTo == id and TARGET_EDGE[o.side or ""] then blocked[TARGET_EDGE[o.side]] = true end
+    end
+    return blocked
+end
+
+local function GroupBounds(id, top, bottom)
+    local lib = Lib()
+    if not lib.dock.panels[id] then return top, bottom end
+    for _, gid in ipairs(Group(lib, id)) do
+        local f = lib.dock.panels[gid].spec.frame
+        local t, b = f:IsShown() and f:GetTop(), f:GetBottom()
+        if t and b then
+            local s = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
+            top, bottom = math.max(top, t * s), math.min(bottom, b * s)
+        end
+    end
+    return top, bottom
+end
+
+function PanelDock.PlaceArrow(arrow, panel, id, fullW, fullH)
     local scale = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    local top = panel:GetTop()
-    local side = PanelDock.ArrowSide(top and top * scale, UIParent:GetTop(), (arrow:GetHeight() + ARROW_GAP) * scale)
+    local w, h = fullW or panel:GetWidth(), fullH or panel:GetHeight()
+    local left, top = panel:GetLeft(), panel:GetTop()
+    local side, extra = "above", 0
+    if left and top then
+        local l, t = left * scale, top * scale
+        local r, b = l + w * scale, t - h * scale
+        local up, across = (arrow:GetHeight() + ARROW_GAP) * scale, (arrow:GetWidth() + ARROW_GAP) * scale
+        side = PanelDock.ArrowSide(PanelDock.Blocked(id), {
+            above = UIParent:GetTop() - t >= up, below = b - UIParent:GetBottom() >= up,
+            right = UIParent:GetRight() - r >= across, left = l - UIParent:GetLeft() >= across })
+        if not side then
+            local gt, gb = GroupBounds(id, t, b)
+            if UIParent:GetTop() - gt >= up then
+                side, extra = "above", (gt - t) / scale
+            else
+                side, extra = "below", (b - gb) / scale
+            end
+        end
+    end
     arrow:ClearAllPoints()
     if side == "below" then
-        arrow:SetPoint("TOPRIGHT", panel, "BOTTOMRIGHT", 0, -ARROW_GAP)
+        arrow:SetPoint("TOPRIGHT", panel, "TOPLEFT", w, -(h + ARROW_GAP + extra))
+    elseif side == "right" then
+        arrow:SetPoint("TOPLEFT", panel, "TOPLEFT", w + ARROW_GAP, 0)
+    elseif side == "left" then
+        arrow:SetPoint("TOPRIGHT", panel, "TOPLEFT", -ARROW_GAP, 0)
     else
-        arrow:SetPoint("BOTTOMRIGHT", panel, "TOPRIGHT", 0, ARROW_GAP)
+        arrow:SetPoint("BOTTOMRIGHT", panel, "TOPLEFT", w, ARROW_GAP + extra)
     end
 end
 
