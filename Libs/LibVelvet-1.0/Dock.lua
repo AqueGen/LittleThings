@@ -141,7 +141,7 @@ function Dock.Snap(id)
     local _, list = collect(skip)
     if p.spec.root then
         if #list == 0 then return mine.x, mine.y end
-        local x, y = D.Snap(mine, list, gapOf(id), D.SNAP)
+        local x, y = D.Snap(mine, list, gapOf(id), D.SNAP, false)
         return x, y
     end
     local best

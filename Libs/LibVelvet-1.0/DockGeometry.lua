@@ -34,9 +34,33 @@ function G.SideOf(rect, target, gap)
     end
 end
 
-function G.Snap(rect, others, gap, dist)
+local function overlap(a, b)
+    local w = math.min(right(a), right(b)) - math.max(a.x, b.x)
+    local h = math.min(bottom(a), bottom(b)) - math.max(a.y, b.y)
+    return (w > 0 and h > 0) and w * h or 0
+end
+
+function G.PushOut(rect, others, gap)
+    local hit, most = nil, 0
+    for _, a in ipairs(others) do
+        local o = a.id ~= nil and overlap(rect, a) or 0
+        if o > most then hit, most = a, o end
+    end
+    if not hit then return rect end
+    local bx, by
+    for _, m in ipairs({
+        { right(hit) + gap - rect.x, 0 }, { hit.x - gap - right(rect), 0 },
+        { 0, bottom(hit) + gap - rect.y }, { 0, hit.y - gap - bottom(rect) },
+    }) do
+        if not bx or math.abs(m[1]) + math.abs(m[2]) < math.abs(bx) + math.abs(by) then bx, by = m[1], m[2] end
+    end
+    return { x = rect.x + bx, y = rect.y + by, w = rect.w, h = rect.h }
+end
+
+function G.Snap(rect, others, gap, dist, push)
     gap = gap or G.GAP
     dist = dist or G.SNAP
+    if push ~= false then rect = G.PushOut(rect, others, gap) end
     local dx, dy
     for _, a in ipairs(others) do
         if rect.y - dist < bottom(a) and bottom(rect) + dist > a.y then
