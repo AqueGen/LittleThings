@@ -12,6 +12,7 @@ local function load(state)
   _G.UISpecialFrames = {}
   _G.tinsert = table.insert
   _G.C_Timer = { NewTicker = function(_, fn) tickers[#tickers + 1] = fn return { Cancel = function() end } end }
+  _G.LibStub = function() return { dock = { panels = state.dockPanels or {} } } end
   local ns = { Widgets = { FLAT = { bgFile = "flat" } }, Print = function(text) state.printed[#state.printed + 1] = text end }
   assert(loadfile("./Modules/PanelMove.lua"))("LittleThings", ns)
   return ns.PanelMove, tracker, function() tickers[1]() end, ns
@@ -45,6 +46,29 @@ describe("PanelMove.Draggable", function()
     assert.is_true(Move.Draggable(false, false, true))
     assert.is_false(Move.Draggable(false, false, false))
     assert.is_false(Move.Draggable(true, true, true))
+  end)
+end)
+
+describe("PanelMove.SeamRect", function()
+  local Move = load({ printed = {} })
+  local target = { l = 100, t = 500, r = 400, b = 440 }
+
+  it("draws a 2 px line along the target's edge, spanning the shared part", function()
+    assert.same({ 100, 440, 300, 438 }, { Move.SeamRect("Below", { l = 100, t = 434, r = 300, b = 380 }, target) })
+    assert.same({ 150, 502, 400, 500 }, { Move.SeamRect("Above", { l = 150, t = 560, r = 450, b = 506 }, target) })
+    assert.same({ 400, 500, 402, 470 }, { Move.SeamRect("Right", { l = 406, t = 520, r = 500, b = 470 }, target) })
+    assert.same({ 98, 490, 100, 440 }, { Move.SeamRect("Left", { l = 0, t = 490, r = 94, b = 400 }, target) })
+  end)
+end)
+
+describe("PanelMove.LabelSide", function()
+  local Move = load({ printed = {} })
+
+  it("puts the name above unless the top edge is a seam", function()
+    assert.equals("above", Move.LabelSide("raid", {}))
+    assert.equals("below", Move.LabelSide("calls", { calls = { dockTo = "raid", side = "Below" } }))
+    assert.equals("below", Move.LabelSide("raid", { calls = { dockTo = "raid", side = "Above" } }))
+    assert.equals("above", Move.LabelSide("raid", { calls = { dockTo = "raid", side = "Below" } }))
   end)
 end)
 
@@ -227,6 +251,25 @@ describe("PanelMove", function()
     end
     state.combat = false
     assert.is_false(Move.CanDrag("partyCalls"))
+  end)
+
+  it("marks every dock seam in the mode and keeps the name labels out of the seam", function()
+    state.dockPanels = {
+      raidMarkers = { spec = { root = true, frame = raid, get = function() return {} end } },
+      partyCalls = { spec = { frame = calls, get = function() return { dockTo = "raidMarkers", side = "Below" } end } },
+    }
+    Move.Toggle()
+    local seam
+    for _, f in ipairs(tracker.all) do
+      if f.name == "LittleThingsMoveSeampartyCalls" then seam = f end
+    end
+    assert.is_true(seam:IsShown())
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 440 } }, seam.points)
+    assert.same({ 200, 2 }, { seam.width, seam.height })
+    assert.equals("TOPLEFT", tracker.text("Party calls").points[1][1])
+    assert.equals("BOTTOMLEFT", tracker.text("Raid marker panel").points[1][1])
+    Move.Toggle()
+    assert.is_false(seam:IsShown())
   end)
 
   it("hides a hidden panel's outline in the mode", function()

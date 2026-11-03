@@ -4,12 +4,13 @@ local addonName, ns = ...
 local PanelMove = {}
 ns.PanelMove = PanelMove
 
-local LOCK, TICK = 12, 0.1
+local LOCK, TICK, SEAM = 12, 0.1, 2
 local GOLD = { 1, 0.82, 0, 1 }
 local EDGE = { edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 }
 
 local MODULES = { "raidMarkers", "partyCalls", "saveIndicator" }
-local panels, order, unlocked, overlays = {}, {}, {}, {}
+local panels, order, unlocked, overlays, seams = {}, {}, {}, {}, {}
+local NO_DOCKS = {}
 local moving, hoverId = false, nil
 local bar, lock, catcher, events
 
@@ -21,6 +22,22 @@ function PanelMove.LockSpot(l, t, r, b, screenTop, strip)
     if strip then return "TOPLEFT", l, t end
     if screenTop - t >= LOCK then return "BOTTOMRIGHT", r, t end
     return "TOPRIGHT", r, b
+end
+
+function PanelMove.SeamRect(side, m, t)
+    if side == "Below" then return math.max(m.l, t.l), t.b, math.min(m.r, t.r), t.b - SEAM end
+    if side == "Above" then return math.max(m.l, t.l), t.t + SEAM, math.min(m.r, t.r), t.t end
+    if side == "Right" then return t.r, math.min(m.t, t.t), t.r + SEAM, math.max(m.b, t.b) end
+    return t.l - SEAM, math.min(m.t, t.t), t.l, math.max(m.b, t.b)
+end
+
+function PanelMove.LabelSide(id, docks)
+    local own = docks[id]
+    if own and own.dockTo and own.side == "Below" then return "below" end
+    for other, d in pairs(docks) do
+        if other ~= id and d.dockTo == id and d.side == "Above" then return "below" end
+    end
+    return "above"
 end
 
 function PanelMove.CanDrag(id)
@@ -61,20 +78,75 @@ local function Overlay(id)
     o:SetFrameStrata("FULLSCREEN_DIALOG")
     o:SetBackdrop(EDGE)
     o:SetBackdropBorderColor(unpack(GOLD))
-    local label = o:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    label:SetPoint("BOTTOMLEFT", o, "TOPLEFT", 0, 2)
-    label:SetText(panels[id].name)
+    o.label = o:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    o.label:SetText(panels[id].name)
     overlays[id] = o
     return o
 end
 
+local function Docks()
+    local docks = {}
+    local lib = LibStub and LibStub("LibVelvet-1.0", true)
+    for id, p in pairs(lib and lib.dock and lib.dock.panels or {}) do
+        local pos = p.spec.get and p.spec.get()
+        if pos and p.spec.frame then docks[id] = pos end
+    end
+    return docks, lib
+end
+
+local function RectOf(f)
+    local l, t, r, b = Rect(f)
+    return l and { l = l, t = t, r = r, b = b } or nil
+end
+
+local function Seam(id)
+    local s = seams[id]
+    if s then return s end
+    s = CreateFrame("Frame", "LittleThingsMoveSeam" .. id, UIParent)
+    s:SetFrameStrata("TOOLTIP")
+    local line = s:CreateTexture(nil, "OVERLAY")
+    line:SetAllPoints()
+    line:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], 1)
+    seams[id] = s
+    return s
+end
+
+local function PaintSeams(combat, docks, lib)
+    for _, s in pairs(seams) do s.wanted = false end
+    if moving and not combat then
+        for id, pos in pairs(docks) do
+            local target = pos.dockTo and lib.dock.panels[pos.dockTo]
+            local mf, tf = lib.dock.panels[id].spec.frame, target and target.spec.frame
+            local m, t = mf:IsVisible() and RectOf(mf), tf and tf:IsVisible() and RectOf(tf)
+            if m and t and pos.side then
+                local l, top, r, b = PanelMove.SeamRect(pos.side, m, t)
+                local s = Seam(id)
+                s:ClearAllPoints()
+                s:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", l, top)
+                s:SetSize(r - l, top - b)
+                s.wanted = true
+            end
+        end
+    end
+    for _, s in pairs(seams) do s:SetShown(s.wanted) end
+end
+
 local function PaintOverlays(combat)
+    local docks, lib = NO_DOCKS, nil
+    if not combat and (moving or next(unlocked)) then docks, lib = Docks() end
+    PaintSeams(combat, docks, lib)
     for _, id in ipairs(order) do
         local f = not combat and (moving or unlocked[id]) and Shown(id)
         local l, t, r, b
         if f then l, t, r, b = Rect(f) end
         if l then
             local o = Overlay(id)
+            o.label:ClearAllPoints()
+            if PanelMove.LabelSide(id, docks) == "above" then
+                o.label:SetPoint("BOTTOMLEFT", o, "TOPLEFT", 0, 2)
+            else
+                o.label:SetPoint("TOPLEFT", o, "BOTTOMLEFT", 0, -2)
+            end
             o:ClearAllPoints()
             o:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", l, t)
             o:SetSize(r - l, t - b)

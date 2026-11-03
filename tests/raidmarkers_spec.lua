@@ -73,7 +73,8 @@ local ALLOWED = {
 
 local MOVER = "LittleThingsRaidMarkersMover"
 local PLAIN_UIPARENT_CHILDREN = set({ MOVER, "LittleThingsMovePanels", "LittleThingsMoveLock", "LittleThingsPanelUnlock",
-  "LittleThingsMoveOutlineraidMarkers", "LittleThingsMoveOutlinepartyCalls", "LittleThingsMoveOutlinesaveIndicator" })
+  "LittleThingsMoveOutlineraidMarkers", "LittleThingsMoveOutlinepartyCalls", "LittleThingsMoveOutlinesaveIndicator",
+  "LittleThingsMoveSeamraidMarkers", "LittleThingsMoveSeampartyCalls" })
 
 local FILES = {}
 for line in io.lines("LittleThings.toc") do
