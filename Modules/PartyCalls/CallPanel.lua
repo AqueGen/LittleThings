@@ -12,8 +12,10 @@ local FONTS = {
     large = { font = "GameFontHighlightLarge", height = 18 },
 }
 local LABEL_GAP = 2
+local MAX_LABEL_LINES = 2
 
 Panel.buttons = {}
+Panel.labelLines = 1
 
 local function Db()
     return ns.db.partyCallOptions
@@ -28,7 +30,20 @@ local function CellSize()
     if not db.labels then
         return db.iconSize, db.iconSize
     end
-    return db.iconSize, db.iconSize + LABEL_GAP + Font().height
+    return db.iconSize, db.iconSize + LABEL_GAP + Panel.labelLines * Font().height
+end
+
+local function LabelLines(ids)
+    if not Db().labels then
+        return 1
+    end
+    for _, id in ipairs(ids) do
+        local label = Panel.buttons[id].label
+        if label:GetUnboundedStringWidth() > label:GetWidth() then
+            return MAX_LABEL_LINES
+        end
+    end
+    return 1
 end
 
 function Panel.Place()
@@ -122,7 +137,9 @@ local function Ensure(id)
     button.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
     button.label = button:CreateFontString(nil, "OVERLAY")
     button.label:SetPoint("TOP", button.icon, "BOTTOM", 0, -LABEL_GAP)
-    button.label:SetWordWrap(false)
+    button.label:SetWordWrap(true)
+    button.label:SetMaxLines(MAX_LABEL_LINES)
+    button.label:SetJustifyV("TOP")
     local highlight = button:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetAllPoints(button.icon)
     highlight:SetColorTexture(1, 1, 1, 0.15)
@@ -165,12 +182,11 @@ end
 
 function Panel.Update()
     local db = Db()
-    local width, height = CellSize()
+    local width = CellSize()
     local font = Font()
     PaintBackground()
     for id, call in pairs(db.calls) do
         local button = Ensure(id)
-        button:SetSize(width, height)
         button.icon:SetSize(db.iconSize, db.iconSize)
         button.icon:SetTexture(Rules.Texture(call.icon, C_Spell.GetSpellTexture, GetFileIDFromPath))
         button.icon:SetDesaturated(call.desaturate and true or false)
@@ -183,6 +199,7 @@ end
 
 function Panel.Layout(ids)
     local db = Db()
+    Panel.labelLines = LabelLines(ids)
     local width, height = CellSize()
     local cells, panelW, panelH, anchor = Rules.Grid(#ids, { grow = db.grow, wrap = db.wrap, perRow = db.perRow,
         cellW = width, cellH = height, gap = db.gap, pad = db.pad })
@@ -197,6 +214,7 @@ function Panel.Layout(ids)
     end
     for i, id in ipairs(ids) do
         local button = Panel.buttons[id]
+        button:SetSize(width, height)
         button:ClearAllPoints()
         button:SetPoint(anchor, Panel.panel, anchor, cells[i].x, cells[i].y)
         button:Show()

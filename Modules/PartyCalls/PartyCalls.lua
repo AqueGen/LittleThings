@@ -7,7 +7,7 @@ local Panel = ns.PartyCallPanel
 local PartyCalls = {}
 
 local DEFAULTS = { locked = false, scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
-    gap = 0, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down" }
+    gap = 4, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down" }
 
 local active, previewing, inCombat = false, false, false
 local previewWindow
@@ -203,7 +203,8 @@ end
 local function MarkOptions()
     local options = { { text = "None", value = 0 } }
     for n = 1, 8 do
-        options[n + 1] = { text = _G["RAID_TARGET_" .. n] or ("Mark " .. n), value = n }
+        options[n + 1] = { text = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_" .. n .. ":16|t "
+            .. (_G["RAID_TARGET_" .. n] or ("Mark " .. n)), value = n }
     end
     return options
 end
