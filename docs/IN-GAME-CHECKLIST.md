@@ -316,3 +316,17 @@ Switch on Group chat on Enter (Party and raid). It is off by default.
 - [ ] R after a whisper: the box opens on the whisper. A whisper tab keeps its whisper.
 - [ ] Switch off: Enter remembers the last channel again, as Blizzard does.
 - [ ] **`/console taintLog 1`. In a key, during a boss pull and in a raid encounter, Enter and send a party or raid message: it arrives, no `ADDON_ACTION_BLOCKED`, BugSack empty, `Logs/taint.log` has no LittleThings entries.**
+
+## 22. Party calls
+
+Switch on Party calls (Party and raid). It is off by default.
+
+- [ ] Solo and in a raid: no panel. Party: the panel shows with the calls for your role. Open its settings page: every enabled call shows, above the window.
+- [ ] Icons: no question marks on the eight built-in calls.
+- [ ] **In a running Mythic+ key, click Lust out of combat and in combat: the line arrives in party chat with the red cross in front, no `ADDON_ACTION_BLOCKED`, BugSack empty. If it is blocked, note where and switch On click to Put in chat.**
+- [ ] After a click every button greys for 3 s and the clicked one for 5 s; clicks on a grey button send nothing.
+- [ ] Swap spec tank > healer: Save me goes, OOM comes. Skip shows only out of combat in a running key; Wipe only in combat.
+- [ ] Put in chat: a click opens the chat line on Party with the call typed in; Enter sends it.
+- [ ] Editor: change the label, message, icon (spell id and a texture path), mark, roles, When and Where of a call: the panel follows at once. Reset to default restores it. A custom slot shown with an empty message adds no button.
+- [ ] A Cyrillic message at the length limit arrives without a broken last letter.
+- [ ] Dungeon Finder group: does a call reach the group?
