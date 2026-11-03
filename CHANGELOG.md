@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.23.0](https://github.com/AqueGen/LittleThings/compare/v0.22.0...v0.23.0) (2026-11-03)
+
+
+### Features
+
+* dock, merge, fold, fade and Move panels mode for LittleThings panels ([#72](https://github.com/AqueGen/LittleThings/issues/72)) ([9d5c165](https://github.com/AqueGen/LittleThings/commit/9d5c1651224e6f770555b6906aa29250d0ede0e1))
+* one Gear in bags page for Low level gear and Warband gear ([#69](https://github.com/AqueGen/LittleThings/issues/69)) ([141e076](https://github.com/AqueGen/LittleThings/commit/141e07648115050c3fd852438cc6e5c578c0e423))
+* party calls panel ([#71](https://github.com/AqueGen/LittleThings/issues/71)) ([e95ef81](https://github.com/AqueGen/LittleThings/commit/e95ef8181977cbf0d10e846296c98db864268809))
+
 ## [0.22.0](https://github.com/AqueGen/LittleThings/compare/v0.21.0...v0.22.0) (2026-11-01)
 
 
