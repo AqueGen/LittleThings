@@ -141,7 +141,7 @@ function PartyCalls.Enable()
     if not Panel.panel then
         Panel.Build(PartyCalls.Click, PartyCalls.Refresh)
         ns.PanelMove.Register("partyCalls", { name = "Party calls", frame = function() return Panel.panel end,
-            strip = true, owner = Panel.MergedOwner,
+            strip = ns.PanelDock.STRIP, owner = Panel.MergedOwner,
             setMoving = function(on)
                 moving = on
                 PartyCalls.Refresh()

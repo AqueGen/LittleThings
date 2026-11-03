@@ -156,6 +156,10 @@ local function Release(mover, deferred)
     PlaceTopLeft(mover:GetLeft() - UIParent:GetLeft(), UIParent:GetTop() - mover:GetTop())
 end
 
+local function DragDown()
+    Panel.drag.MouseDown()
+end
+
 local function StartDrag()
     Panel.drag.Start()
 end
@@ -231,6 +235,7 @@ local function Ensure(id)
     highlight:SetColorTexture(1, 1, 1, 0.15)
     button:RegisterForClicks("LeftButtonUp")
     button:RegisterForDrag("LeftButton")
+    button:SetScript("OnMouseDown", DragDown)
     button:SetScript("OnDragStart", StartDrag)
     button:SetScript("OnDragStop", StopDrag)
     button:SetScript("OnClick", function(self) Panel.onClick(self.id) end)
@@ -250,6 +255,7 @@ function Panel.Build(onClick, onChange)
     panel:SetDontSavePosition(true)
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
+    panel:SetScript("OnMouseDown", DragDown)
     panel:SetScript("OnDragStart", StartDrag)
     panel:SetScript("OnDragStop", StopDrag)
     panel:SetScript("OnHide", function(self) StopDrag(self, true) end)
@@ -264,6 +270,7 @@ function Panel.Build(onClick, onChange)
     handle:SetIgnoreParentAlpha(true)
     handle:RegisterForClicks("LeftButtonUp")
     handle:RegisterForDrag("LeftButton")
+    handle:SetScript("OnMouseDown", DragDown)
     handle:SetScript("OnDragStart", StartDrag)
     handle:SetScript("OnDragStop", StopDrag)
     handle:SetScript("OnClick", function()
@@ -282,7 +289,7 @@ local function PaintBackground()
     end
     panel:SetBackdrop(ns.Widgets.FLAT)
     panel:SetBackdropColor(0, 0, 0, db.bgAlpha)
-    panel:SetBackdropBorderColor(0.3, 0.3, 0.3, db.border and 1 or 0)
+    panel:SetBackdropBorderColor(0.3, 0.3, 0.3, db.border and not ns.PanelMove.Moving() and 1 or 0)
 end
 
 function Panel.Update()

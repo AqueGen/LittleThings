@@ -4,7 +4,7 @@ local addonName, ns = ...
 local PanelMove = {}
 ns.PanelMove = PanelMove
 
-local LOCK, TICK, SEAM = 12, 0.1, 1
+local LOCK, TICK, SEAM = 16, 0.1, 1
 local GOLD = { 1, 0.82, 0, 1 }
 
 local MODULES = { "raidMarkers", "partyCalls", "saveIndicator" }
@@ -23,20 +23,19 @@ function PanelMove.Draggable(combat, mode, open)
     return not combat and (mode or open) == true
 end
 
-function PanelMove.LockSpot(l, t, r, b, screenTop, strip)
-    if strip then return "TOPLEFT", l, t end
+function PanelMove.LockSpot(l, t, r, b, screenTop, inset)
+    if inset then return "TOPLEFT", l + inset, t end
     if screenTop - t >= LOCK then return "BOTTOMRIGHT", r, t end
     return "TOPRIGHT", r, b
 end
 
 function PanelMove.SeamRect(side, m, t)
-    local half = SEAM / 2
     if side == "Below" or side == "Above" then
-        local c = side == "Below" and (t.b + m.t) / 2 or (t.t + m.b) / 2
-        return math.max(m.l, t.l), c + half, math.min(m.r, t.r), c - half
+        local c = math.floor(side == "Below" and (t.b + m.t) / 2 or (t.t + m.b) / 2)
+        return math.max(m.l, t.l), c + SEAM, math.min(m.r, t.r), c
     end
-    local c = side == "Right" and (t.r + m.l) / 2 or (t.l + m.r) / 2
-    return c - half, math.min(m.t, t.t), c + half, math.max(m.b, t.b)
+    local c = math.floor(side == "Right" and (t.r + m.l) / 2 or (t.l + m.r) / 2)
+    return c, math.min(m.t, t.t), c + SEAM, math.max(m.b, t.b)
 end
 
 local MEMBER_SIDE = { Below = "top", Above = "bottom", Right = "left", Left = "right" }
@@ -219,7 +218,7 @@ local function PaintLock(combat)
     local size = strip and LOCK * s or LOCK
     lock:SetSize(size, size)
     lock:ClearAllPoints()
-    local point, x, y = PanelMove.LockSpot(l, t, r, b, UIParent:GetTop(), strip)
+    local point, x, y = PanelMove.LockSpot(l, t, r, b, UIParent:GetTop(), strip and (strip - LOCK) / 2 * s)
     lock:SetPoint(point, UIParent, "BOTTOMLEFT", x, y)
     local color = unlocked[hoverId] and GOLD or { 1, 1, 1 }
     lock.icon:SetVertexColor(color[1], color[2], color[3])

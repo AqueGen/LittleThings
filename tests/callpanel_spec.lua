@@ -59,7 +59,7 @@ describe("PartyCallPanel docking", function()
       CallRules = { Grid = function(_, o) state.grid = o return {}, 0, 0, "TOPLEFT" end },
     }
     assert(loadfile("./Modules/PanelDock.lua"))("LittleThings", ns)
-    ns.PanelMove = { Moving = function() return false end, CanDrag = function() return state.canDrag and not state.combat end }
+    ns.PanelMove = { Moving = function() return state.moving == true end, CanDrag = function() return state.canDrag and not state.combat end }
     assert(loadfile("./Modules/PartyCalls/CallPanel.lua"))("LittleThings", ns)
     Panel = ns.PartyCallPanel
   end)
@@ -120,9 +120,11 @@ describe("PartyCallPanel docking", function()
     local handle = Panel.handle
     assert.equals(panel, handle.parentFrame)
     assert.equals(handle, panel.foldHandle)
-    assert.same({ { "TOPLEFT", panel, "TOPLEFT", 0, 0 }, { "BOTTOMRIGHT", panel, "BOTTOMLEFT", 12, 0 } }, handle.points)
+    assert.same({ { "TOPLEFT", panel, "TOPLEFT", 0, 0 }, { "BOTTOMRIGHT", panel, "BOTTOMLEFT", 18, 0 } }, handle.points)
+    assert.same({ { "CENTER", handle, "CENTER", 0, -8 } }, Panel.glyph.points)
+    assert.equals("-", Panel.glyph.text)
     Panel.Layout({})
-    assert.equals(12, state.grid.strip)
+    assert.equals(18, state.grid.strip)
   end)
 
   it("folds its labels away on a click of its own handle and shows + while folded", function()
@@ -159,7 +161,7 @@ describe("PartyCallPanel docking", function()
     Panel.Update()
     Panel.Layout({})
     assert.is_true(Panel.handle:IsShown())
-    assert.equals(12, state.grid.strip)
+    assert.equals(18, state.grid.strip)
     assert.equals(32, state.grid.cellH)
   end)
 
@@ -206,6 +208,22 @@ describe("PartyCallPanel docking", function()
     Panel.Place()
     assert.equals(clears, panel.clears)
     assert.same({ { "TOPLEFT", rootFrame, "BOTTOMLEFT", 0, -6 } }, panel.points)
+  end)
+
+  it("drops its own border in Move panels mode, where the gold outline takes over", function()
+    local panel = build()
+    function panel:SetBackdropBorderColor(...) self.borderColor = { ... } end
+    Panel.Update()
+    assert.equals(1, panel.borderColor[4])
+    state.moving = true
+    Panel.Update()
+    assert.equals(0, panel.borderColor[4])
+  end)
+
+  it("wires mouse-down on the panel, the handle and the call buttons so pre-drag movement counts", function()
+    local panel = build()
+    assert.is_function(panel.scripts.OnMouseDown)
+    assert.is_function(Panel.handle.scripts.OnMouseDown)
   end)
 
   it("keeps its own background while the merged background is not shown", function()

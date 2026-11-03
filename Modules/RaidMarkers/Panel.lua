@@ -254,6 +254,7 @@ function Shared.PaintBackground()
         Shared.panel:SetBackdrop(nil)
     else
         Shared.PaintPanel(Shared.panel)
+        if ns.PanelMove.Moving() then Shared.panel:SetBackdropBorderColor(0.3, 0.3, 0.3, 0) end
     end
 end
 
@@ -333,6 +334,10 @@ end
 
 local drag
 
+local function DragDown()
+    drag.MouseDown()
+end
+
 local function DragStart()
     drag.Start()
 end
@@ -391,6 +396,7 @@ function Shared.BuildFrame()
 
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
+    panel:SetScript("OnMouseDown", DragDown)
     panel:SetScript("OnDragStart", DragStart)
     panel:SetScript("OnDragStop", DragStop)
     panel:SetScript("OnShow", function()
@@ -418,6 +424,7 @@ function Shared.BuildHandle()
     handle:SetIgnoreParentAlpha(true)
     handle:RegisterForClicks("LeftButtonUp")
     handle:RegisterForDrag("LeftButton")
+    handle:SetScript("OnMouseDown", DragDown)
     handle:SetScript("OnDragStart", DragStart)
     handle:SetScript("OnDragStop", DragStop)
     SecureHandlerSetFrameRef(handle, "panel", panel)

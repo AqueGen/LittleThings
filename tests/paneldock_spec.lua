@@ -299,6 +299,21 @@ describe("PanelDock.GhostDrag", function()
     assert.same({ { "release", drag.mover, false }, { "Drop", "panelId" }, { "after" } }, calls)
   end)
 
+  it("keeps the cursor movement made between mouse-down and drag start", function()
+    make(false)
+    state.cursor = { 0, 0 }
+    drag.MouseDown()
+    state.cursor = { 10 * 0.8, 0 }
+    drag.Start()
+    assert.same({ "TOPLEFT", UIParent, "BOTTOMLEFT", 210, 140 }, drag.mover.points[1])
+    state.cursor = { 300 * 0.8, 0 }
+    drag.mover.scripts.OnUpdate(drag.mover)
+    assert.same({ "TOPLEFT", UIParent, "BOTTOMLEFT", 500, 140 }, drag.mover.points[1])
+    drag.Stop()
+    assert.same({ "release", drag.mover, false }, calls[1])
+    assert.same({ "TOPLEFT", UIParent, "BOTTOMLEFT", 500, 140 }, drag.mover.points[1])
+  end)
+
   it("ends the drag when the mouse button is up", function()
     make(true)
     drag.Start()

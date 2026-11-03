@@ -31,7 +31,7 @@ local function panel(rect)
 end
 
 local function spec(state, name, frame)
-  local s = { name = name, frame = function() return frame end, calls = {}, strip = true }
+  local s = { name = name, frame = function() return frame end, calls = {}, strip = 18 }
   for _, key in ipairs({ "setMoving", "reset", "stopDrag" }) do
     s[key] = function(...) s.calls[#s.calls + 1] = { key, ... } state.log[#state.log + 1] = name .. ":" .. key end
   end
@@ -53,15 +53,15 @@ describe("PanelMove.SeamRect", function()
   local Move = load({ printed = {} })
   local target = { l = 100, t = 500, r = 400, b = 440 }
 
-  it("draws a 1 px line centred in the gap, spanning only the shared part of the two edges", function()
-    assert.same({ 100, 437.5, 300, 436.5 }, { Move.SeamRect("Below", { l = 100, t = 434, r = 300, b = 380 }, target) })
-    assert.same({ 150, 503.5, 400, 502.5 }, { Move.SeamRect("Above", { l = 150, t = 560, r = 450, b = 506 }, target) })
-    assert.same({ 402.5, 500, 403.5, 470 }, { Move.SeamRect("Right", { l = 406, t = 520, r = 500, b = 470 }, target) })
-    assert.same({ 96.5, 490, 97.5, 440 }, { Move.SeamRect("Left", { l = 0, t = 490, r = 94, b = 400 }, target) })
+  it("draws a 1 unit line on whole units in the middle of the gap, spanning only the shared part of the two edges", function()
+    assert.same({ 100, 438, 300, 437 }, { Move.SeamRect("Below", { l = 100, t = 434, r = 300, b = 380 }, target) })
+    assert.same({ 150, 504, 400, 503 }, { Move.SeamRect("Above", { l = 150, t = 560, r = 450, b = 506 }, target) })
+    assert.same({ 403, 500, 404, 470 }, { Move.SeamRect("Right", { l = 406, t = 520, r = 500, b = 470 }, target) })
+    assert.same({ 97, 490, 98, 440 }, { Move.SeamRect("Left", { l = 0, t = 490, r = 94, b = 400 }, target) })
   end)
 
-  it("centres on the shared edge when there is no gap", function()
-    assert.same({ 100, 440.5, 300, 439.5 }, { Move.SeamRect("Below", { l = 100, t = 440, r = 300, b = 380 }, target) })
+  it("sits on the shared edge when there is no gap", function()
+    assert.same({ 100, 441, 300, 440 }, { Move.SeamRect("Below", { l = 100, t = 440, r = 300, b = 380 }, target) })
   end)
 end)
 
@@ -98,14 +98,14 @@ describe("PanelMove.LockSpot", function()
   local Move = load({ printed = {} })
 
   it("puts the lock inside the top of the fold strip of a panel with a strip", function()
-    assert.same({ "TOPLEFT", 100, 500 }, { Move.LockSpot(100, 500, 400, 440, 1080, true) })
-    assert.same({ "TOPLEFT", 100, 1080 }, { Move.LockSpot(100, 1080, 400, 1020, 1080, true) })
+    assert.same({ "TOPLEFT", 101, 500 }, { Move.LockSpot(100, 500, 400, 440, 1080, 1) })
+    assert.same({ "TOPLEFT", 102, 1080 }, { Move.LockSpot(100, 1080, 400, 1020, 1080, 2) })
   end)
 
   it("puts the lock outside the top-right corner of a panel without a strip, below it at the screen top", function()
-    assert.same({ "BOTTOMRIGHT", 400, 500 }, { Move.LockSpot(100, 500, 400, 440, 1080, false) })
-    assert.same({ "BOTTOMRIGHT", 400, 1068 }, { Move.LockSpot(100, 1068, 400, 1000, 1080, false) })
-    assert.same({ "TOPRIGHT", 400, 1000 }, { Move.LockSpot(100, 1070, 400, 1000, 1080, false) })
+    assert.same({ "BOTTOMRIGHT", 400, 500 }, { Move.LockSpot(100, 500, 400, 440, 1080, nil) })
+    assert.same({ "BOTTOMRIGHT", 400, 1064 }, { Move.LockSpot(100, 1064, 400, 1000, 1080, nil) })
+    assert.same({ "TOPRIGHT", 400, 1000 }, { Move.LockSpot(100, 1066, 400, 1000, 1080, nil) })
   end)
 end)
 
@@ -189,8 +189,8 @@ describe("PanelMove", function()
     tick()
     local icon = lock()
     assert.is_true(icon:IsShown())
-    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 434 } }, icon.points)
-    assert.same({ 12, 12 }, { icon.width, icon.height })
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 101, 434 } }, icon.points)
+    assert.same({ 16, 16 }, { icon.width, icon.height })
     assert.equals("QuestSharing-Padlock", icon.icon.atlas)
     assert.same({ 1, 1, 1 }, icon.icon.vertex)
     icon.scripts.OnClick(icon)
@@ -214,7 +214,7 @@ describe("PanelMove", function()
   it("puts the lock below a strip-less panel at the screen top", function()
     local top = panel({ 10, 1078, 200, 1000 })
     local s = spec(state, "Save indicator", top)
-    s.strip = false
+    s.strip = nil
     Move.Register("saveIndicator", s)
     top.over = true
     tick()
@@ -227,7 +227,7 @@ describe("PanelMove", function()
     Move.Register("member", member)
     member.frame().over = true
     tick()
-    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 500 } }, lock().points)
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 101, 500 } }, lock().points)
     lock().scripts.OnClick(lock())
     assert.is_true(Move.CanDrag("raidMarkers"))
     assert.is_false(Move.CanDrag("member"))
@@ -237,7 +237,7 @@ describe("PanelMove", function()
     function raid:GetEffectiveScale() return 2 end
     raid.over = true
     tick()
-    assert.same({ 24, 24 }, { lock().width, lock().height })
+    assert.same({ 32, 32 }, { lock().width, lock().height })
   end)
 
   it("locks every unlocked panel again on Esc and when combat starts", function()
@@ -270,7 +270,7 @@ describe("PanelMove", function()
       if f.name == "LittleThingsMoveSeampartyCalls" then seam = f end
     end
     assert.is_true(seam:IsShown())
-    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 437.5 } }, seam.points)
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 438 } }, seam.points)
     assert.same({ 200, 1 }, { seam.width, seam.height })
     local function outline(id)
       for _, f in ipairs(tracker.all) do
@@ -291,5 +291,48 @@ describe("PanelMove", function()
     Move.Toggle()
     assert.is_nil(tracker.text("Party calls"))
     assert.is_true(tracker.text("Raid marker panel").parentFrame:IsShown())
+  end)
+end)
+
+describe("PanelMove with the Velvet dock", function()
+  local function rectFrame(parent)
+    local f = Frames.new(parent)
+    function f:GetEffectiveScale() return 1 end
+    function f:GetLeft() local p = self.points[1] return p and p[2]:GetLeft() + p[4] end
+    function f:GetTop() local p = self.points[1] return p and p[2]:GetTop() + p[5] end
+    function f:GetRight() return self:GetLeft() and self:GetLeft() + self.width end
+    function f:GetBottom() return self:GetTop() and self:GetTop() - self.height end
+    return f
+  end
+
+  it("draws one seam and hides the touching outline sides of a docked pair", function()
+    local state = { printed = {}, log = {} }
+    local Move, tracker, tick = load(state)
+    _G.LibStub = nil
+    UIParent.width, UIParent.height = 1920, 1080
+    function UIParent:GetLeft() return 0 end
+    Frames.loadVelvet()
+    local lib = LibStub("LibVelvet-1.0")
+    local raid, calls = rectFrame(UIParent), rectFrame(UIParent)
+    raid.width, raid.height, calls.width, calls.height = 200, 60, 120, 40
+    raid:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -100)
+    calls:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -166)
+    local callsDb = { dockTo = "raidMarkers", side = "Below", offset = 0 }
+    lib.Dock.Register("raidMarkers", { frame = raid, root = true, get = function() return {} end, set = function() end,
+      locked = function() return false end, merged = function() return false end })
+    lib.Dock.Register("partyCalls", { frame = calls, get = function() return callsDb end, set = function() end,
+      locked = function() return false end })
+    Move.Register("raidMarkers", spec(state, "Raid marker panel", raid))
+    Move.Register("partyCalls", spec(state, "Party calls", calls))
+    Move.Toggle()
+    tick()
+    local function named(name)
+      for _, f in ipairs(tracker.all) do
+        if f.name == name then return f end
+      end
+    end
+    assert.is_true(named("LittleThingsMoveSeampartyCalls"):IsShown())
+    assert.is_false(named("LittleThingsMoveOutlinepartyCalls").edges.top.shown)
+    assert.is_false(named("LittleThingsMoveOutlineraidMarkers").edges.bottom.shown)
   end)
 end)

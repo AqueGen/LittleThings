@@ -195,6 +195,7 @@ local function BuildPreview()
     outline:SetColorTexture(1, 0.82, 0, 0.25)
     Center.PaintSamples(Center.DrawSamples(preview), false, true)
     drag = ns.PanelDock.GhostDrag("saveIndicator", preview, { name = "LittleThingsSaveRowMover", release = Center.Release })
+    preview:SetScript("OnMouseDown", function() drag.MouseDown() end)
     preview:SetScript("OnDragStart", function() drag.Start() end)
     preview:SetScript("OnDragStop", function() drag.Stop() end)
 end

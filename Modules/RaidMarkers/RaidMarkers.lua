@@ -61,6 +61,7 @@ end
 local function SetMoving(on)
     Shared.moving = on
     RequestVisibility()
+    Shared.PaintBackground()
 end
 
 local function Build()
@@ -76,7 +77,7 @@ local function Build()
     Shared.BuildHelpers()
     Shared.BuildWorldButtons(header)
     Shared.BuildHandle()
-    ns.PanelMove.Register(Shared.DOCK_ID, { name = "Raid marker panel", frame = function() return Shared.panel end, strip = true,
+    ns.PanelMove.Register(Shared.DOCK_ID, { name = "Raid marker panel", frame = function() return Shared.panel end, strip = ns.PanelDock.STRIP,
         setMoving = SetMoving, reset = ResetPosition, stopDrag = Shared.StopDragging })
     Shared.ApplyOrder()
     Shared.Layout()

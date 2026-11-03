@@ -7,7 +7,7 @@ ns.PanelDock = PanelDock
 local TICK, HANDLE_FLOOR = 0.1, 0.35
 local tickers = {}
 
-PanelDock.STRIP = 12
+PanelDock.STRIP, PanelDock.LOCK = 18, 16
 
 local function Lib()
     return LibStub("LibVelvet-1.0")
@@ -23,7 +23,7 @@ function PanelDock.BuildHandle(handle, panel)
     line:SetColorTexture(unpack(T.divider))
     local glyph = handle:CreateFontString(nil, "OVERLAY")
     glyph:SetFontObject("GameFontNormalSmall")
-    glyph:SetPoint("CENTER", handle, "CENTER", 0, 0)
+    glyph:SetPoint("CENTER", handle, "CENTER", 0, -PanelDock.LOCK / 2)
     glyph:SetTextColor(unpack(T.muted))
     glyph:SetText("-")
     handle:SetScript("OnEnter", function() glyph:SetTextColor(unpack(Lib().T.gold)) end)
@@ -138,7 +138,7 @@ function PanelDock.GhostDrag(id, panel, opts)
     local drag = { mover = mover, active = false }
     local rect = { x = 0, y = 0, w = 0, h = 0 }
     local stick = {}
-    local grabX, grabY, lastX, lastY
+    local grabX, grabY, lastX, lastY, downX, downY
 
     local function Stick()
         local t = stick.tid and HeldRect(stick.tid)
@@ -178,6 +178,9 @@ function PanelDock.GhostDrag(id, panel, opts)
         mover:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
         PanelDock.ShowSeam(stick.tid, stick.side, left, top, rect.w, rect.h)
     end
+    function drag.MouseDown()
+        downX, downY = Cursor()
+    end
     function drag.Start()
         if drag.active or not ns.PanelMove.CanDrag(id) or not panel:GetLeft() then return end
         local s = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
@@ -186,11 +189,14 @@ function PanelDock.GhostDrag(id, panel, opts)
         mover:ClearAllPoints()
         mover:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", panel:GetLeft() * s, panel:GetBottom() * s)
         local cx, cy = Cursor()
-        grabX, grabY, lastX, lastY = cx - panel:GetLeft() * s, cy - panel:GetTop() * s, cx, cy
+        local ax, ay = downX or cx, downY or cy
+        downX, downY = nil, nil
+        grabX, grabY, lastX, lastY = ax - panel:GetLeft() * s, ay - panel:GetTop() * s, ax, ay
         stick.tid, stick.align = nil, nil
         mover:Show()
         mover:SetScript("OnUpdate", drag.Follow)
         drag.active = true
+        drag.Follow()
     end
     function drag.Stop(hidden)
         if not drag.active then return end
