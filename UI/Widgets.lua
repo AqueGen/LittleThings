@@ -222,6 +222,144 @@ function Group:Dropdown(spec)
     end, spec.visible)
 end
 
+function Group:Input(spec)
+    local group = self
+    local holder = CreateFrame("Frame", nil, self.frame)
+    local width = spec.width or CONTROL_W
+    holder:SetSize(LABEL_W + width + 28, 26)
+    holder:EnableMouse(true)
+    Hover(holder, spec)
+    local label = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    label:SetPoint("LEFT")
+    label:SetWidth(LABEL_W - 8)
+    label:SetJustifyH("LEFT")
+    label:SetText(spec.label)
+    local box = UI.Input(holder, width)
+    box:SetPoint("LEFT", holder, "LEFT", LABEL_W, 0)
+    if spec.maxBytes then box:SetMaxBytes(spec.maxBytes) end
+    HookHover(box, spec)
+    local icon
+    if spec.icon then
+        icon = holder:CreateTexture(nil, "ARTWORK")
+        icon:SetSize(22, 22)
+        icon:SetPoint("LEFT", box, "RIGHT", 6, 0)
+    end
+    local function Commit(self)
+        if Locked(spec) then
+            self:SetText(spec.get() or "")
+            return
+        end
+        local text = self:GetText()
+        if text ~= tostring(spec.get() or "") then
+            spec.set(text)
+            group.page:Refresh()
+        end
+    end
+    box:SetScript("OnEnterPressed", function(self)
+        Commit(self)
+        self:ClearFocus()
+    end)
+    box:HookScript("OnEditFocusLost", Commit)
+    box:SetScript("OnEscapePressed", function(self)
+        self:SetText(spec.get() or "")
+        self:ClearFocus()
+    end)
+    self:Add(holder, 26, function()
+        if not box:HasFocus() then
+            box:SetText(tostring(spec.get() or ""))
+        end
+        if icon then icon:SetTexture(spec.icon()) end
+        local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
+        box:SetEnabled(enabled)
+        label:SetTextColor(unpack(enabled and T.text or T.muted))
+    end, spec.visible)
+end
+
+local LIST_ROW_H = 24
+
+local function ArrowButton(parent, texture, onClick)
+    local button = CreateFrame("Button", nil, parent)
+    button:SetSize(20, 20)
+    button:SetNormalTexture(texture .. "-Up")
+    button:SetPushedTexture(texture .. "-Down")
+    button:SetHighlightTexture(texture .. "-Highlight", "ADD")
+    button:SetScript("OnClick", onClick)
+    return button
+end
+
+function Group:List(spec)
+    local group = self
+    local width = spec.width or (LABEL_W + CONTROL_W)
+    local holder = CreateFrame("Frame", nil, self.frame)
+    local rows = {}
+    local function Row(index)
+        if rows[index] then return rows[index] end
+        local row = CreateFrame("Button", nil, holder)
+        row:SetSize(width, LIST_ROW_H)
+        row:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, -(index - 1) * LIST_ROW_H)
+        row.back = row:CreateTexture(nil, "BACKGROUND")
+        row.back:SetAllPoints()
+        row.back:SetColorTexture(unpack(T.selected))
+        row:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
+        row.icon = row:CreateTexture(nil, "ARTWORK")
+        row.icon:SetSize(LIST_ROW_H - 4, LIST_ROW_H - 4)
+        row.icon:SetPoint("LEFT", 2, 0)
+        row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.text:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
+        row.text:SetPoint("RIGHT", row, "RIGHT", -48, 0)
+        row.text:SetJustifyH("LEFT")
+        row.text:SetWordWrap(false)
+        row:SetScript("OnClick", function(self)
+            local focus = GetCurrentKeyBoardFocus()
+            if focus then focus:ClearFocus() end
+            spec.select(self.id)
+            group.page:Refresh()
+        end)
+        if spec.move then
+            row.up = ArrowButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollUp", function()
+                spec.move(row.id, -1)
+                group.page:Refresh()
+            end)
+            row.up:SetPoint("RIGHT", row, "RIGHT", -24, 0)
+            row.down = ArrowButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollDown", function()
+                spec.move(row.id, 1)
+                group.page:Refresh()
+            end)
+            row.down:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+        end
+        rows[index] = row
+        return row
+    end
+    local count = 0
+    local function Height()
+        return math.max(count, 1) * LIST_ROW_H
+    end
+    self:Add(holder, Height, function()
+        local items = spec.items()
+        count = #items
+        holder:SetSize(width, Height())
+        local selected = spec.selected()
+        for index, item in ipairs(items) do
+            local row = Row(index)
+            row.id = item.id
+            row.icon:SetTexture(item.icon)
+            row.icon:SetDesaturated(item.desaturate and true or false)
+            row.text:SetText(item.text)
+            row:SetAlpha(item.dim and 0.5 or 1)
+            row.back:SetShown(item.id == selected)
+            if row.up then
+                row.up:SetShown(item.id == selected)
+                row.down:SetShown(item.id == selected)
+            end
+            row:Show()
+        end
+        for index = count + 1, #rows do
+            rows[index]:Hide()
+        end
+    end, spec.visible)
+end
+
 function Group:Button(spec)
     local group = self
     local button = Widgets.Button(self.frame, spec.text or spec.label, spec.width or 180)
@@ -256,7 +394,7 @@ end
 
 function Group:Scoped(predicate)
     local group, proxy = self, {}
-    for _, name in ipairs({ "Check", "Slider", "Dropdown", "Button", "Note" }) do
+    for _, name in ipairs({ "Check", "Slider", "Dropdown", "Input", "Button", "Note" }) do
         proxy[name] = function(_, spec)
             if type(spec) == "string" then spec = { text = spec } end
             local own = spec.visible
