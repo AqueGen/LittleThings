@@ -115,7 +115,7 @@ end
 
 function Shared.BuildHelpers()
     local manaBar
-    manaBar, Shared.manaText, Shared.downText = Shared.HelperParts(Shared.panel)
+    manaBar, Shared.manaText, Shared.downText = Shared.HelperParts(Shared.block)
     Shared.manaBar = manaBar
     manaCurve = C_CurveUtil.CreateCurve()
     manaCurve:SetType(Enum.LuaCurveType.Linear)

@@ -10,7 +10,7 @@ local ORDINALS ={ "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
 
 local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
     showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false,
-    healerMana = false, manaText = "percent", groupDown = false }
+    healerMana = false, manaText = "percent", groupDown = false, merge = false, fade = false, fadeAlpha = 0, collapsed = false }
 
 local events
 
@@ -34,6 +34,7 @@ local function RequestVisibility()
         partyLeaderOnly = ns.db.raidMarkerPanel.partyLeaderOnly,
         raidWithoutRank = ns.db.raidMarkerPanel.raidWithoutRank,
     }
+    local wasShown = Shared.panel:IsShown()
     local allowed = Rules.CanMark(group)
     Shared.modeButton:SetAttribute("lt-allowed", allowed or nil)
     if not allowed then
@@ -44,6 +45,9 @@ local function RequestVisibility()
     else
         Shared.panel:Hide()
     end
+    if wasShown ~= Shared.panel:IsShown() then
+        Shared.ApplyDock()
+    end
 end
 
 local function Build()
@@ -52,14 +56,17 @@ local function Build()
     end
     Shared.BuildFrame()
     local header = Shared.BuildBindings()
-    Shared.row1, Shared.row2, Shared.block = Shared.NewRow(Shared.panel), Shared.NewRow(Shared.panel), Shared.NewRow(Shared.panel)
+    Shared.row1 = Shared.NewRow(Shared.panel)
+    Shared.row2, Shared.block = Shared.NewRow(Shared.panel, "SecureFrameTemplate"), Shared.NewRow(Shared.panel, "SecureFrameTemplate")
     Shared.BuildTargetButtons()
     Shared.BuildGroupButtons()
     Shared.BuildHelpers()
     Shared.BuildWorldButtons(header)
+    Shared.BuildArrow()
     Shared.ApplyOrder()
     Shared.Layout()
     Shared.Place()
+    ns.PanelDock.Fade(Shared.DOCK_ID, Shared.panel, ns.db.raidMarkerPanel)
 end
 
 local function RolesChanged()
@@ -96,6 +103,9 @@ local handlers = {
             end
             if pending[Shared.ApplyOrder] then
                 Shared.ApplyOrder()
+            end
+            if pending[Shared.ApplyDock] then
+                Shared.ApplyDock()
             end
             Shared.pending = {}
         end
@@ -157,6 +167,13 @@ local function Option(key, spec, apply)
     return spec
 end
 
+local function ApplyDockOptions()
+    if Shared.panel then
+        ns.PanelDock.Fade(Shared.DOCK_ID, Shared.panel, ns.db.raidMarkerPanel)
+        Shared.ApplyOutOfCombat(Shared.ApplyDock)
+    end
+end
+
 local function Preview(shown)
     Shared.previewing = shown
     if Shared.panel then
@@ -202,6 +219,8 @@ function RaidMarkers.Pages(page)
                 Shared.ApplyOutOfCombat(Shared.Place)
             end
         end })
+
+    ns.PanelDock.Options(page, ns.db.raidMarkerPanel, ApplyDockOptions, Shared.DOCK_ID)
 
     local helpers = page:Group("Tank helpers")
     helpers:Check(Option("healerMana", { label = "Healer mana", combatLocked = true,

@@ -18,9 +18,27 @@ local TIP_ANCHORS = {
     left = { "TOPRIGHT", "TOPLEFT", -4, 0 },
 }
 local GREY, RED = { 0.5, 0.5, 0.5 }, { 1, 0.2, 0.2 }
+local DOCK_ID = "raidMarkers"
+local COLLAPSE_BODY = [[
+local collapsed = not self:GetAttribute("lt-collapsed")
+self:SetAttribute("lt-collapsed", collapsed)
+local row2, block = self:GetFrameRef("row2"), self:GetFrameRef("block")
+if collapsed then
+    row2:Hide()
+    block:Hide()
+else
+    row2:Show()
+    block:Show()
+end
+local size = collapsed and "lt-collapsed-" or "lt-full-"
+local panel = self:GetFrameRef("panel")
+panel:SetWidth(self:GetAttribute(size .. "w"))
+panel:SetHeight(self:GetAttribute(size .. "h"))
+]]
 
 Shared.SIZE, Shared.GAP, Shared.CELL_PAD, Shared.ICON = SIZE, GAP, 8, 12
 Shared.GOLD, Shared.GREY, Shared.RED = GOLD, GREY, RED
+Shared.DOCK_ID = DOCK_ID
 
 Shared.active = false
 Shared.previewing = false
@@ -28,6 +46,10 @@ Shared.pending = {}
 
 local dragging = false
 local ticker
+
+local function Lib()
+    return LibStub("LibVelvet-1.0")
+end
 
 function Shared.Ring(button, on)
     local color = on and GOLD or BORDER
@@ -97,8 +119,8 @@ function Shared.SecureButton(row, width, title, attributes, name)
     return button
 end
 
-function Shared.NewRow(parent)
-    local row = CreateFrame("Frame", nil, parent)
+function Shared.NewRow(parent, template)
+    local row = CreateFrame("Frame", nil, parent, template)
     row.buttons = {}
     return row
 end
@@ -151,6 +173,7 @@ local function LayoutHorizontal(v)
         bw = bw + GAP + v.downText.cell
     end
     v.panel:SetSize(width + GAP + bw + 2 * PAD, math.max(2 * SIZE + GAP, bh) + 2 * PAD)
+    return width
 end
 
 local function LayoutVertical(v)
@@ -186,6 +209,7 @@ local function LayoutVertical(v)
         extra = extra + GAP + DOWN_HEIGHT
     end
     v.panel:SetSize(width + 2 * PAD, height + GAP + 3 * step - GAP + extra + 2 * PAD)
+    return width
 end
 
 function Shared.Arrange(v)
@@ -200,15 +224,56 @@ function Shared.Arrange(v)
     v.manaText:SetShown(db.manaText ~= "none")
     v.downText:SetShown(db.groupDown)
     if db.vertical then
-        LayoutVertical(v)
+        return LayoutVertical(v)
+    end
+    return LayoutHorizontal(v)
+end
+
+local function PaintArrow()
+    Shared.arrowGlyph:SetText(ns.db.raidMarkerPanel.collapsed and ">" or "v")
+end
+
+local function ApplyCollapse(width)
+    local db, panel, arrow = ns.db.raidMarkerPanel, Shared.panel, Shared.arrow
+    local w, h = Rules.CollapsedSize({ vertical = db.vertical, width = width, size = SIZE, gap = GAP, pad = PAD })
+    arrow:SetAttribute("lt-full-w", panel:GetWidth())
+    arrow:SetAttribute("lt-full-h", panel:GetHeight())
+    arrow:SetAttribute("lt-collapsed-w", w)
+    arrow:SetAttribute("lt-collapsed-h", h)
+    arrow:SetAttribute("lt-collapsed", db.collapsed)
+    Shared.row2:SetShown(not db.collapsed)
+    Shared.block:SetShown(not db.collapsed)
+    if db.collapsed then
+        panel:SetSize(w, h)
+    end
+    PaintArrow()
+end
+
+function Shared.PaintBackground()
+    if Lib().Dock.MergeFrame(DOCK_ID) then
+        Shared.panel:SetBackdrop(nil)
     else
-        LayoutHorizontal(v)
+        Shared.PaintPanel(Shared.panel)
     end
 end
 
+function Shared.ApplyDock()
+    local lib = Lib()
+    for _, id in ipairs(lib.Dock.Members(DOCK_ID)) do
+        lib.Dock.Apply(id)
+        local change = lib.dock.panels[id].spec.onChange
+        if change then
+            change()
+        end
+    end
+    lib.Dock.RefreshMerge(DOCK_ID)
+    Shared.PaintBackground()
+end
+
 function Shared.Layout()
-    Shared.Arrange(Shared)
+    ApplyCollapse(Shared.Arrange(Shared))
     Shared.RefreshHelpers()
+    Shared.ApplyDock()
 end
 
 function Shared.Place()
@@ -216,6 +281,7 @@ function Shared.Place()
     Shared.panel:ClearAllPoints()
     Shared.panel:SetPoint(db.point, UIParent, db.relativePoint, db.x, db.y)
     Shared.panel:SetScale(db.scale)
+    Shared.ApplyDock()
 end
 
 function Shared.ApplyOutOfCombat(apply)
@@ -241,7 +307,7 @@ local function StartDrag()
     dragging = true
 end
 
-local function StopDrag()
+local function StopDrag(hidden)
     local mover = Shared.mover
     dragging = false
     mover:StopMovingOrSizing()
@@ -250,7 +316,16 @@ local function StopDrag()
     db.point, db.relativePoint = "BOTTOMLEFT", "BOTTOMLEFT"
     db.x, db.y = math.floor(mover:GetLeft() / scale + 0.5), math.floor(mover:GetBottom() / scale + 0.5)
     mover:Hide()
-    Shared.ApplyOutOfCombat(Shared.Place)
+    if hidden or InCombatLockdown() then
+        Shared.ApplyOutOfCombat(Shared.Place)
+        return
+    end
+    Shared.Place()
+    local x, y = Lib().Dock.Snap(DOCK_ID)
+    db.point, db.relativePoint = "TOPLEFT", "TOPLEFT"
+    db.x, db.y = math.floor(x / scale + 0.5), math.floor(-y / scale + 0.5)
+    Shared.Place()
+    Lib().Dock.Drop(DOCK_ID)
 end
 
 local function Tick()
@@ -291,6 +366,11 @@ function Shared.BuildFrame()
     panel:SetClampedToScreen(true)
     panel:SetDontSavePosition(true)
     Shared.PaintPanel(panel)
+    local function Db()
+        return ns.db.raidMarkerPanel
+    end
+    Lib().Dock.Register(DOCK_ID, { frame = panel, root = true, get = Db, set = function() end,
+        locked = function() return Db().locked end, merged = function() return Db().merge end, onChange = Shared.PaintBackground })
 
     local mover = CreateFrame("Frame", "LittleThingsRaidMarkersMover", UIParent)
     Shared.mover = mover
@@ -325,7 +405,35 @@ function Shared.BuildFrame()
     panel:SetScript("OnHide", function()
         Shared.StopTicker()
         if dragging then
-            StopDrag()
+            StopDrag(true)
         end
+    end)
+end
+
+function Shared.BuildArrow()
+    local panel = Shared.panel
+    local arrow = CreateFrame("Button", "LittleThingsRaidMarkersCollapse", panel, "SecureHandlerClickTemplate")
+    Shared.arrow = arrow
+    arrow:SetSize(14, 14)
+    arrow:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0)
+    arrow:SetFrameLevel(panel:GetFrameLevel() + 10)
+    arrow:RegisterForClicks("AnyUp")
+    arrow:SetAlpha(0)
+    local glyph = arrow:CreateFontString(nil, "OVERLAY")
+    glyph:SetFontObject("GameFontNormalSmall")
+    glyph:SetPoint("CENTER")
+    glyph:SetTextColor(unpack(Lib().T.muted))
+    Shared.arrowGlyph = glyph
+    SecureHandlerSetFrameRef(arrow, "panel", panel)
+    SecureHandlerSetFrameRef(arrow, "row2", Shared.row2)
+    SecureHandlerSetFrameRef(arrow, "block", Shared.block)
+    arrow:SetAttribute("_onclick", COLLAPSE_BODY)
+    arrow:SetScript("PostClick", function(self)
+        ns.db.raidMarkerPanel.collapsed = self:GetAttribute("lt-collapsed") and true or false
+        PaintArrow()
+        Shared.ApplyOutOfCombat(Shared.ApplyDock)
+    end)
+    panel:HookScript("OnUpdate", function()
+        arrow:SetAlpha((Lib().Dock.Hovered(DOCK_ID) or arrow:IsMouseOver()) and 1 or 0)
     end)
 end

@@ -55,13 +55,16 @@ local ALLOWED = {
   Frame = { "SetScript", "RegisterEvent", "Show", "Hide", "IsShown", "SetPoint", "ClearAllPoints", "SetSize", "SetScale",
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
     "CreateTexture", "CreateMaskTexture", "CreateFontString", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
-    "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
+    "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetShown",
+    "HookScript", "IsMouseOver", "GetFrameLevel" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateMaskTexture", "CreateFontString", "SetHighlightTexture",
-    "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
+    "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetFrameLevel",
+    "SetAlpha", "IsMouseOver", "SetFontString" },
   Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "AddMaskTexture",
     "SetBlendMode", "Hide", "SetShown" },
   MaskTexture = { "SetTexture", "SetAllPoints" },
-  FontString = { "SetPoint", "ClearAllPoints", "SetText", "SetFormattedText", "SetTextColor", "GetStringWidth", "SetAlpha", "SetShown" },
+  FontString = { "SetPoint", "ClearAllPoints", "SetText", "SetFormattedText", "SetTextColor", "GetStringWidth", "SetAlpha", "SetShown",
+    "SetFontObject" },
   StatusBar = { "SetScript", "SetPoint", "ClearAllPoints", "SetSize", "SetShown", "SetAlpha", "EnableMouse", "SetMouseClickEnabled", "CreateTexture",
     "CreateFontString",
     "SetStatusBarTexture", "SetStatusBarColor", "SetMinMaxValues", "SetValue" },
@@ -96,6 +99,10 @@ local function handle(f, bindings)
   function h:SetBindingClick(priority, key, name, button) bindings[key] = { priority, name, button } end
   function h:ClearBindings() for key in pairs(bindings) do bindings[key] = nil end end
   function h:GetName() return f.name end
+  function h:Show() f.shown = true end
+  function h:Hide() f.shown = false end
+  function h:SetWidth(w) f.width = w end
+  function h:SetHeight(v) f.height = v end
   return h
 end
 
@@ -110,6 +117,12 @@ end
 
 local function snippet(f, bindings, button, down)
   return wrapped(f, "OnClick", bindings, button, down)
+end
+
+local function onclick(f, button, down)
+  local fn = assert(loadstring("local self, button, down = ...\n" .. assert(f.attrs._onclick, "no _onclick")))
+  setfenv(fn, {})
+  return fn(handle(f, {}), button, down)
 end
 
 local function within(f, ancestor)
@@ -177,6 +190,10 @@ function IMPL:GetStringWidth()
   local state = self.frames.state
   return state.textWidths and state.textWidths[self.text] or state.textWidth or 0
 end
+function IMPL:HookScript(script, fn) self.hooks = rawget(self, "hooks") or {} self.hooks[script] = fn end
+function IMPL:IsMouseOver() return rawget(self, "mouseOver") == true end
+function IMPL:GetFrameLevel() return rawget(self, "level") or 1 end
+function IMPL:SetFrameLevel(level) self.level = level end
 function IMPL:WrapScript(frame, script, preBody) frame.wraps = rawget(frame, "wraps") or {} frame.wraps[script] = preBody end
 
 local new_object
@@ -238,6 +255,30 @@ local function load(state, db)
   _G.IsRaidMarkerActive = function(i) return state.placed and state.placed[i] or false end
   _G.SetRaidTargetIconTexture = noop
   _G.SecureHandlerSetFrameRef = function(frame, label, ref) frame.attrs["frameref-" .. label] = ref end
+  state.dockCalls, state.fades, state.dockMembers = {}, {}, state.dockMembers or {}
+  local function dockCall(name, id)
+    state.dockCalls[#state.dockCalls + 1] = { name, id, combat = state.combat }
+  end
+  local dockLib
+  dockLib = { T ={ muted = { 0.72, 0.74, 0.78 } }, dock = { panels = {} }, Dock = {
+    Register = function(id, spec) state.dockSpec = spec dockLib.dock.panels[id] = { spec = spec } end,
+    Snap = function(id) dockCall("Snap", id) return state.snap[1], state.snap[2] end,
+    Drop = function(id) dockCall("Drop", id) end,
+    Apply = function(id) dockCall("Apply", id) end,
+    RefreshMerge = function(id) dockCall("RefreshMerge", id) end,
+    Members = function() return state.dockMembers end,
+    MergeFrame = function() return state.mergeFrame end,
+    Hovered = function() return state.hovered == true end,
+  } }
+  state.snap = state.snap or { 0, 0 }
+  _G.LibStub = function(name) assert(name == "LibVelvet-1.0") return dockLib end
+  ns.PanelDock = {
+    Fade = function(id, frame, fadeDb) state.fades[#state.fades + 1] = { id, frame, fadeDb } end,
+    Options = function(page, optionsDb, apply, id)
+      page:Group("Docking")
+      state.dockOptions = { db = optionsDb, apply = apply, id = id }
+    end,
+  }
   state.clearedBindings = {}
   _G.ClearOverrideBindings = function(owner)
     if state.combat then frames.blocked[#frames.blocked + 1] = "ClearOverrideBindings" end
@@ -392,6 +433,7 @@ local function load(state, db)
   return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance, all = all,
     groupButtons = groupButtons, blocked = frames.blocked, tick = tick, eventFrame = eventFrame, children = children,
     mover = function() return named("LittleThingsRaidMarkersMover") end,
+    arrow = function() return named("LittleThingsRaidMarkersCollapse") end,
     manaBar = function()
       for _, f in ipairs(frames) do
         if f.kind == "StatusBar" then return f end
@@ -409,7 +451,7 @@ local function load(state, db)
     end,
     downText = function()
       for _, f in ipairs(frames) do
-        if f.kind == "FontString" and f.parent == panel() then return f end
+        if f.kind == "FontString" and f.parent and f.parent.template == "SecureFrameTemplate" then return f end
       end
     end }
 end
@@ -497,7 +539,7 @@ describe("RaidMarkers", function()
 
   it("puts the visibility options in their own group first, all off by default", function()
     local specs, byLabel, _, titles = pages(addon)
-    assert.same({ "Visibility", "Raid marker panel", "Tank helpers", "Placement order" }, titles)
+    assert.same({ "Visibility", "Raid marker panel", "Docking", "Tank helpers", "Placement order" }, titles)
     for i, option in ipairs(VISIBILITY) do
       local spec = byLabel[option[2]]
       assert.equals(specs[i], spec)
@@ -912,14 +954,16 @@ describe("RaidMarkers", function()
     assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 200, 100 }, mover.lastPoint)
     assert.same({ 600, 120 }, { mover.width, mover.height })
     mover.left, mover.bottom = 401, 301
+    state.snap = { 402, 600 }
     panel.scripts.OnDragStop(panel)
     assert.equals(1, mover.calls.StopMovingOrSizing)
     assert.is_false(mover:IsShown())
     assert.is_nil(panel.calls.StartMoving)
     assert.is_nil(panel.calls.StopMovingOrSizing)
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 1])
     local db = addon.ns.db.raidMarkerPanel
-    assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
-    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.lastPoint)
+    assert.same({ "TOPLEFT", "TOPLEFT", 201, -300 }, { db.point, db.relativePoint, db.x, db.y })
+    assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 201, -300 }, panel.lastPoint)
   end)
 
   it("finishes an active drag when the panel hides", function()
@@ -1067,6 +1111,14 @@ describe("RaidMarkers", function()
     panel.scripts.OnDragStart(panel)
     panel.scripts.OnDragStop(panel)
     panel.scripts.OnShow(panel)
+    local arrow = addon.arrow()
+    onclick(arrow, "LeftButton", false)
+    arrow.scripts.PostClick(arrow, "LeftButton", false)
+    onclick(arrow, "LeftButton", false)
+    arrow.scripts.PostClick(arrow, "LeftButton", false)
+    panel.hooks.OnUpdate(panel)
+    state.dockOptions.apply()
+    state.dockSpec.onChange()
     addon.tick()
     local bar = addon.manaBar()
     assert.is_true(rawequal(MANA, bar.value))
@@ -1088,6 +1140,9 @@ describe("RaidMarkers", function()
     assert.same({}, addon.blocked)
     assert.same({}, state.calls)
     assert.same({}, state.clearedBindings)
+    for _, call in ipairs(state.dockCalls) do
+      assert.is_false(call.combat, call[1])
+    end
   end)
 
   it("fills defaults before any page exists", function()
@@ -2004,6 +2059,173 @@ describe("RaidMarkers", function()
       state.status = { raid1 = "ready", raid2 = "notready", player = "ready" }
       addon.fire("READY_CHECK")
       assert.equals("Ready 1/2", addon.button("Ready check").label.text)
+    end)
+  end)
+
+  describe("docking and collapse", function()
+    local function block() return addon.button("Ready check").parent end
+    local function row2() return world(1).parent end
+    local function glyph(arrow)
+      for _, child in ipairs(addon.children(arrow)) do
+        if child.kind == "FontString" then return child end
+      end
+    end
+    local function calls(name)
+      local found = {}
+      for _, c in ipairs(state.dockCalls) do
+        if c[1] == name then found[#found + 1] = c end
+      end
+      return found
+    end
+
+    it("defaults merge, mouse-over and collapse off with a faded opacity of 0", function()
+      local db = addon.ns.db.raidMarkerPanel
+      assert.same({ false, false, 0, false }, { db.merge, db.fade, db.fadeAlpha, db.collapsed })
+    end)
+
+    it("registers the panel as the dock root reading its saved fields", function()
+      local spec, db = state.dockSpec, addon.ns.db.raidMarkerPanel
+      assert.equals(addon.panel(), spec.frame)
+      assert.is_true(spec.root)
+      assert.equals(db, spec.get())
+      assert.is_false(spec.locked())
+      assert.is_false(spec.merged())
+      db.locked, db.merge = true, true
+      assert.is_true(spec.locked())
+      assert.is_true(spec.merged())
+    end)
+
+    it("fades through the shared mouse-over helper from the start", function()
+      assert.same({ "raidMarkers", addon.panel(), addon.ns.db.raidMarkerPanel }, state.fades[1])
+    end)
+
+    it("snaps and drops a drag out of combat, and skips both when the drag ends by hiding", function()
+      local panel, mover = addon.panel(), addon.mover()
+      startDrag(panel)
+      mover.left, mover.bottom = 401, 301
+      panel.scripts.OnDragStop(panel)
+      assert.same({ { "Snap", "raidMarkers", combat = false } }, calls("Snap"))
+      assert.same({ { "Drop", "raidMarkers", combat = false } }, calls("Drop"))
+      startDrag(panel)
+      panel.scripts.OnHide(panel)
+      assert.equals(1, #calls("Snap"))
+      assert.equals(1, #calls("Drop"))
+    end)
+
+    it("re-applies docked members and refreshes the merge after the panel is placed", function()
+      local changed = 0
+      state.dockMembers = { "partyCalls" }
+      _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() changed = changed + 1 end } }
+      local _, specs = pages(addon)
+      state.dockCalls = {}
+      specs["Scale"].set(1.5)
+      assert.same({ { "Apply", "partyCalls", combat = false } }, calls("Apply"))
+      assert.equals(1, changed)
+      assert.same({ { "RefreshMerge", "raidMarkers", combat = false } }, calls("RefreshMerge"))
+    end)
+
+    it("hides its own background while merged and paints it back when unmerged", function()
+      local panel = addon.panel()
+      state.mergeFrame = {}
+      state.dockSpec.onChange()
+      assert.is_nil(panel.backdrop)
+      state.mergeFrame = nil
+      state.dockSpec.onChange()
+      assert.is_truthy(panel.backdrop)
+      assert.same({ 0, 0, 0, 0.6 }, panel.bg)
+    end)
+
+    it("adds the docking options after the panel group and applies the dock part only out of combat", function()
+      pages(addon)
+      assert.equals("raidMarkers", state.dockOptions.id)
+      assert.equals(addon.ns.db.raidMarkerPanel, state.dockOptions.db)
+      state.dockCalls = {}
+      local fades = #state.fades
+      state.combat = true
+      state.dockOptions.apply()
+      assert.equals(fades + 1, #state.fades)
+      assert.same({}, state.dockCalls)
+      assert.same({}, addon.blocked)
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.equals(1, #calls("RefreshMerge"))
+    end)
+
+    it("builds a secure collapse arrow with refs to the panel, the world row and the group block", function()
+      local arrow, panel = addon.arrow(), addon.panel()
+      assert.equals("SecureHandlerClickTemplate", arrow.template)
+      assert.equals(panel, arrow.parent)
+      assert.equals(panel, arrow.attrs["frameref-panel"])
+      assert.equals(row2(), arrow.attrs["frameref-row2"])
+      assert.equals(block(), arrow.attrs["frameref-block"])
+      assert.equals("SecureFrameTemplate", block().template)
+      assert.equals(block(), addon.manaBar().parent)
+      assert.equals(block(), addon.downText().parent)
+      assert.same({ "AnyUp" }, arrow.clicks)
+      assert.equals("v", glyph(arrow).text)
+    end)
+
+    it("stores the full and collapsed sizes for both layouts", function()
+      local arrow, panel = addon.arrow(), addon.panel()
+      assert.same({ panel.width, panel.height, 292, 34 },
+        { arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"], arrow.attrs["lt-collapsed-w"], arrow.attrs["lt-collapsed-h"] })
+      local _, specs = pages(addon)
+      specs["Vertical"].set(true)
+      assert.same({ panel.width, panel.height, 44, 258 },
+        { arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"], arrow.attrs["lt-collapsed-w"], arrow.attrs["lt-collapsed-h"] })
+    end)
+
+    it("collapses and expands in combat through the secure snippet and saves the state after the click", function()
+      local arrow, panel, db = addon.arrow(), addon.panel(), addon.ns.db.raidMarkerPanel
+      local full = { panel.width, panel.height }
+      state.dockCalls = {}
+      state.combat = true
+      onclick(arrow, "LeftButton", false)
+      arrow.scripts.PostClick(arrow, "LeftButton", false)
+      assert.is_false(row2():IsShown())
+      assert.is_false(block():IsShown())
+      assert.same({ 292, 34 }, { panel.width, panel.height })
+      assert.is_true(db.collapsed)
+      assert.equals(">", glyph(arrow).text)
+      onclick(arrow, "LeftButton", false)
+      arrow.scripts.PostClick(arrow, "LeftButton", false)
+      assert.is_true(row2():IsShown())
+      assert.is_true(block():IsShown())
+      assert.same(full, { panel.width, panel.height })
+      assert.is_false(db.collapsed)
+      assert.equals("v", glyph(arrow).text)
+      assert.same({}, addon.blocked)
+      assert.same({}, state.dockCalls)
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.equals(1, #calls("RefreshMerge"))
+    end)
+
+    it("restores a saved collapse when the panel is built", function()
+      local saved = load(state, { raidMarkerPanel = { collapsed = true } })
+      saved.module.Enable()
+      local arrow, panel = saved.named("LittleThingsRaidMarkersCollapse"), saved.panel()
+      assert.is_true(arrow.attrs["lt-collapsed"])
+      assert.is_false(arrow.attrs["frameref-row2"]:IsShown())
+      assert.is_false(arrow.attrs["frameref-block"]:IsShown())
+      assert.same({ 292, 34 }, { panel.width, panel.height })
+      onclick(arrow, "LeftButton", false)
+      assert.same({ arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"] }, { panel.width, panel.height })
+    end)
+
+    it("shows the arrow by alpha only while the group or the arrow is hovered", function()
+      local arrow, panel = addon.arrow(), addon.panel()
+      state.combat = true
+      panel.hooks.OnUpdate(panel)
+      assert.equals(0, arrow.alpha)
+      state.hovered = true
+      panel.hooks.OnUpdate(panel)
+      assert.equals(1, arrow.alpha)
+      state.hovered = false
+      arrow.mouseOver = true
+      panel.hooks.OnUpdate(panel)
+      assert.equals(1, arrow.alpha)
+      assert.same({}, addon.blocked)
     end)
   end)
 end)
