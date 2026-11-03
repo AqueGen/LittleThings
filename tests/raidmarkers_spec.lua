@@ -238,7 +238,8 @@ local function load(state, db)
   local frames = { state = state, blocked = {} }
   local ns = {
     db = db or {},
-    Widgets = { FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 } },
+    Widgets = { FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 },
+      THEME = { bg = { 0.063, 0.075, 0.09, 0.99 } } },
     IconButtons = { ROLE_ATLAS = { HEALER = "UI-LFG-RoleIcon-Healer-Micro-GroupFinder" } },
     RegisterModule = function(_, m) module = m end,
     Print = function(text) state.printed = state.printed or {} state.printed[#state.printed + 1] = text end,

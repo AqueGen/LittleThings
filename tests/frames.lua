@@ -48,6 +48,7 @@ function Frames.new(parent)
     function f:SetAtlas(a) self.atlas = a end
     function f:SetFrameStrata(s) self.strata = s end
     function f:SetBackdropBorderColor(...) self.border = { ... } end
+    function f:SetBackdropColor(...) self.bg = { ... } end
     function f:SetVertexColor(...) self.vertex = { ... } end
     return setmetatable(f, {
         __index = function(_, k)

@@ -13,7 +13,7 @@ local function load(state)
   _G.tinsert = table.insert
   _G.C_Timer = { NewTicker = function(_, fn) tickers[#tickers + 1] = fn return { Cancel = function() end } end }
   _G.LibStub = function() return { dock = { panels = state.dockPanels or {} } } end
-  local ns = { Widgets = { FLAT = { bgFile = "flat" } }, Print = function(text) state.printed[#state.printed + 1] = text end }
+  local ns = { Widgets = { FLAT = { bgFile = "flat" }, THEME = { bg = { 0.063, 0.075, 0.09, 0.99 } } }, Print = function(text) state.printed[#state.printed + 1] = text end }
   assert(loadfile("./Modules/PanelMove.lua"))("LittleThings", ns)
   return ns.PanelMove, tracker, function() tickers[1]() end, ns
 end
@@ -97,15 +97,20 @@ end)
 describe("PanelMove.LockSpot", function()
   local Move = load({ printed = {} })
 
-  it("puts the lock inside the top of the fold strip of a panel with a strip", function()
-    assert.same({ "TOPLEFT", 101, 500 }, { Move.LockSpot(100, 500, 400, 440, 1080, 1) })
-    assert.same({ "TOPLEFT", 102, 1080 }, { Move.LockSpot(100, 1080, 400, 1020, 1080, 2) })
+  it("centres a 22 unit badge on the top of the fold strip, scaled with the panel, sticking out past the corner", function()
+    assert.same({ "CENTER", 109, 491, 22 }, { Move.LockSpot(100, 500, 400, 440, 1080, 18, 1, false) })
+    assert.same({ "CENTER", 118, 982, 44 }, { Move.LockSpot(100, 1000, 400, 880, 1080, 36, 2, false) })
   end)
 
-  it("puts the lock outside the top-right corner of a panel without a strip, below it at the screen top", function()
-    assert.same({ "BOTTOMRIGHT", 400, 500 }, { Move.LockSpot(100, 500, 400, 440, 1080, nil) })
-    assert.same({ "BOTTOMRIGHT", 400, 1064 }, { Move.LockSpot(100, 1064, 400, 1000, 1080, nil) })
-    assert.same({ "TOPRIGHT", 400, 1000 }, { Move.LockSpot(100, 1066, 400, 1000, 1080, nil) })
+  it("shrinks the badge inside the strip when a neighbour sits on the left or above", function()
+    assert.same({ "CENTER", 109, 491, 16 }, { Move.LockSpot(100, 500, 400, 440, 1080, 18, 1, true) })
+    assert.same({ "CENTER", 118, 982, 32 }, { Move.LockSpot(100, 1000, 400, 880, 1080, 36, 2, true) })
+  end)
+
+  it("puts the badge outside the top-right corner of a panel without a strip, below it at the screen top", function()
+    assert.same({ "BOTTOMRIGHT", 400, 500, 22 }, { Move.LockSpot(100, 500, 400, 440, 1080) })
+    assert.same({ "BOTTOMRIGHT", 400, 1058, 22 }, { Move.LockSpot(100, 1058, 400, 1000, 1080) })
+    assert.same({ "TOPRIGHT", 400, 1000, 22 }, { Move.LockSpot(100, 1060, 400, 1000, 1080) })
   end)
 end)
 
@@ -189,8 +194,14 @@ describe("PanelMove", function()
     tick()
     local icon = lock()
     assert.is_true(icon:IsShown())
-    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 101, 434 } }, icon.points)
-    assert.same({ 16, 16 }, { icon.width, icon.height })
+    assert.same({ { "CENTER", UIParent, "BOTTOMLEFT", 109, 425 } }, icon.points)
+    assert.same({ 22, 22 }, { icon.width, icon.height })
+    assert.equals(0.95, icon.bg[4])
+    assert.same({ 1, 0.82, 0, 1 }, icon.border)
+    icon.scripts.OnEnter(icon)
+    assert.are_not.same({ 1, 0.82, 0, 1 }, icon.border)
+    icon.scripts.OnLeave(icon)
+    assert.same({ 1, 0.82, 0, 1 }, icon.border)
     assert.equals("QuestSharing-Padlock", icon.icon.atlas)
     assert.same({ 1, 1, 1 }, icon.icon.vertex)
     icon.scripts.OnClick(icon)
@@ -227,7 +238,7 @@ describe("PanelMove", function()
     Move.Register("member", member)
     member.frame().over = true
     tick()
-    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 101, 500 } }, lock().points)
+    assert.same({ { "CENTER", UIParent, "BOTTOMLEFT", 109, 491 } }, lock().points)
     lock().scripts.OnClick(lock())
     assert.is_true(Move.CanDrag("raidMarkers"))
     assert.is_false(Move.CanDrag("member"))
@@ -237,7 +248,28 @@ describe("PanelMove", function()
     function raid:GetEffectiveScale() return 2 end
     raid.over = true
     tick()
-    assert.same({ 32, 32 }, { lock().width, lock().height })
+    assert.same({ 44, 44 }, { lock().width, lock().height })
+  end)
+
+  it("keeps the badge inside the strip when a neighbour is docked above or to the left, never over its buttons", function()
+    for _, side in ipairs({ "Above", "Left" }) do
+      state.dockPanels = {
+        raidMarkers = { spec = { root = true, frame = raid, get = function() return {} end } },
+        partyCalls = { spec = { frame = calls, get = function() return { dockTo = "raidMarkers", side = side } end } },
+      }
+      raid.over = true
+      tick()
+      assert.same({ 16, 16 }, { lock().width, lock().height })
+      raid.over = false
+      tick()
+    end
+    state.dockPanels.partyCalls.spec.get = function() return { dockTo = "raidMarkers", side = "Below" } end
+    raid.over = true
+    tick()
+    assert.same({ 22, 22 }, { lock().width, lock().height })
+    raid.over, calls.over = false, true
+    tick()
+    assert.same({ 16, 16 }, { lock().width, lock().height })
   end)
 
   it("locks every unlocked panel again on Esc and when combat starts", function()
