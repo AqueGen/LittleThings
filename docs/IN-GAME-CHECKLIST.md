@@ -340,17 +340,17 @@ Switch on Party calls (Party and raid). It is off by default.
 Switch on the Raid marker panel (Show when solo) and Party calls; join a party so both show. `/console taintLog 1` before the first fight.
 
 - [ ] **First: in combat, with Show on mouse-over on for the raid marker panel, move the mouse on and off it: it fades and comes back, no `ADDON_ACTION_BLOCKED`. If blocked, note it: the raid panel then fades out of combat only.**
-- [ ] Drag Party calls next to each edge of the raid marker panel: it snaps within 16 px with a 6 px gap and stays docked. Drag the raid marker panel: Party calls moves with it. Drop the raid marker panel near a screen edge or another panel: it snaps on release.
+- [ ] Drag Party calls next to each edge of the raid marker panel: it snaps within 16 px with a 6 px gap and stays docked. Drag the raid marker panel: Party calls moves with it. Drop the raid marker panel near another panel's edge: it snaps on release. Screen edges do not snap; the panel stays on screen anyway.
 - [ ] Lock position on the raid marker panel: it does not drag. Drag starts in combat: nothing moves.
 - [ ] Change the raid marker panel's Scale and Vertical, and Reset position: the docked Party calls follows.
 - [ ] Merge with docked panels on (raid marker panel page): one background and border around both, no gap; the raid panel draws no own background. Merge off: both backgrounds back, gap 6.
-- [ ] Hover the raid marker panel: the arrow shows top right; mouse away: it hides. Hover Party calls docked to it: both arrows show.
-- [ ] **Collapse the raid marker panel out of combat and in combat (target dummy): world markers, Place, Ready/Pull/Role, healer mana and dead count hide, the panel shrinks to the target row, Party calls docked below or right follows. Expand: all back. No `ADDON_ACTION_BLOCKED`, BugSack empty.**
+- [ ] Hover the raid marker panel: the arrow shows just above its top-right corner, over no button; mouse away: it hides. Same for Party calls. Hover Party calls docked to it: both arrows show. With Show on mouse-over and opacity 0, move from the panel onto its arrow: the panel stays visible.
+- [ ] **Collapse the raid marker panel out of combat and in combat (target dummy): world markers, Place, Ready/Pull/Role, healer mana and dead count hide, the panel shrinks to the target row, the target markers do not move (also right after Reset position and after a reload of an old save), Party calls docked below or right follows. Expand: all back. No `ADDON_ACTION_BLOCKED`, BugSack empty.**
 - [ ] Vertical layout: collapse keeps the target column and Clear all only.
 - [ ] Collapse while merged, in and out of combat: the merged background follows the new size; if it lags in combat it is right after combat.
 - [ ] Collapse Party calls in and out of combat: labels hide and show.
 - [ ] Placement mode on, then collapse: placement mode ends.
 - [ ] Show on mouse-over with Faded opacity 0 on both: both vanish; hovering either shows the whole group; clicking a faded target marker still sets it.
-- [ ] Hide in combat on the raid marker panel with Party calls docked: in combat the raid panel hides, Party calls stays where it was docked. Note whether a merged background stays drawn while the raid panel is hidden.
+- [ ] Hide in combat on the raid marker panel with Party calls docked and merged: in combat the raid panel and the merged background hide, Party calls stays where it was docked; after combat the merged background is back.
 - [ ] Reload: dock, merge, collapse, mouse-over and opacity are all as left.
 - [ ] **After all of the above, `Logs/taint.log` has no LittleThings entries.**

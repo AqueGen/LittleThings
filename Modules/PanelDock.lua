@@ -27,6 +27,7 @@ local function Tick(id, frame, db)
     local lib = Lib()
     local hovered
     if lib.dock.panels[id] then hovered = lib.Dock.Hovered(id) else hovered = frame:IsMouseOver() end
+    hovered = hovered or (frame.dockArrow ~= nil and frame.dockArrow:IsMouseOver())
     SetAlpha(id, frame, PanelDock.FadeAlpha(hovered, db))
 end
 

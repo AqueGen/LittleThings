@@ -114,6 +114,9 @@ local handlers = {
         Refresh()
     end,
     PLAYER_REGEN_DISABLED = function()
+        if Shared.panel then
+            Shared.HideMergeInCombat()
+        end
         C_Timer.After(0, Shared.PaintGroupButtons)
     end,
     RAID_TARGET_UPDATE = Shared.RefreshTarget,

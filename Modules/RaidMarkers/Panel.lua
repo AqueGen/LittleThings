@@ -276,11 +276,23 @@ function Shared.Layout()
     Shared.ApplyDock()
 end
 
+local function PanelScale()
+    return Shared.panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+end
+
 function Shared.Place()
-    local db = ns.db.raidMarkerPanel
-    Shared.panel:ClearAllPoints()
-    Shared.panel:SetPoint(db.point, UIParent, db.relativePoint, db.x, db.y)
-    Shared.panel:SetScale(db.scale)
+    local db, panel = ns.db.raidMarkerPanel, Shared.panel
+    panel:ClearAllPoints()
+    panel:SetPoint(db.point, UIParent, db.relativePoint, db.x, db.y)
+    panel:SetScale(db.scale)
+    if (db.point ~= "TOPLEFT" or db.relativePoint ~= "TOPLEFT") and panel:GetLeft() then
+        local scale = PanelScale()
+        db.point, db.relativePoint = "TOPLEFT", "TOPLEFT"
+        db.x = math.floor((panel:GetLeft() * scale - UIParent:GetLeft()) / scale + 0.5)
+        db.y = math.floor((panel:GetTop() * scale - UIParent:GetTop()) / scale + 0.5)
+        panel:ClearAllPoints()
+        panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", db.x, db.y)
+    end
     Shared.ApplyDock()
 end
 
@@ -290,10 +302,6 @@ function Shared.ApplyOutOfCombat(apply)
     else
         apply()
     end
-end
-
-local function PanelScale()
-    return Shared.panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
 end
 
 local function StartDrag()
@@ -360,7 +368,7 @@ function Shared.BuildFrame()
     container:SetAllPoints(UIParent)
     Shared.ApplyCombatHide()
 
-    local panel = CreateFrame("Frame", "LittleThingsRaidMarkers", container, "BackdropTemplate")
+    local panel = CreateFrame("Frame", "LittleThingsRaidMarkers", container, "SecureFrameTemplate,BackdropTemplate")
     Shared.panel = panel
     panel:Hide()
     panel:SetClampedToScreen(true)
@@ -395,6 +403,9 @@ function Shared.BuildFrame()
         end
     end)
     panel:SetScript("OnShow", function()
+        if ns.db.raidMarkerPanel.point ~= "TOPLEFT" and not InCombatLockdown() then
+            Shared.Place()
+        end
         Shared.RefreshTarget()
         Shared.RefreshWorld()
         Shared.PaintMode()
@@ -415,7 +426,7 @@ function Shared.BuildArrow()
     local arrow = CreateFrame("Button", "LittleThingsRaidMarkersCollapse", panel, "SecureHandlerClickTemplate")
     Shared.arrow = arrow
     arrow:SetSize(14, 14)
-    arrow:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0)
+    arrow:SetPoint("BOTTOMRIGHT", panel, "TOPRIGHT", 0, 2)
     arrow:SetFrameLevel(panel:GetFrameLevel() + 10)
     arrow:RegisterForClicks("AnyUp")
     arrow:SetAlpha(0)
@@ -424,6 +435,7 @@ function Shared.BuildArrow()
     glyph:SetPoint("CENTER")
     glyph:SetTextColor(unpack(Lib().T.muted))
     Shared.arrowGlyph = glyph
+    panel.dockArrow = arrow
     SecureHandlerSetFrameRef(arrow, "panel", panel)
     SecureHandlerSetFrameRef(arrow, "row2", Shared.row2)
     SecureHandlerSetFrameRef(arrow, "block", Shared.block)
@@ -433,7 +445,18 @@ function Shared.BuildArrow()
         PaintArrow()
         Shared.ApplyOutOfCombat(Shared.ApplyDock)
     end)
-    panel:HookScript("OnUpdate", function()
-        arrow:SetAlpha((Lib().Dock.Hovered(DOCK_ID) or arrow:IsMouseOver()) and 1 or 0)
+    local dock = Lib().Dock
+    C_Timer.NewTicker(0.1, function()
+        if panel:IsShown() then
+            arrow:SetAlpha((dock.Hovered(DOCK_ID) or arrow:IsMouseOver()) and 1 or 0)
+        end
     end)
+end
+
+function Shared.HideMergeInCombat()
+    local merged = ns.db.raidMarkerPanel.hideInCombat and Lib().Dock.MergeFrame(DOCK_ID)
+    if merged then
+        merged:Hide()
+        Shared.pending[Shared.ApplyDock] = true
+    end
 end

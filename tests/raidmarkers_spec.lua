@@ -89,6 +89,9 @@ describe("RaidMarkers files", function()
 end)
 
 local function handle(f, bindings)
+  if f.frames.state.combat and not (f.template and f.template:find("Secure")) then
+    error("restricted handle to an unprotected frame in combat", 2)
+  end
   local h = {}
   function h:GetAttribute(k) return f.attrs[k] end
   function h:SetAttribute(k, v)
@@ -217,6 +220,7 @@ new_object = function(frames, kind, name, template, parent)
       return impl(self, ...)
     end
   end
+  for k, v in pairs(frames.state.rects and name and frames.state.rects[name] or {}) do f[k] = v end
   frames[#frames + 1] = f
   return setmetatable(f, { __index = function(_, k)
     if type(k) == "string" and k:match("^%u") then error(kind .. ":" .. k .. " is not on the fake allowlist", 2) end
@@ -238,7 +242,8 @@ local function load(state, db)
       end
     end,
   }
-  _G.UIParent = { GetEffectiveScale = function() return 0.8 end, GetWidth = function() return 1920 end, GetHeight = function() return 1080 end }
+  _G.UIParent = { GetEffectiveScale = function() return 0.8 end, GetWidth = function() return 1920 end, GetHeight = function() return 1080 end,
+    GetLeft = function() return 0 end, GetTop = function() return 1080 end }
   _G.CreateFrame = function(kind, name, parent, template) return new_object(frames, kind, name, template, parent) end
   _G.InCombatLockdown = function() return state.combat end
   _G.IsInGroup = function() return state.group end
@@ -293,8 +298,8 @@ local function load(state, db)
   _G.UnregisterStateDriver = function(...) driver("unregister", ...) end
   local timers, tickers = {}, {}
   _G.C_Timer = {
-    NewTicker = function(_, fn)
-      local t = { Cancel = noop, fn = fn }
+    NewTicker = function(interval, fn)
+      local t = { Cancel = noop, fn = fn, interval = interval }
       tickers[#tickers + 1] = t
       return t
     end,
@@ -434,6 +439,11 @@ local function load(state, db)
     groupButtons = groupButtons, blocked = frames.blocked, tick = tick, eventFrame = eventFrame, children = children,
     mover = function() return named("LittleThingsRaidMarkersMover") end,
     arrow = function() return named("LittleThingsRaidMarkersCollapse") end,
+    arrowTicker = function()
+      for _, t in ipairs(tickers) do
+        if t.interval == 0.1 then return t end
+      end
+    end,
     manaBar = function()
       for _, f in ipairs(frames) do
         if f.kind == "StatusBar" then return f end
@@ -750,7 +760,7 @@ describe("RaidMarkers", function()
   it("gives the panel and every button a thin border", function()
     local panel = addon.panel()
     local flat = addon.ns.Widgets.FLAT
-    assert.equals("BackdropTemplate", panel.template)
+    assert.equals("SecureFrameTemplate,BackdropTemplate", panel.template)
     assert.equals(flat, panel.backdrop)
     assert.same({ 0, 0, 0, 0.6 }, panel.bg)
     assert.same({ 0.3, 0.3, 0.3, 1 }, panel.border)
@@ -960,7 +970,7 @@ describe("RaidMarkers", function()
     assert.is_false(mover:IsShown())
     assert.is_nil(panel.calls.StartMoving)
     assert.is_nil(panel.calls.StopMovingOrSizing)
-    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 1])
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 2])
     local db = addon.ns.db.raidMarkerPanel
     assert.same({ "TOPLEFT", "TOPLEFT", 201, -300 }, { db.point, db.relativePoint, db.x, db.y })
     assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 201, -300 }, panel.lastPoint)
@@ -974,7 +984,8 @@ describe("RaidMarkers", function()
     assert.equals(1, mover.calls.StopMovingOrSizing)
     assert.is_false(mover:IsShown())
     local db = addon.ns.db.raidMarkerPanel
-    assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 1])
+    assert.same({ "TOPLEFT", "TOPLEFT", 100, -540 }, { db.point, db.relativePoint, db.x, db.y })
     panel.scripts.OnDragStop(panel)
     assert.equals(1, mover.calls.StopMovingOrSizing)
   end)
@@ -1014,7 +1025,9 @@ describe("RaidMarkers", function()
     assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
     state.combat = false
     addon.fire("PLAYER_REGEN_ENABLED")
-    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.lastPoint)
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 1])
+    assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 100, -540 }, panel.lastPoint)
+    assert.same({ "TOPLEFT", "TOPLEFT", 100, -540 }, { db.point, db.relativePoint, db.x, db.y })
   end)
 
   it("applies settings changed in combat when combat ends, and nothing else", function()
@@ -1116,7 +1129,7 @@ describe("RaidMarkers", function()
     arrow.scripts.PostClick(arrow, "LeftButton", false)
     onclick(arrow, "LeftButton", false)
     arrow.scripts.PostClick(arrow, "LeftButton", false)
-    panel.hooks.OnUpdate(panel)
+    addon.arrowTicker().fn()
     state.dockOptions.apply()
     state.dockSpec.onChange()
     addon.tick()
@@ -2159,6 +2172,10 @@ describe("RaidMarkers", function()
       assert.equals(row2(), arrow.attrs["frameref-row2"])
       assert.equals(block(), arrow.attrs["frameref-block"])
       assert.equals("SecureFrameTemplate", block().template)
+      assert.equals("SecureFrameTemplate", row2().template)
+      assert.equals("SecureFrameTemplate,BackdropTemplate", panel.template)
+      assert.same({ "BOTTOMRIGHT", panel, "TOPRIGHT", 0, 2 }, arrow.lastPoint)
+      assert.equals(arrow, panel.dockArrow)
       assert.equals(block(), addon.manaBar().parent)
       assert.equals(block(), addon.downText().parent)
       assert.same({ "AnyUp" }, arrow.clicks)
@@ -2213,19 +2230,60 @@ describe("RaidMarkers", function()
       assert.same({ arrow.attrs["lt-full-w"], arrow.attrs["lt-full-h"] }, { panel.width, panel.height })
     end)
 
-    it("shows the arrow by alpha only while the group or the arrow is hovered", function()
+    it("shows the arrow by alpha only, on a 0.1 s tick, while the group or the arrow is hovered", function()
       local arrow, panel = addon.arrow(), addon.panel()
+      local hover = addon.arrowTicker().fn
+      panel:Show()
       state.combat = true
-      panel.hooks.OnUpdate(panel)
+      hover()
       assert.equals(0, arrow.alpha)
       state.hovered = true
-      panel.hooks.OnUpdate(panel)
+      hover()
       assert.equals(1, arrow.alpha)
       state.hovered = false
       arrow.mouseOver = true
-      panel.hooks.OnUpdate(panel)
+      hover()
       assert.equals(1, arrow.alpha)
       assert.same({}, addon.blocked)
+      assert.is_nil(rawget(panel, "hooks"))
+    end)
+
+    for _, case in ipairs({
+      { "a saved bottom-left corner", { point = "BOTTOMLEFT", relativePoint = "BOTTOMLEFT", x = 201, y = 151 } },
+      { "the default centre", {} },
+    }) do
+      it("re-anchors " .. case[1] .. " to the top-left so a collapse keeps the target row in place", function()
+        case[2].scale = 2
+        state.rects = { LittleThingsRaidMarkers = { left = 300, top = 700 } }
+        local saved = load(state, { raidMarkerPanel = case[2] })
+        saved.module.Enable()
+        local panel = saved.panel()
+        local db = saved.ns.db.raidMarkerPanel
+        assert.same({ "TOPLEFT", "TOPLEFT", 300, 160 }, { db.point, db.relativePoint, db.x, db.y })
+        assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 300, 160 }, panel.lastPoint)
+        local points = #panel.points
+        state.combat = true
+        onclick(saved.named("LittleThingsRaidMarkersCollapse"), "LeftButton", false)
+        assert.equals(points, #panel.points)
+        assert.same({}, saved.blocked)
+      end)
+    end
+
+    it("hides the merged background when combat starts with Hide in combat on, and refreshes it after combat", function()
+      local merged = { shown = true }
+      function merged:Hide() self.shown = false end
+      state.mergeFrame = merged
+      addon.fire("PLAYER_REGEN_DISABLED")
+      assert.is_true(merged.shown)
+      addon.ns.db.raidMarkerPanel.hideInCombat = true
+      state.dockCalls = {}
+      addon.fire("PLAYER_REGEN_DISABLED")
+      state.combat = true
+      assert.is_false(merged.shown)
+      assert.same({}, state.dockCalls)
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.equals(1, #calls("RefreshMerge"))
     end)
   end)
 end)

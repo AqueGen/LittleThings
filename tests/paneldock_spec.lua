@@ -54,6 +54,13 @@ describe("PanelDock.Fade", function()
     assert.equals(1, merged.alpha)
   end)
 
+  it("stays opaque while the mouse is on the panel's collapse arrow outside it", function()
+    local f = frame(false)
+    f.dockArrow = frame(true)
+    ns.PanelDock.Fade("known", f, { fade = true, fadeAlpha = 0 })
+    assert.equals(1, f.alpha)
+  end)
+
   it("uses the frame mouse-over for an unregistered id", function()
     local f = frame(true)
     ns.PanelDock.Fade("unknown", f, { fade = true, fadeAlpha = 0 })
