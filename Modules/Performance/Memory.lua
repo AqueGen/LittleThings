@@ -104,21 +104,21 @@ end
 function Memory.Pages(page)
     local group = page:Group("Memory")
     group:Check({ label = "Smoother garbage collection",
-        tooltip = "The game frees addon memory in one large pass after it has doubled, which shows as a hitch. This starts a pass after 10% growth instead, so the work is spread over many small steps. Off returns the game's own values.",
+        hint = "Spreads memory cleanup over many small steps", tooltip = "The game frees addon memory in one large pass after it has doubled, which shows as a hitch. This starts a pass after 10% growth instead, so the work is spread over many small steps. Off returns the game's own values.",
         get = function() return ns.db.smoothGarbageCollection end,
         set = function(value)
             ns.db.smoothGarbageCollection = value
             ApplyCollection()
         end })
     group:Check({ label = "Clean up in the open world",
-        tooltip = ("Every %d seconds, frees thrown-away memory in small steps over up to %d seconds, so less is left for the game to collect later. Only outside instances, never in combat or on a loading screen."):format(CLEANUP_INTERVAL, CLEANUP_SECONDS),
+        hint = "Frees thrown-away memory in the open world", tooltip = ("Every %d seconds, frees thrown-away memory in small steps over up to %d seconds, so less is left for the game to collect later. Only outside instances, never in combat or on a loading screen."):format(CLEANUP_INTERVAL, CLEANUP_SECONDS),
         get = function() return ns.db.openWorldCleanup end,
         set = function(value)
             ns.db.openWorldCleanup = value
             ApplyCleanup()
         end })
     group:Button({ label = "Collect garbage", text = "Collect garbage", combatLocked = true, onClick = CollectGarbage,
-        tooltip = "Frees the memory addons have thrown away and prints how much that was, and the five addons holding the most after it. The game stalls for a moment while it runs and gains no frames: most of what an addon shows before a collection is garbage the game frees on its own." })
+        hint = "Frees addon memory now and prints the result", tooltip = "Frees the memory addons have thrown away and prints how much that was, and the five addons holding the most after it. The game stalls for a moment while it runs and gains no frames: most of what an addon shows before a collection is garbage the game frees on its own." })
 end
 
 Memory.Enable = Apply

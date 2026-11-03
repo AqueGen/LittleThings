@@ -21,6 +21,7 @@ Widgets.FLAT = UI.FLAT
 local T = Widgets.THEME
 local PAD, GAP, TITLE_H = UI.PAD, UI.GAP, 32
 local LABEL_W, CONTROL_W, NOTE_W = 170, 220, 540
+local VALUE_GAP, VALUE_W = 8, 44
 
 local function Locked(spec)
     return spec.combatLocked and InCombatLockdown()
@@ -47,14 +48,45 @@ local function HookHover(region, spec)
     region:HookScript("OnLeave", GameTooltip_Hide)
 end
 
+local function AddHint(group, spec, owner, controlEnd, height, indent)
+    if not spec.hint then return height, function() end end
+    group.hintEnd = math.max(group.hintEnd or 0, controlEnd)
+    local text = owner:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    text:SetJustifyH("LEFT")
+    text:SetTextColor(unpack(T.muted))
+    text:SetText(spec.hint)
+    local wide, below = text:GetStringWidth(), false
+    local function Place()
+        local room = (group.frame:GetWidth() or 0) - 2 * PAD
+        local x = Rules.HintX(room, group.hintEnd, wide, group.page.hintsBelow)
+        below = x == nil
+        text:ClearAllPoints()
+        text:SetWordWrap(below)
+        if below then
+            text:SetWidth(math.max(room - indent, 100))
+            text:SetPoint("TOPLEFT", owner, "BOTTOMLEFT", indent, -2)
+        else
+            text:SetWidth(wide + 2)
+            text:SetPoint("LEFT", owner, "LEFT", x, 0)
+        end
+    end
+    local function Height()
+        Place()
+        return below and height + 2 + text:GetStringHeight() or height
+    end
+    return Height, function(enabled) text:SetAlpha(enabled and 1 or 0.5) end
+end
+
+Widgets.AddHint = AddHint
+
 local function AskReload(spec, valueText)
     if spec.reload then
         StaticPopup_Show("LITTLETHINGS_MODULE_RELOAD", spec.name or spec.label, valueText)
     end
 end
 
-function Widgets.Button(parent, text, width)
-    return UI.Button(parent, text, width)
+function Widgets.Button(parent, text, width, primary)
+    return UI.Button(parent, text, width, primary)
 end
 
 local Group = {}
@@ -71,11 +103,13 @@ function Group:Check(spec)
     check.text:SetPoint("LEFT", check, "RIGHT", 4, 0)
     check.text:SetText(spec.label)
     check:SetHitRectInsets(0, -(check.text:GetStringWidth() + 6), 0, 0)
+    local height, paintHint = AddHint(group, spec, check, 26 + check.text:GetStringWidth(), 24, 26)
     local function Refresh()
         check:SetChecked(spec.get() and true or false)
         local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
         check:SetEnabled(enabled)
         check.text:SetTextColor(unpack(enabled and T.text or T.muted))
+        paintHint(enabled)
     end
     check:SetScript("OnClick", function(self)
         if Locked(spec) then
@@ -88,7 +122,7 @@ function Group:Check(spec)
         group.page:Refresh()
     end)
     Hover(check, spec)
-    self:Add(check, 24, Refresh, spec.visible)
+    self:Add(check, height, Refresh, spec.visible)
 end
 
 function Group:CheckGrid(specs, columns, cellWidth)
@@ -143,18 +177,26 @@ end
 
 function Group:Slider(spec)
     local holder = CreateFrame("Frame", nil, self.frame)
-    holder:SetSize(LABEL_W + CONTROL_W, 22)
+    local controlEnd = LABEL_W + CONTROL_W + VALUE_GAP + VALUE_W
+    holder:SetSize(controlEnd, 22)
     holder:EnableMouse(true)
     Hover(holder, spec)
     local label = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     label:SetPoint("LEFT")
     label:SetWidth(LABEL_W - 8)
     label:SetJustifyH("LEFT")
+    label:SetWordWrap(false)
+    label:SetText(spec.label)
     local slider = UI.Slider(holder, CONTROL_W)
     slider:SetPoint("LEFT", holder, "LEFT", LABEL_W, 0)
+    local readout = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    readout:SetPoint("LEFT", holder, "LEFT", LABEL_W + CONTROL_W + VALUE_GAP, 0)
+    readout:SetWidth(VALUE_W)
+    readout:SetJustifyH("LEFT")
+    readout:SetWordWrap(false)
     local format = spec.format or "%d"
     local function Caption(value)
-        label:SetText(spec.label .. ": " .. format:format(value))
+        readout:SetText(format:format(value))
     end
     HookHover(slider.widget, spec)
     slider:Setup(spec.min, spec.max, spec.step or 1)
@@ -170,11 +212,14 @@ function Group:Slider(spec)
         spec.set(value)
         Caption(value)
     end
-    self:Add(holder, 24, function()
+    local height, paintHint = AddHint(self, spec, holder, controlEnd, 24, 0)
+    self:Add(holder, height, function()
         SetShown(spec.get())
-        local locked = Locked(spec)
+        local locked = Locked(spec) or (spec.enabled and not spec.enabled())
         slider:SetEnabled(not locked)
         label:SetTextColor(unpack(locked and T.muted or T.text))
+        readout:SetTextColor(unpack(locked and T.muted or T.text))
+        paintHint(not locked)
     end, spec.visible)
 end
 
@@ -209,7 +254,8 @@ function Group:Dropdown(spec)
         end
     end)
     HookHover(dropdown, spec)
-    self:Add(holder, 26, function()
+    local height, paintHint = AddHint(self, spec, holder, LABEL_W + CONTROL_W, 26, 0)
+    self:Add(holder, height, function()
         local current = spec.get()
         local options = Options()
         if spec.default ~= nil and #options > 0 and Rules.Known(options, current, spec.default) ~= current then
@@ -219,6 +265,7 @@ function Group:Dropdown(spec)
         local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
         dropdown:SetEnabled(enabled)
         label:SetTextColor(unpack(enabled and T.text or T.muted))
+        paintHint(enabled)
     end, spec.visible)
 end
 
@@ -264,7 +311,8 @@ function Group:Input(spec)
         self:SetText(spec.get() or "")
         self:ClearFocus()
     end)
-    self:Add(holder, 26, function()
+    local height, paintHint = AddHint(self, spec, holder, LABEL_W + width + 28, 26, 0)
+    self:Add(holder, height, function()
         if not box:HasFocus() then
             box:SetText(tostring(spec.get() or ""))
         end
@@ -272,6 +320,7 @@ function Group:Input(spec)
         local enabled = not Locked(spec) and (not spec.enabled or spec.enabled())
         box:SetEnabled(enabled)
         label:SetTextColor(unpack(enabled and T.text or T.muted))
+        paintHint(enabled)
     end, spec.visible)
 end
 
@@ -369,10 +418,12 @@ function Group:Button(spec)
         group.page:Refresh()
     end)
     Hover(button, spec)
-    self:Add(button, 22, function()
+    local height, paintHint = AddHint(self, spec, button, spec.width or 180, 22, 0)
+    self:Add(button, height, function()
         local enabled = not Locked(spec)
         button:SetEnabled(enabled)
         button.label:SetTextColor(unpack(enabled and T.text or T.muted))
+        paintHint(enabled)
     end, spec.visible)
 end
 

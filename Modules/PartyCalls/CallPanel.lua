@@ -13,6 +13,7 @@ local FONTS = {
 }
 local LABEL_GAP = 2
 local MAX_LABEL_LINES = 2
+local DOCK_ID = "partyCalls"
 
 Panel.buttons = {}
 Panel.labelLines = 1
@@ -25,16 +26,64 @@ local function Font()
     return FONTS[Db().labelSize] or FONTS.small
 end
 
+local function Lib()
+    return LibStub("LibVelvet-1.0")
+end
+
+function Panel.Docked()
+    return Db().dockTo ~= nil
+end
+
+local function MergedRoot()
+    local panels = Lib().dock.panels
+    local cur, seen = Db().dockTo, {}
+    while cur and not seen[cur] do
+        seen[cur] = true
+        local p = panels[cur]
+        if not p then return nil end
+        if p.spec.root then return cur end
+        cur = p.spec.get().dockTo
+    end
+end
+
+function Panel.Merged()
+    local root = MergedRoot()
+    return root ~= nil and Lib().Dock.Merged(root)
+end
+
+local function ShownMergedRoot()
+    local root = MergedRoot()
+    local p = root and Lib().Dock.Merged(root) and Lib().dock.panels[root]
+    return p and p.spec.frame:IsShown() and p or nil
+end
+
+function Panel.MergedOwner()
+    return ShownMergedRoot() and MergedRoot() or nil
+end
+
+local function HandleShown()
+    return ns.PanelDock.HandleShown(false, ShownMergedRoot() ~= nil)
+end
+
+local function Folded()
+    local root = ShownMergedRoot()
+    return (root and root.spec.get() or Db()).collapsed
+end
+
+local function ShowLabels()
+    return Db().labels and not Folded()
+end
+
 local function CellSize()
     local db = Db()
-    if not db.labels then
+    if not ShowLabels() then
         return db.iconSize, db.iconSize
     end
     return db.iconSize, db.iconSize + LABEL_GAP + Panel.labelLines * Font().height
 end
 
 local function LabelLines(ids)
-    if not Db().labels then
+    if not ShowLabels() then
         return 1
     end
     for _, id in ipairs(ids) do
@@ -46,43 +95,81 @@ local function LabelLines(ids)
     return 1
 end
 
-function Panel.Place()
-    local db = Db()
-    local panel = Panel.panel
-    panel:ClearAllPoints()
-    panel:SetScale(db.scale)
-    if db.posX and db.posY then
-        panel:SetPoint(Panel.anchor or "TOPLEFT", UIParent, "BOTTOMLEFT", db.posX, db.posY)
-    else
-        panel:SetPoint("CENTER", UIParent, "CENTER", 0, 160)
-    end
-end
-
 local function SaveCorner()
     local panel, db = Panel.panel, Db()
     local anchor = Panel.anchor or "TOPLEFT"
     if not panel:GetLeft() then
         return
     end
-    db.posX = math.floor((anchor:find("RIGHT") and panel:GetRight() or panel:GetLeft()) + 0.5)
-    db.posY = math.floor((anchor:find("BOTTOM") and panel:GetBottom() or panel:GetTop()) + 0.5)
+    local k = panel:GetScale() / db.scale
+    db.posX = math.floor((anchor:find("RIGHT") and panel:GetRight() or panel:GetLeft()) * k + 0.5)
+    db.posY = math.floor((anchor:find("BOTTOM") and panel:GetBottom() or panel:GetTop()) * k + 0.5)
+end
+
+local function Notify(id)
+    local p = id and Lib().dock.panels[id]
+    if p and p.spec.onChange then
+        p.spec.onChange()
+    end
+end
+
+function Panel.Place()
+    local db = Db()
+    local panel = Panel.panel
+    local was, wasSide = Panel.dockedTo, Panel.dockedSide
+    if was and not db.dockTo then
+        SaveCorner()
+    end
+    Panel.dockedTo, Panel.dockedSide = db.dockTo, db.side
+    local root = ShownMergedRoot()
+    panel:SetScale(root and root.spec.frame:GetScale() or db.scale)
+    if not (db.dockTo and InCombatLockdown() and panel:GetNumPoints() > 0) then
+        panel:ClearAllPoints()
+        if db.posX and db.posY then
+            panel:SetPoint(Panel.anchor or "TOPLEFT", UIParent, "BOTTOMLEFT", db.posX, db.posY)
+        else
+            panel:SetPoint("CENTER", UIParent, "CENTER", 0, 160)
+        end
+        Lib().Dock.Apply(DOCK_ID)
+        if db.dockTo and not InCombatLockdown() then
+            SaveCorner()
+        end
+    end
+    if was ~= db.dockTo then
+        Notify(was)
+    end
+    if was ~= db.dockTo or wasSide ~= db.side then
+        Notify(db.dockTo)
+    end
+end
+
+local function PlaceTopLeft(x, y)
+    local panel = Panel.panel
+    local s = panel:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    panel:ClearAllPoints()
+    panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x / s, -y / s)
+    SaveCorner()
+end
+
+local function Release(mover, deferred)
+    if deferred and Db().dockTo then return end
+    PlaceTopLeft(mover:GetLeft() - UIParent:GetLeft(), UIParent:GetTop() - mover:GetTop())
+end
+
+local function DragDown()
+    Panel.drag.MouseDown()
 end
 
 local function StartDrag()
-    if not Db().locked then
-        Panel.panel:StartMoving()
-        Panel.dragging = true
-    end
+    Panel.drag.Start()
 end
 
-local function StopDrag()
-    if not Panel.dragging then
-        return
-    end
-    Panel.dragging = false
-    Panel.panel:StopMovingOrSizing()
-    SaveCorner()
-    Panel.Place()
+local function StopDrag(_, hidden)
+    Panel.drag.Stop(hidden)
+end
+
+function Panel.StopDragging()
+    StopDrag()
 end
 
 local function Overlaps(a, b)
@@ -96,7 +183,7 @@ local function Overlaps(a, b)
 end
 
 function Panel.MoveClearOf(window)
-    if Panel.dragging or not Overlaps(Panel.panel, window) then
+    if Panel.drag.active or Panel.Docked() or not Overlaps(Panel.panel, window) then
         return
     end
     local scale = window:GetEffectiveScale() / UIParent:GetEffectiveScale()
@@ -112,6 +199,9 @@ end
 
 function Panel.ResetPosition()
     local db = Db()
+    if db.dockTo then
+        Lib().Dock.Undock(DOCK_ID)
+    end
     db.posX, db.posY = nil, nil
     Panel.Place()
 end
@@ -145,6 +235,7 @@ local function Ensure(id)
     highlight:SetColorTexture(1, 1, 1, 0.15)
     button:RegisterForClicks("LeftButtonUp")
     button:RegisterForDrag("LeftButton")
+    button:SetScript("OnMouseDown", DragDown)
     button:SetScript("OnDragStart", StartDrag)
     button:SetScript("OnDragStop", StopDrag)
     button:SetScript("OnClick", function(self) Panel.onClick(self.id) end)
@@ -155,29 +246,50 @@ local function Ensure(id)
     return button
 end
 
-function Panel.Build(onClick)
+function Panel.Build(onClick, onChange)
     Panel.onClick = onClick
     local panel = CreateFrame("Frame", "LittleThingsPartyCalls", UIParent, "BackdropTemplate")
     Panel.panel = panel
     panel:Hide()
     panel:SetClampedToScreen(true)
     panel:SetDontSavePosition(true)
-    panel:SetMovable(true)
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
+    panel:SetScript("OnMouseDown", DragDown)
     panel:SetScript("OnDragStart", StartDrag)
     panel:SetScript("OnDragStop", StopDrag)
-    panel:SetScript("OnHide", StopDrag)
+    panel:SetScript("OnHide", function(self) StopDrag(self, true) end)
     local db = Db()
+    Panel.drag = ns.PanelDock.GhostDrag(DOCK_ID, panel, { name = "LittleThingsPartyCallsMover",
+        release = Release, snapped = PlaceTopLeft, after = Panel.Place })
+    Lib().Dock.Register(DOCK_ID, { frame = panel, root = false, get = Db, set = function() end,
+        locked = function() return not ns.PanelMove.CanDrag(DOCK_ID) end, onChange = onChange })
+    local handle = CreateFrame("Button", nil, panel)
+    Panel.handle, panel.foldHandle = handle, handle
+    Panel.glyph = ns.PanelDock.BuildHandle(handle, panel)
+    handle:SetIgnoreParentAlpha(true)
+    handle:RegisterForClicks("LeftButtonUp")
+    handle:RegisterForDrag("LeftButton")
+    handle:SetScript("OnMouseDown", DragDown)
+    handle:SetScript("OnDragStart", StartDrag)
+    handle:SetScript("OnDragStop", StopDrag)
+    handle:SetScript("OnClick", function()
+        db.collapsed = not db.collapsed
+        onChange()
+    end)
     Panel.anchor = select(4, Rules.Grid(0, { grow = db.grow, wrap = db.wrap, perRow = 1, cellW = 0, cellH = 0, gap = 0, pad = 0 }))
     Panel.Place()
 end
 
 local function PaintBackground()
     local db, panel = Db(), Panel.panel
+    if Lib().Dock.MergeFrame(DOCK_ID) then
+        panel:SetBackdrop(nil)
+        return
+    end
     panel:SetBackdrop(ns.Widgets.FLAT)
     panel:SetBackdropColor(0, 0, 0, db.bgAlpha)
-    panel:SetBackdropBorderColor(0.3, 0.3, 0.3, db.border and 1 or 0)
+    panel:SetBackdropBorderColor(0.3, 0.3, 0.3, db.border and not ns.PanelMove.Moving() and 1 or 0)
 end
 
 function Panel.Update()
@@ -185,6 +297,8 @@ function Panel.Update()
     local width = CellSize()
     local font = Font()
     PaintBackground()
+    Panel.handle:SetShown(HandleShown())
+    Panel.glyph:SetText(db.collapsed and "+" or "-")
     for id, call in pairs(db.calls) do
         local button = Ensure(id)
         button.icon:SetSize(db.iconSize, db.iconSize)
@@ -193,7 +307,7 @@ function Panel.Update()
         button.label:SetFontObject(font.font)
         button.label:SetWidth(width)
         button.label:SetText(call.label)
-        button.label:SetShown(db.labels)
+        button.label:SetShown(ShowLabels())
     end
 end
 
@@ -202,10 +316,10 @@ function Panel.Layout(ids)
     Panel.labelLines = LabelLines(ids)
     local width, height = CellSize()
     local cells, panelW, panelH, anchor = Rules.Grid(#ids, { grow = db.grow, wrap = db.wrap, perRow = db.perRow,
-        cellW = width, cellH = height, gap = db.gap, pad = db.pad })
+        cellW = width, cellH = height, gap = db.gap, pad = db.pad, strip = HandleShown() and ns.PanelDock.STRIP or 0 })
     if anchor ~= Panel.anchor then
         Panel.anchor = anchor
-        if db.posX then
+        if db.posX and not Panel.Docked() then
             SaveCorner()
         end
     end
@@ -220,6 +334,8 @@ function Panel.Layout(ids)
         button:Show()
     end
     Panel.panel:SetSize(panelW, panelH)
+    Panel.glyph:ClearAllPoints()
+    Panel.glyph:SetPoint("CENTER", Panel.handle, "CENTER", 0, ns.PanelDock.GlyphOffset(panelH))
     Panel.Place()
 end
 

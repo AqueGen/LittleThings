@@ -72,7 +72,7 @@ function Shared.PaintMode()
     local upcoming = on and bindNext:GetAttribute("lt-order" .. index)
     local allowed = modeButton:GetAttribute("lt-allowed")
     local color = Shared.ModeColor(count, allowed, on)
-    modeButton.reason = not allowed and "Needs lead or assist" or count == 0 and "Placement order is empty" or nil
+    modeButton.reason = not allowed and "Needs lead or assist" or count == 0 and "World marker order is empty" or nil
     modeButton.label:SetText(on and (index .. "/" .. count) or "Place")
     modeButton.label:SetTextColor(color[1], color[2], color[3])
     Shared.Ring(modeButton, on)

@@ -15,6 +15,7 @@ local SAMPLES = { { id = 389539, dr = 24, time = 12 }, { id = 33206, dr = 40, ti
 local row, host, preview
 local containers = {}
 local wanted = false
+local drag
 
 local function Point(frame)
     local db = ns.db.saveIndicatorRow
@@ -94,6 +95,7 @@ local function Build()
     Point(row)
     host = CreateFrame("Frame", nil, row)
     host:SetPoint("TOP", row, "TOP", (STEP - ICON) / 2, 0)
+    row.hoverPart = host
     local prev
     for _, entry in ipairs(Rules.Row(Rules.Enabled(ns.SaveData, ns.db.saveIndicatorRow.off))) do
         local c = Container(entry)
@@ -118,6 +120,11 @@ local function ApplyNow()
     if row then
         row:SetShown(wanted)
     end
+    Center.Fade()
+end
+
+function Center.Fade()
+    if row then ns.PanelDock.Fade("saveIndicator", row, ns.db.saveIndicatorRow) end
 end
 
 local deferred = {}
@@ -180,7 +187,6 @@ end
 local function BuildPreview()
     preview = CreateFrame("Frame", "LittleThingsSaveRowPreview", UIParent)
     preview:SetFrameStrata("HIGH")
-    preview:SetMovable(true)
     preview:SetClampedToScreen(true)
     preview:EnableMouse(true)
     preview:RegisterForDrag("LeftButton")
@@ -188,26 +194,32 @@ local function BuildPreview()
     outline:SetAllPoints()
     outline:SetColorTexture(1, 0.82, 0, 0.25)
     Center.PaintSamples(Center.DrawSamples(preview), false, true)
-    preview:SetScript("OnDragStart", function(self)
-        if not ns.db.saveIndicatorRow.locked and not InCombatLockdown() then
-            self:StartMoving()
-        end
-    end)
-    preview:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local db = ns.db.saveIndicatorRow
-        local cx, cy = self:GetCenter()
-        local ux, uy = UIParent:GetCenter()
-        db.x, db.y = Rules.CenterOffset(cx, cy, ux, uy, db.scale)
-        Center.Place()
-        if ns.Window and ns.Window.Refresh then ns.Window.Refresh() end
-    end)
+    drag = ns.PanelDock.GhostDrag("saveIndicator", preview, { name = "LittleThingsSaveRowMover", release = Center.Release })
+    preview:SetScript("OnMouseDown", function() drag.MouseDown() end)
+    preview:SetScript("OnDragStart", function() drag.Start() end)
+    preview:SetScript("OnDragStop", function() drag.Stop() end)
 end
 
-local pageOpen, demo = false, false
+function Center.StopDrag()
+    if drag then drag.Stop() end
+end
+
+function Center.Release(mover)
+    local s = preview:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    preview:ClearAllPoints()
+    preview:SetPoint("TOPLEFT", UIParent, "TOPLEFT", (mover:GetLeft() - UIParent:GetLeft()) / s, (mover:GetTop() - UIParent:GetTop()) / s)
+    local db = ns.db.saveIndicatorRow
+    local cx, cy = preview:GetCenter()
+    local ux, uy = UIParent:GetCenter()
+    db.x, db.y = Rules.CenterOffset(cx, cy, ux, uy, db.scale)
+    Center.Place()
+    if ns.Window and ns.Window.Refresh then ns.Window.Refresh() end
+end
+
+local pageOpen, demo, moving = false, false, false
 
 local function ShowPreview()
-    local on = pageOpen or demo
+    local on = pageOpen or demo or moving
     if on and not preview then
         BuildPreview()
     end
@@ -220,6 +232,15 @@ end
 function Center.SetPreview(on)
     pageOpen = on
     ShowPreview()
+end
+
+function Center.SetMoving(on)
+    moving = on
+    ShowPreview()
+end
+
+function Center.PreviewFrame()
+    return preview
 end
 
 function Center.ToggleDemo()

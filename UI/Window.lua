@@ -19,8 +19,8 @@ local ZONE_MIN, ZONE_MAX, BAND_H = 260, 380, 150
 local WINDOWS_KEY = "damageMeterWindows"
 local EXTRAS = { { key = WINDOWS_KEY, label = "Meter windows", after = "damageMeter" } }
 
-local frame, menu, scroll, host
-local pages, builders, entries, headers, panes = {}, {}, {}, {}, {}
+local frame, menu, scroll, host, unlock
+local pages, builders, entries, headers, panes, headerPages = {}, {}, {}, {}, {}, {}
 local current
 
 local function Saved()
@@ -41,14 +41,30 @@ local function Row(key)
     end
 end
 
+local function HasPage(key)
+    for _, module in ipairs(ns.ModulesFor(key)) do
+        if module.Pages or module.Preview then return true end
+    end
+    return false
+end
+
 local function Model()
-    return MenuModel.Build(ns.MODULES, EXTRAS, IsOn)
+    return MenuModel.Build(ns.MODULES, EXTRAS, IsOn, HasPage)
+end
+
+local function GroupPageOf(key)
+    for _, group in ipairs(Model()) do
+        for _, switch in ipairs(group.switches) do
+            if switch == key then return group.page end
+        end
+    end
 end
 
 local function SwitchSpec(row)
     return {
         label = row.label,
         tooltip = row.tooltip,
+        hint = row.hint,
         reload = not row.live,
         combatLocked = true,
         get = function() return ns.db[row.key] == true end,
@@ -67,11 +83,17 @@ local function CallPages(key, page, fallback)
     end
 end
 
+local function PreviewFor(key)
+    for _, module in ipairs(ns.ModulesFor(key)) do
+        if module.Preview then return module.Preview end
+    end
+end
+
 local function BuildModulePage(page, row)
     local head = page:Group(row.label)
     head:Check(SwitchSpec(row))
-    head:Note(row.tooltip)
 
+    page.hintsBelow = PreviewFor(row.key) ~= nil
     page.visible = function() return ns.IsOn(row.key) end
 
     local section, group
@@ -92,10 +114,23 @@ local function BuildModulePage(page, row)
     end)
 end
 
+local function BuildGroupPage(page, key)
+    for _, group in ipairs(Model()) do
+        if group.page == key then
+            local box = page:Group(group.title)
+            for _, switch in ipairs(group.switches) do
+                box:Check(SwitchSpec(Row(switch)))
+            end
+        end
+    end
+end
+
 local function BuildPage(key)
     local page = Widgets.NewPage(host)
     local ok = xpcall(function()
-        if builders[key] then
+        if key:find("^group:") then
+            BuildGroupPage(page, key)
+        elseif builders[key] then
             builders[key](page)
         else
             BuildModulePage(page, Row(key))
@@ -110,6 +145,10 @@ local function Paint()
     for key, entry in pairs(entries) do
         UI.PaintNav(entry, key == current and "selected" or (entry.enabled and "normal" or "muted"))
     end
+    for key, header in pairs(headerPages) do
+        UI.PaintNav(header, key == current and "selected" or "normal")
+        if key ~= current then header.label:SetTextColor(unpack(UI.HEADER)) end
+    end
 end
 
 local function Entry(item)
@@ -123,14 +162,20 @@ local function LayoutMenu()
     local y = -PAD
     for _, group in ipairs(Model()) do
         local header = headers[group.title]
-        if not header then
+        if not header and group.page then
+            header = UI.NavEntry(menu, group.title, MENU_W - 2 * PAD + 10, HEADER_H)
+            header.label:SetFontObject("GameFontNormalSmall")
+            header:SetScript("OnClick", function() Window.Show(group.page) end)
+            headerPages[group.page] = header
+            headers[group.title] = header
+        elseif not header then
             header = menu:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             header:SetTextColor(unpack(UI.HEADER))
             header:SetText(group.title)
             headers[group.title] = header
         end
         header:ClearAllPoints()
-        header:SetPoint("TOPLEFT", menu, "TOPLEFT", PAD, y)
+        header:SetPoint("TOPLEFT", menu, "TOPLEFT", group.page and PAD - 10 or PAD, y)
         y = y - HEADER_H
         for _, item in ipairs(group.entries) do
             local entry = entries[item.key] or Entry(item)
@@ -142,12 +187,6 @@ local function LayoutMenu()
         y = y - PAD
     end
     Paint()
-end
-
-local function PreviewFor(key)
-    for _, module in ipairs(ns.ModulesFor(key)) do
-        if module.Preview then return module.Preview end
-    end
 end
 
 local function PaneFor(preview)
@@ -201,6 +240,25 @@ local function SavePosition()
     saved.point, saved.relativePoint, saved.x, saved.y = point, relativePoint, x, y
 end
 
+local function TitleButton(parent, text, width, anchor, onClick, primary)
+    local button = Widgets.Button(parent, text, width, primary)
+    button:SetPoint("RIGHT", anchor, anchor == parent and "RIGHT" or "LEFT", anchor == parent and -(TITLE_H - 22) / 2 or -GAP, 0)
+    button:SetScript("OnClick", function()
+        onClick()
+        Window.Refresh()
+    end)
+    return button
+end
+
+local function PaintUnlock()
+    local combat = InCombatLockdown()
+    unlock:SetShown(ns.PanelMove.Available(ns.IsOn))
+    unlock:SetText(ns.PanelMove.Moving() and "Done" or "Move the panels")
+    unlock:SetEnabled(not combat)
+    UI.SetPrimary(unlock, true)
+    if combat then unlock.label:SetTextColor(unpack(T.muted)) end
+end
+
 local function Build()
     frame = CreateFrame("Frame", "LittleThingsSettings", UIParent, "BackdropTemplate")
     tinsert(UISpecialFrames, "LittleThingsSettings")
@@ -239,9 +297,18 @@ local function Build()
     name:SetTextColor(unpack(T.gold))
     name:SetText("LittleThings")
 
-    local close = Widgets.Button(title, "X", 22)
-    close:SetPoint("RIGHT", title, "RIGHT", -(TITLE_H - 22) / 2, 0)
-    close:SetScript("OnClick", function() frame:Hide() end)
+    local close = TitleButton(title, "X", 22, title, function() frame:Hide() end)
+    unlock = TitleButton(title, "Move the panels", 110, close, function()
+        if not InCombatLockdown() then ns.PanelMove.Toggle() end
+    end, true)
+    unlock:SetMotionScriptsWhileDisabled(true)
+    unlock:SetScript("OnEnter", function(self)
+        if not InCombatLockdown() then return end
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Out of combat only.", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    unlock:SetScript("OnLeave", GameTooltip_Hide)
 
     menu = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     menu:SetPoint("TOPLEFT", 0, -TITLE_H)
@@ -317,6 +384,7 @@ end
 
 function Window.Refresh()
     if not frame or not frame:IsShown() then return end
+    PaintUnlock()
     LayoutMenu()
     if current and pages[current] then pages[current]:Refresh() end
     RefreshPreview()
@@ -324,7 +392,7 @@ end
 
 function Window.Show(key)
     if not frame then Build() end
-    key = key or current or Model()[1].entries[1].key
+    key = key and GroupPageOf(key) or key or current or Model()[1].entries[1].key
     if current and pages[current] and current ~= key then
         pages[current].frame:Hide()
     end
@@ -333,6 +401,7 @@ function Window.Show(key)
     local page = pages[key] or BuildPage(key)
     page.frame:Show()
     frame:Show()
+    PaintUnlock()
     LayoutMenu()
     page:Refresh()
     scroll:SetVerticalScroll(0)

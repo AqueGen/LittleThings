@@ -6,10 +6,11 @@ local Panel = ns.PartyCallPanel
 
 local PartyCalls = {}
 
-local DEFAULTS = { locked = false, scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
-    gap = 4, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down" }
+local DEFAULTS = { scale = 1, click = "send", bgAlpha = 0.6, border = true, pad = 4, iconSize = 32,
+    gap = 4, labels = true, labelSize = "small", grow = "right", perRow = 8, wrap = "down", merge = false, fade = false, fadeAlpha = 0, collapsed = false,
+    showSolo = false }
 
-local active, previewing, inCombat = false, false, false
+local active, previewing, moving, inCombat = false, false, false, false
 local previewWindow
 local lastAny, lastById = nil, {}
 local events, ticker
@@ -23,6 +24,11 @@ end
 
 local function Remaining(id)
     return Rules.Remaining(GetTime(), lastAny, lastById, id)
+end
+
+local function Grey(id)
+    if not IsInGroup() and not previewing and not moving then return 1 end
+    return Remaining(id)
 end
 
 local function CurrentState()
@@ -40,7 +46,8 @@ local function VisibleIds()
     local calls, state, ids = ns.db.partyCallOptions.calls, CurrentState(), {}
     for _, id in ipairs(ns.db.partyCallOptions.order) do
         local call = calls[id]
-        if previewing and call.enabled and Rules.Text(call) or not previewing and Rules.Visible(call, state) then
+        local sample = previewing or moving
+        if sample and call.enabled and Rules.Text(call) or not sample and Rules.Visible(call, state) then
             ids[#ids + 1] = id
         end
     end
@@ -61,14 +68,26 @@ function PartyCalls.Refresh()
     if previewing and previewWindow then
         Panel.MoveClearOf(previewWindow)
     end
-    local shown = Rules.PanelShown({ party = IsInGroup(), raid = IsInRaid(), preview = previewing,
-        anyVisible = #ids > 0 })
+    local shown = Rules.PanelShown({ party = IsInGroup(), raid = IsInRaid(), preview = previewing or moving,
+        showSolo = ns.db.partyCallOptions.showSolo, anyVisible = #ids > 0 })
+    Panel.Paint(Grey)
     Panel.panel:SetShown(shown and true or false)
     Panel.panel:SetFrameStrata(previewing and "FULLSCREEN_DIALOG" or "MEDIUM")
+    local lib = LibStub("LibVelvet-1.0")
+    for id, p in pairs(lib.dock.panels) do
+        if p.spec.root then lib.Dock.RefreshMerge(id) end
+    end
+end
+
+local function ApplyDock()
+    PartyCalls.Refresh()
+    if Panel.panel then
+        ns.PanelDock.Fade("partyCalls", Panel.panel, ns.db.partyCallOptions)
+    end
 end
 
 local function Repaint()
-    if not Panel.Paint(Remaining) and ticker then
+    if (not Panel.Paint(Grey) or not IsInGroup()) and ticker then
         ticker:Cancel()
         ticker = nil
     end
@@ -127,7 +146,14 @@ function PartyCalls.Enable()
     InitializeDb()
     inCombat = InCombatLockdown() or UnitAffectingCombat("player")
     if not Panel.panel then
-        Panel.Build(PartyCalls.Click)
+        Panel.Build(PartyCalls.Click, PartyCalls.Refresh)
+        ns.PanelMove.Register("partyCalls", { name = "Party calls", frame = function() return Panel.panel end,
+            strip = ns.PanelDock.STRIP, owner = Panel.MergedOwner,
+            setMoving = function(on)
+                moving = on
+                PartyCalls.Refresh()
+            end,
+            reset = Panel.ResetPosition, stopDrag = Panel.StopDragging })
     end
     if not events then
         events = CreateFrame("Frame")
@@ -140,6 +166,7 @@ function PartyCalls.Enable()
         end
         events:SetScript("OnEvent", function(_, event) handlers[event]() end)
     end
+    ns.PanelDock.Fade("partyCalls", Panel.panel, ns.db.partyCallOptions)
     PartyCalls.Refresh()
 end
 
@@ -237,26 +264,26 @@ local function GrowSet(value)
 end
 
 local function Look(page)
-    local look = page:Group("Look")
-    look:Slider(Option("bgAlpha", { label = "Background", min = 0, max = 1, step = 0.05, format = "%.2f",
-        tooltip = "Opacity of the panel background. 0 hides it." }))
-    look:Check(Option("border", { label = "Border", tooltip = "A thin line around the panel." }))
-    look:Slider(Option("pad", { label = "Edge padding", min = 0, max = 12, tooltip = "Space between the edge and the buttons." }))
-    look:Slider(Option("iconSize", { label = "Icon size", min = 20, max = 56, tooltip = "Size of each icon." }))
-    look:Slider(Option("gap", { label = "Spacing", min = 0, max = 20, tooltip = "Space between buttons." }))
-    look:Check(Option("labels", { label = "Labels", tooltip = "The short text under each icon." }))
-    look:Dropdown(Option("labelSize", { label = "Label size",
+    local look = page:Group("Appearance")
+    look:Slider(Option("bgAlpha", { label = "Background opacity", min = 0, max = 1, step = 0.05, format = "%.2f",
+        hint = "Opacity of the panel background", tooltip = "Opacity of the panel background. 0 hides it." }))
+    look:Check(Option("border", { label = "Border", hint = "A thin line around the panel", tooltip = "A thin line around the panel." }))
+    look:Slider(Option("pad", { label = "Edge margin", min = 0, max = 12, hint = "Space between the edge and the buttons", tooltip = "Space between the edge and the buttons." }))
+    look:Slider(Option("iconSize", { label = "Icon size", min = 20, max = 56, hint = "Size of each icon", tooltip = "Size of each icon." }))
+    look:Slider(Option("gap", { label = "Button gap", min = 0, max = 20, hint = "Space between buttons", tooltip = "Space between buttons." }))
+    look:Check(Option("labels", { label = "Button labels", hint = "Short text under each icon", tooltip = "The short text under each icon." }))
+    look:Dropdown(Option("labelSize", { label = "Label size", hint = "Size of the text under each icon",
         options = { { text = "Small", value = "small" }, { text = "Normal", value = "normal" }, { text = "Large", value = "large" } },
         enabled = function() return Db().labels end }))
-    look:Dropdown({ label = "Grow", default = DEFAULTS.grow,
+    look:Dropdown({ label = "Button direction", default = DEFAULTS.grow,
         options = { { text = "Right", value = "right" }, { text = "Left", value = "left" },
             { text = "Down", value = "down" }, { text = "Up", value = "up" } },
-        tooltip = "Where a row of buttons goes from the panel's corner. That corner stays in place when buttons show or hide.",
+        hint = "Direction a row of buttons grows", tooltip = "Where a row of buttons goes from the panel's corner. That corner stays in place when buttons show or hide.",
         get = function() return Db().grow end, set = GrowSet })
     look:Slider(Option("perRow", { label = "Buttons per row", min = 1, max = 20,
-        tooltip = "After this many buttons the next one starts a new row." }))
-    look:Dropdown(Option("wrap", { label = "New rows go", options = WrapOptions,
-        tooltip = "Where the next row starts." }))
+        hint = "Buttons in a row before a new one starts", tooltip = "After this many buttons the next one starts a new row." }))
+    look:Dropdown(Option("wrap", { label = "Next row goes", options = WrapOptions,
+        hint = "Where the next row starts", tooltip = "Where the next row starts." }))
 end
 
 function PartyCalls.Pages(page)
@@ -270,16 +297,18 @@ function PartyCalls.Pages(page)
         page.frame:HookScript("OnHide", function() PartyCalls.SetPreview(false) end)
     end
 
-    local panel = page:Group("Panel")
-    panel:Check(Option("locked", { label = "Lock position",
-        tooltip = "Drag the panel to place it, then lock it so it cannot be dragged." }))
+    local panel = page:Group("Panel behaviour")
+    panel:Check(Option("showSolo", { label = "Show when solo",
+        hint = "Show the panel outside a group too", tooltip = "Shows the panel outside a group too. The buttons do nothing there." }))
     panel:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
-        tooltip = "Size of the whole panel." }))
-    panel:Dropdown(Option("click", { label = "On click",
+        hint = "Size of the whole panel", tooltip = "Size of the whole panel.",
+        enabled = function() return not Panel.Merged() end }))
+    panel:Dropdown(Option("click", { label = "Click action",
         options = { { text = "Send to party", value = "send" }, { text = "Put in chat, Enter sends", value = "chat" },
             { text = "Put in chat while in combat", value = "chatInCombat" } },
-        tooltip = "Send posts the call at once. Put in chat opens the chat line on Party with the call typed in; press Enter to send it." }))
-    panel:Button({ label = "Reset position", tooltip = "Moves the panel back above the centre of the screen.",
+        hint = "Send at once, or put the call in the chat line", tooltip = "Send posts the call at once. Put in chat opens the chat line on Party with the call typed in; press Enter to send it." }))
+    ns.PanelDock.FadeOptions(panel, Db(), ApplyDock)
+    panel:Button({ label = "Reset position", hint = "Puts the panel back at its default place", tooltip = "Moves the panel back above the centre of the screen.",
         onClick = function()
             if Panel.panel then
                 Panel.ResetPosition()
@@ -287,6 +316,7 @@ function PartyCalls.Pages(page)
         end })
 
     Look(page)
+    ns.PanelDock.Options(page, Db(), ApplyDock, "partyCalls")
 
     local calls = page:Group("Calls")
     calls:List({ items = CallItems,
@@ -296,33 +326,33 @@ function PartyCalls.Pages(page)
             Rules.Move(Db(), id, delta)
             PartyCalls.Refresh()
         end })
-    calls:Button({ label = "Add call", tooltip = "A new call of your own at the end of the list.",
+    calls:Button({ label = "Add call", hint = "Adds a call of your own to the list", tooltip = "A new call of your own at the end of the list.",
         onClick = function()
             selected = Rules.AddCustom(Db())
             PartyCalls.Refresh()
         end })
-    calls:Check(Field("enabled", { label = "Show this call" }))
-    calls:Input(Field("label", { label = "Label", maxBytes = 16, tooltip = "Short text under the icon." }))
+    calls:Check(Field("enabled", { label = "Show this call", hint = "Hide a call without deleting it" }))
+    calls:Input(Field("label", { label = "Call label", maxBytes = 16, hint = "Short text under the icon", tooltip = "Short text under the icon." }))
     calls:Input(Field("message", { label = "Message", maxBytes = 249, width = 320,
-        tooltip = "What goes to party chat. The raid mark is put in front of it." }))
-    calls:Input(Field("icon", { label = "Icon", tooltip = "A spell id (for example 2825) or a texture path.",
+        hint = "What goes to party chat", tooltip = "What goes to party chat. The raid mark is put in front of it." }))
+    calls:Input(Field("icon", { label = "Icon", hint = "A spell id or a texture path", tooltip = "A spell id (for example 2825) or a texture path.",
         icon = function() return Rules.Texture(Selected().icon, C_Spell.GetSpellTexture, GetFileIDFromPath) end }))
     calls:Dropdown(Field("mark", { label = "Raid mark", options = MarkOptions(),
-        tooltip = "Shown at the start of the message in everyone's chat." }))
-    calls:CheckGrid({ RoleSpec("TANK", "Tank"), RoleSpec("HEALER", "Healer"), RoleSpec("DAMAGER", "Damage") }, 3, 110)
-    calls:Dropdown(Field("combat", { label = "When",
+        hint = "Mark shown at the start of the message", tooltip = "Shown at the start of the message in everyone's chat." }))
+    calls:CheckGrid({ RoleSpec("TANK", "Tank"), RoleSpec("HEALER", "Healer"), RoleSpec("DAMAGER", "Damage dealer") }, 3, 110)
+    calls:Dropdown(Field("combat", { label = "Show during", hint = "Show the call always, or only in or out of combat",
         options = { { text = "Always", value = "any" }, { text = "In combat", value = "in" },
             { text = "Out of combat", value = "out" } } }))
-    calls:Dropdown(Field("content", { label = "Where",
+    calls:Dropdown(Field("content", { label = "Show in", hint = "Limit the call to dungeons or Mythic+",
         options = { { text = "Any group", value = "group" }, { text = "Any dungeon", value = "dungeon" },
             { text = "Mythic+", value = "mplus" } } }))
-    calls:Button({ label = "Reset to default", tooltip = "Puts this built-in call back as it shipped.",
+    calls:Button({ label = "Reset to default", hint = "Restores this call to its shipped state", tooltip = "Puts this built-in call back as it shipped.",
         visible = function() return Rules.IsBuiltin(selected) end,
         onClick = function()
             Rules.Reset(Db().calls, selected)
             PartyCalls.Refresh()
         end })
-    calls:Button({ label = "Delete call", tooltip = "Removes this call of your own.",
+    calls:Button({ label = "Delete call", hint = "Removes this call", tooltip = "Removes this call of your own.",
         visible = function() return not Rules.IsBuiltin(selected) end,
         onClick = function()
             local index

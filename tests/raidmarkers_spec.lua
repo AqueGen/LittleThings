@@ -55,19 +55,26 @@ local ALLOWED = {
   Frame = { "SetScript", "RegisterEvent", "Show", "Hide", "IsShown", "SetPoint", "ClearAllPoints", "SetSize", "SetScale",
     "SetFrameStrata", "SetClampedToScreen", "SetDontSavePosition", "SetMovable", "EnableMouse", "RegisterForDrag",
     "CreateTexture", "CreateMaskTexture", "CreateFontString", "StartMoving", "StopMovingOrSizing", "GetLeft", "GetBottom", "GetRight", "GetTop", "GetWidth", "GetHeight",
-    "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
+    "GetEffectiveScale", "WrapScript", "SetAllPoints", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetShown",
+    "HookScript", "IsMouseOver", "GetFrameLevel", "SetAlpha", "IsVisible" },
   Button = { "SetScript", "SetSize", "SetPoint", "ClearAllPoints", "CreateTexture", "CreateMaskTexture", "CreateFontString", "SetHighlightTexture",
-    "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor" },
+    "RegisterForClicks", "SetAttribute", "GetAttribute", "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetFrameLevel",
+    "SetAlpha", "IsMouseOver", "SetFontString", "SetIgnoreParentAlpha", "RegisterForDrag", "SetFrameStrata", "Show", "Hide", "IsShown",
+    "SetText" },
   Texture = { "SetAllPoints", "SetPoint", "SetSize", "SetColorTexture", "SetTexture", "SetVertexColor", "SetAtlas", "AddMaskTexture",
     "SetBlendMode", "Hide", "SetShown" },
   MaskTexture = { "SetTexture", "SetAllPoints" },
-  FontString = { "SetPoint", "ClearAllPoints", "SetText", "SetFormattedText", "SetTextColor", "GetStringWidth", "SetAlpha", "SetShown" },
+  FontString = { "SetPoint", "ClearAllPoints", "SetText", "SetFormattedText", "SetTextColor", "GetStringWidth", "SetAlpha", "SetShown",
+    "SetFontObject" },
   StatusBar = { "SetScript", "SetPoint", "ClearAllPoints", "SetSize", "SetShown", "SetAlpha", "EnableMouse", "SetMouseClickEnabled", "CreateTexture",
     "CreateFontString",
     "SetStatusBarTexture", "SetStatusBarColor", "SetMinMaxValues", "SetValue" },
 }
 
 local MOVER = "LittleThingsRaidMarkersMover"
+local PLAIN_UIPARENT_CHILDREN = set({ MOVER, "LittleThingsMovePanels", "LittleThingsMoveLock", "LittleThingsPanelUnlock",
+  "LittleThingsMoveOutlineraidMarkers", "LittleThingsMoveOutlinepartyCalls", "LittleThingsMoveOutlinesaveIndicator",
+  "LittleThingsMoveSeamraidMarkers", "LittleThingsMoveSeampartyCalls", "LittleThingsDockSeam" })
 
 local FILES = {}
 for line in io.lines("LittleThings.toc") do
@@ -86,6 +93,9 @@ describe("RaidMarkers files", function()
 end)
 
 local function handle(f, bindings)
+  if f.frames.state.combat and not (f.template and f.template:find("Secure")) then
+    error("restricted handle to an unprotected frame in combat", 2)
+  end
   local h = {}
   function h:GetAttribute(k) return f.attrs[k] end
   function h:SetAttribute(k, v)
@@ -96,6 +106,10 @@ local function handle(f, bindings)
   function h:SetBindingClick(priority, key, name, button) bindings[key] = { priority, name, button } end
   function h:ClearBindings() for key in pairs(bindings) do bindings[key] = nil end end
   function h:GetName() return f.name end
+  function h:Show() f.shown = true end
+  function h:Hide() f.shown = false end
+  function h:SetWidth(w) f.width = w end
+  function h:SetHeight(v) f.height = v end
   return h
 end
 
@@ -110,6 +124,12 @@ end
 
 local function snippet(f, bindings, button, down)
   return wrapped(f, "OnClick", bindings, button, down)
+end
+
+local function onclick(f, button, down)
+  local fn = assert(loadstring("local self, button, down = ...\n" .. assert(f.attrs._onclick, "no _onclick")))
+  setfenv(fn, {})
+  return fn(handle(f, {}), button, down)
 end
 
 local function within(f, ancestor)
@@ -139,6 +159,7 @@ function IMPL:Hide()
   end
 end
 function IMPL:IsShown() return self.shown end
+function IMPL:IsVisible() return self.shown end
 function IMPL:SetShown(v) self.shown = v and true or false end
 function IMPL:SetPoint(...)
   self.setPoints = (rawget(self, "setPoints") or 0) + 1
@@ -166,6 +187,7 @@ function IMPL:SetVertexColor(...) self.vertexColor = { ... } end
 function IMPL:SetAtlas(atlas) self.atlas = atlas end
 function IMPL:AddMaskTexture(mask) self.masks = rawget(self, "masks") or {} self.masks[#self.masks + 1] = mask end
 function IMPL:SetAlpha(alpha) self.alpha = alpha end
+function IMPL:SetIgnoreParentAlpha(on) self.ignoreParentAlpha = on end
 function IMPL:SetStatusBarTexture(texture) self.barTexture = texture end
 function IMPL:SetStatusBarColor(...) self.barColor = { ... } end
 function IMPL:SetMinMaxValues(low, high) self.minMax = { low, high } end
@@ -177,6 +199,10 @@ function IMPL:GetStringWidth()
   local state = self.frames.state
   return state.textWidths and state.textWidths[self.text] or state.textWidth or 0
 end
+function IMPL:HookScript(script, fn) self.hooks = rawget(self, "hooks") or {} self.hooks[script] = fn end
+function IMPL:IsMouseOver() return rawget(self, "mouseOver") == true end
+function IMPL:GetFrameLevel() return rawget(self, "level") or 1 end
+function IMPL:SetFrameLevel(level) self.level = level end
 function IMPL:WrapScript(frame, script, preBody) frame.wraps = rawget(frame, "wraps") or {} frame.wraps[script] = preBody end
 
 local new_object
@@ -190,7 +216,7 @@ new_object = function(frames, kind, name, template, parent)
     events = {}, points = {}, shown = true, showCalls = 0, calls = {} }
   local protected = PROTECTED[kind]
   local secure = template and template:find("Secure")
-  local exempt = name == MOVER
+  local exempt = PLAIN_UIPARENT_CHILDREN[name] == true
   for _, method in ipairs(assert(ALLOWED[kind], kind)) do
     local impl = IMPL[method] or noop
     local recorded = protected[method] or (secure and method == "SetAttribute")
@@ -200,6 +226,7 @@ new_object = function(frames, kind, name, template, parent)
       return impl(self, ...)
     end
   end
+  for k, v in pairs(frames.state.rects and name and frames.state.rects[name] or {}) do f[k] = v end
   frames[#frames + 1] = f
   return setmetatable(f, { __index = function(_, k)
     if type(k) == "string" and k:match("^%u") then error(kind .. ":" .. k .. " is not on the fake allowlist", 2) end
@@ -211,9 +238,11 @@ local function load(state, db)
   local frames = { state = state, blocked = {} }
   local ns = {
     db = db or {},
-    Widgets = { FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 } },
+    Widgets = { FLAT = { bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 },
+      THEME = { bg = { 0.063, 0.075, 0.09, 0.99 } } },
     IconButtons = { ROLE_ATLAS = { HEALER = "UI-LFG-RoleIcon-Healer-Micro-GroupFinder" } },
     RegisterModule = function(_, m) module = m end,
+    Print = function(text) state.printed = state.printed or {} state.printed[#state.printed + 1] = text end,
     IsOn = function() return not state.off end,
     ApplyDefaults = function(target, defaults)
       for k, v in pairs(defaults) do
@@ -221,9 +250,12 @@ local function load(state, db)
       end
     end,
   }
-  _G.UIParent = { GetEffectiveScale = function() return 0.8 end, GetWidth = function() return 1920 end, GetHeight = function() return 1080 end }
+  _G.UIParent = { GetEffectiveScale = function() return 0.8 end, GetWidth = function() return 1920 end, GetHeight = function() return 1080 end,
+    GetLeft = function() return 0 end, GetTop = function() return 1080 end }
   _G.CreateFrame = function(kind, name, parent, template) return new_object(frames, kind, name, template, parent) end
   _G.InCombatLockdown = function() return state.combat end
+  _G.GetCursorPosition = function() return (state.cursor or { 0, 0 })[1], (state.cursor or { 0, 0 })[2] end
+  _G.IsMouseButtonDown = function() return state.mouseUp ~= true end
   _G.IsInGroup = function() return state.group end
   _G.IsInRaid = function() return state.raid end
   _G.UnitIsGroupLeader = function() return state.leader end
@@ -237,7 +269,35 @@ local function load(state, db)
   _G.GetRaidTargetIndex = function() return state.targetIndex end
   _G.IsRaidMarkerActive = function(i) return state.placed and state.placed[i] or false end
   _G.SetRaidTargetIconTexture = noop
+  _G.UISpecialFrames, _G.tinsert = {}, table.insert
   _G.SecureHandlerSetFrameRef = function(frame, label, ref) frame.attrs["frameref-" .. label] = ref end
+  state.dockCalls, state.fades, state.dockMembers = {}, {}, state.dockMembers or {}
+  local function dockCall(name, id)
+    state.dockCalls[#state.dockCalls + 1] = { name, id, combat = state.combat }
+  end
+  local dockLib
+  dockLib = { T = { muted = { 0.72, 0.74, 0.78 }, gold = { 1, 0.82, 0 }, divider = { 0.19, 0.21, 0.247, 1 } }, dock = { panels = {} }, Dock = {
+    Register = function(id, spec) state.dockSpec = spec dockLib.dock.panels[id] = { spec = spec } end,
+    Snap = function(id) dockCall("Snap", id) return state.snap[1], state.snap[2] end,
+    Drop = function(id) dockCall("Drop", id) end,
+    Apply = function(id) dockCall("Apply", id) end,
+    RefreshMerge = function(id) dockCall("RefreshMerge", id) end,
+    Members = function() return state.dockMembers end,
+    MergeFrame = function() return state.mergeFrame end,
+    Hovered = function() return state.hovered == true end,
+  } }
+  state.snap = state.snap or { 0, 0 }
+  _G.LibStub = function(name) assert(name == "LibVelvet-1.0") return dockLib end
+  assert(loadfile("Modules/PanelDock.lua"))("LittleThings", ns)
+  assert(loadfile("Modules/PanelMove.lua"))("LittleThings", ns)
+  local realDock = ns.PanelDock
+  ns.PanelDock = setmetatable({
+    Fade = function(id, frame, fadeDb) state.fades[#state.fades + 1] = { id, frame, fadeDb } end,
+    Options = function(page, optionsDb, apply, id)
+      page:Group("Docking to other panels")
+      state.dockOptions = { db = optionsDb, apply = apply, id = id }
+    end,
+  }, { __index = realDock })
   state.clearedBindings = {}
   _G.ClearOverrideBindings = function(owner)
     if state.combat then frames.blocked[#frames.blocked + 1] = "ClearOverrideBindings" end
@@ -252,8 +312,8 @@ local function load(state, db)
   _G.UnregisterStateDriver = function(...) driver("unregister", ...) end
   local timers, tickers = {}, {}
   _G.C_Timer = {
-    NewTicker = function(_, fn)
-      local t = { Cancel = noop, fn = fn }
+    NewTicker = function(interval, fn)
+      local t = { Cancel = noop, fn = fn, interval = interval }
       tickers[#tickers + 1] = t
       return t
     end,
@@ -392,6 +452,13 @@ local function load(state, db)
   return { module = module, ns = ns, fire = fire, secure = secure, named = named, panel = panel, button = button, advance = advance, all = all,
     groupButtons = groupButtons, blocked = frames.blocked, tick = tick, eventFrame = eventFrame, children = children,
     mover = function() return named("LittleThingsRaidMarkersMover") end,
+    handle = function() return named("LittleThingsRaidMarkersCollapse") end,
+    moveTick = function()
+      for _, t in ipairs(tickers) do
+        if t.interval == 0.1 then return t.fn() end
+      end
+    end,
+    realFade = realDock.Fade,
     manaBar = function()
       for _, f in ipairs(frames) do
         if f.kind == "StatusBar" then return f end
@@ -409,7 +476,7 @@ local function load(state, db)
     end,
     downText = function()
       for _, f in ipairs(frames) do
-        if f.kind == "FontString" and f.parent == panel() then return f end
+        if f.kind == "FontString" and f.parent and f.parent.template == "SecureFrameTemplate" then return f end
       end
     end }
 end
@@ -497,7 +564,7 @@ describe("RaidMarkers", function()
 
   it("puts the visibility options in their own group first, all off by default", function()
     local specs, byLabel, _, titles = pages(addon)
-    assert.same({ "Visibility", "Raid marker panel", "Tank helpers", "Placement order" }, titles)
+    assert.same({ "Visibility", "Panel", "Docking to other panels", "Tank extras", "World marker order" }, titles)
     for i, option in ipairs(VISIBILITY) do
       local spec = byLabel[option[2]]
       assert.equals(specs[i], spec)
@@ -604,11 +671,11 @@ describe("RaidMarkers", function()
   it("raises the panel and the mover above the settings window while previewing", function()
     local _, _, page = pages(addon)
     local panel, mover = addon.panel(), addon.mover()
-    assert.same({ "MEDIUM", "DIALOG" }, { panel.strata, mover.strata })
+    assert.same({ "MEDIUM", "TOOLTIP" }, { panel.strata, mover.strata })
     page.scripts.OnShow(page)
     assert.same({ "FULLSCREEN_DIALOG", "TOOLTIP" }, { panel.strata, mover.strata })
     page.scripts.OnHide(page)
-    assert.same({ "MEDIUM", "DIALOG" }, { panel.strata, mover.strata })
+    assert.same({ "MEDIUM", "TOOLTIP" }, { panel.strata, mover.strata })
   end)
 
   it("restores the strata after combat when the preview ends in combat", function()
@@ -621,7 +688,7 @@ describe("RaidMarkers", function()
     assert.same({ "FULLSCREEN_DIALOG", "TOOLTIP" }, { panel.strata, mover.strata })
     state.combat = false
     addon.fire("PLAYER_REGEN_ENABLED")
-    assert.same({ "MEDIUM", "DIALOG" }, { panel.strata, mover.strata })
+    assert.same({ "MEDIUM", "TOOLTIP" }, { panel.strata, mover.strata })
   end)
 
   it("applies a preview change made in combat after combat", function()
@@ -644,6 +711,7 @@ describe("RaidMarkers", function()
   local function startDrag(panel)
     panel.scale, panel.left, panel.bottom, panel.width, panel.height = 2, 100, 50, 300, 60
     addon.ns.db.raidMarkerPanel.scale = 2
+    addon.ns.PanelMove.SetUnlocked("raidMarkers", true)
     panel.scripts.OnDragStart(panel)
   end
 
@@ -708,7 +776,7 @@ describe("RaidMarkers", function()
   it("gives the panel and every button a thin border", function()
     local panel = addon.panel()
     local flat = addon.ns.Widgets.FLAT
-    assert.equals("BackdropTemplate", panel.template)
+    assert.equals("SecureFrameTemplate,BackdropTemplate", panel.template)
     assert.equals(flat, panel.backdrop)
     assert.same({ 0, 0, 0, 0.6 }, panel.bg)
     assert.same({ 0.3, 0.3, 0.3, 1 }, panel.border)
@@ -780,7 +848,7 @@ describe("RaidMarkers", function()
     assert.same({ 66, 0 }, offsets(pull))
     assert.same({ 0, -28 }, offsets(role))
     assert.same({ 130, 54 }, { block.width, block.height })
-    assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { panel.width, panel.height })
+    assert.same({ 284 + 2 + 130 + 8 + 18, 54 + 8 }, { panel.width, panel.height })
   end)
 
   local function clears(a)
@@ -834,14 +902,14 @@ describe("RaidMarkers", function()
     assert.same({ width, 82 }, { block.width, block.height })
     assert.same({ "TOPLEFT", row1, "BOTTOMLEFT", 0, -2 }, block.lastPoint)
     local panel = a.panel()
-    assert.same({ width + 8, 278 + 2 + 82 + 8 }, { panel.width, panel.height })
+    assert.same({ width + 8 + 18, 278 + 2 + 82 + 8 }, { panel.width, panel.height })
   end
 
   it("pairs each target marker with the world marker of the same symbol in one centred column", function()
     local _, specs = pages(addon)
-    specs["Vertical"].set(true)
+    specs["Vertical layout"].set(true)
     column(addon, 64, 5)
-    specs["Vertical"].set(false)
+    specs["Vertical layout"].set(false)
     local clearTarget = clears(addon)
     placed(clearTarget, target(1).parent, 224, 0, 60)
     assert.same({ 284, 26 }, { target(1).parent.width, target(1).parent.height })
@@ -860,7 +928,7 @@ describe("RaidMarkers", function()
     wide.module.Enable()
     column(wide, 86, 16)
     local _, specs = pages(wide)
-    specs["Vertical"].set(false)
+    specs["Vertical layout"].set(false)
     local clearTarget = clears(wide)
     assert.same({ 60, 26 }, { clearTarget.width, clearTarget.height })
   end)
@@ -874,7 +942,7 @@ describe("RaidMarkers", function()
     assert.same({ 81, 0 }, offsets(pull))
     assert.same({ 160, 26 }, { role.width, role.height })
     assert.equals("Ready", ready.label.text)
-    assert.same({ 284 + 2 + 160 + 8, 54 + 8 }, { wide.panel().width, wide.panel().height })
+    assert.same({ 284 + 2 + 160 + 8 + 18, 54 + 8 }, { wide.panel().width, wide.panel().height })
   end)
 
   it("anchors every tooltip beside the panel on the side with more room", function()
@@ -899,7 +967,7 @@ describe("RaidMarkers", function()
     assert.same({ "SetPoint", "TOPLEFT", panel, "BOTTOMLEFT", 0, -4 }, tipAt({ 100, 900, 500, 960 }, 1))
     assert.same({ "SetPoint", "BOTTOMLEFT", panel, "TOPLEFT", 0, 4 }, tipAt({ 100, 50, 500, 110 }, 1))
     local _, specs = pages(addon)
-    specs["Vertical"].set(true)
+    specs["Vertical layout"].set(true)
     assert.same({ "SetPoint", "TOPRIGHT", panel, "TOPLEFT", -4, 0 }, tipAt({ 1700, 100, 1760, 500 }, 1))
     assert.same({ "SetPoint", "TOPLEFT", panel, "TOPRIGHT", 4, 0 }, tipAt({ 1700, 100, 1760, 500 }, 0.5))
   end)
@@ -908,18 +976,20 @@ describe("RaidMarkers", function()
     local panel, mover = addon.panel(), addon.mover()
     startDrag(panel)
     assert.is_true(mover:IsShown())
-    assert.equals(1, mover.calls.StartMoving)
+    assert.is_function(mover.scripts.OnUpdate)
     assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 200, 100 }, mover.lastPoint)
     assert.same({ 600, 120 }, { mover.width, mover.height })
     mover.left, mover.bottom = 401, 301
+    state.snap = { 402, 600 }
     panel.scripts.OnDragStop(panel)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
     assert.is_false(mover:IsShown())
     assert.is_nil(panel.calls.StartMoving)
     assert.is_nil(panel.calls.StopMovingOrSizing)
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 2])
     local db = addon.ns.db.raidMarkerPanel
-    assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
-    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.lastPoint)
+    assert.same({ "TOPLEFT", "TOPLEFT", 201, -300 }, { db.point, db.relativePoint, db.x, db.y })
+    assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 201, -300 }, panel.lastPoint)
   end)
 
   it("finishes an active drag when the panel hides", function()
@@ -927,12 +997,13 @@ describe("RaidMarkers", function()
     startDrag(panel)
     mover.left, mover.bottom = 401, 301
     panel.scripts.OnHide(panel)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
     assert.is_false(mover:IsShown())
     local db = addon.ns.db.raidMarkerPanel
-    assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 1])
+    assert.same({ "TOPLEFT", "TOPLEFT", 100, -540 }, { db.point, db.relativePoint, db.x, db.y })
     panel.scripts.OnDragStop(panel)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
   end)
 
   it("keeps the mover a separate childless frame never anchored to the panel", function()
@@ -952,25 +1023,39 @@ describe("RaidMarkers", function()
     end
   end)
 
+  it("stops an unlocked drag when combat starts and saves where the outline was", function()
+    local panel, mover = addon.panel(), addon.mover()
+    startDrag(panel)
+    mover.left, mover.bottom = 401, 301
+    addon.fire("PLAYER_REGEN_DISABLED")
+    assert.is_nil(mover.scripts.OnUpdate)
+    assert.is_false(mover:IsShown())
+    assert.is_false(addon.ns.PanelMove.CanDrag("raidMarkers"))
+    state.combat = true
+    panel.scripts.OnDragStop(panel)
+    assert.is_nil(mover.scripts.OnUpdate)
+    assert.same({}, addon.blocked)
+  end)
+
   it("saves a drag released in combat and places the panel after combat", function()
     local panel, mover = addon.panel(), addon.mover()
     startDrag(panel)
-    addon.fire("PLAYER_REGEN_DISABLED")
     state.combat = true
-    addon.fire("PLAYER_REGEN_DISABLED")
-    assert.is_nil(mover.calls.StopMovingOrSizing)
+    assert.is_function(mover.scripts.OnUpdate)
     local placed = panel.setPoints
     mover.left, mover.bottom = 401, 301
     panel.scripts.OnDragStop(panel)
     assert.same({}, addon.blocked)
-    assert.equals(1, mover.calls.StopMovingOrSizing)
+    assert.is_nil(mover.scripts.OnUpdate)
     assert.is_false(mover:IsShown())
     assert.equals(placed, panel.setPoints)
     local db = addon.ns.db.raidMarkerPanel
     assert.same({ "BOTTOMLEFT", "BOTTOMLEFT", 201, 151 }, { db.point, db.relativePoint, db.x, db.y })
     state.combat = false
     addon.fire("PLAYER_REGEN_ENABLED")
-    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.lastPoint)
+    assert.same({ "BOTTOMLEFT", _G.UIParent, "BOTTOMLEFT", 201, 151 }, panel.points[#panel.points - 1])
+    assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 100, -540 }, panel.lastPoint)
+    assert.same({ "TOPLEFT", "TOPLEFT", 100, -540 }, { db.point, db.relativePoint, db.x, db.y })
   end)
 
   it("applies settings changed in combat when combat ends, and nothing else", function()
@@ -978,7 +1063,7 @@ describe("RaidMarkers", function()
     local _, specs = pages(addon)
     state.combat = true
     specs["Scale"].set(1.5)
-    specs["Vertical"].set(true)
+    specs["Vertical layout"].set(true)
     assert.same({}, addon.blocked)
     assert.equals(1, panel.scale)
     local sized = panel.calls.SetSize
@@ -996,13 +1081,22 @@ describe("RaidMarkers", function()
     addon.fire("GROUP_ROSTER_UPDATE")
     local specs, byLabel, page = pages(addon)
     local panel = addon.panel()
-    byLabel["Healer mana"].set(true)
-    byLabel["Dead or offline count"].set(true)
+    byLabel["Healer mana bar"].set(true)
+    byLabel["Dead and offline count"].set(true)
     state.roles, state.present = { party1 = "HEALER" }, { player = true, party1 = true, party2 = true }
     state.power, state.powerMax = { party1 = MANA, party2 = MANA }, { party1 = MANA_MAX, party2 = MANA_MAX }
     state.dead, state.names = { party2 = true }, { party2 = SECRET }
-    byLabel["Mana text"].set("both")
+    byLabel["Mana bar text"].set("both")
     state.percent = { party1 = MANA_PCT, party2 = MANA_PCT }
+
+    local Move = addon.ns.PanelMove
+    Move.SetUnlocked("raidMarkers", true)
+    panel.mouseOver = true
+    addon.moveTick()
+    assert.is_true(addon.named("LittleThingsMoveLock"):IsShown())
+    assert.is_true(addon.named("LittleThingsMoveOutlineraidMarkers"):IsShown())
+    Move.Toggle()
+    assert.is_true(Move.Moving())
 
     local events = {
       { "PLAYER_ROLES_ASSIGNED", before = function() state.roles = { party2 = "HEALER", party1 = SECRET } end },
@@ -1034,6 +1128,14 @@ describe("RaidMarkers", function()
       addon.fire(entry[1], unpack(entry, 2))
       if entry[1] == "READY_CHECK_FINISHED" then addon.advance() end
     end
+    assert.is_false(Move.Moving())
+    assert.is_false(Move.CanDrag("raidMarkers"))
+    addon.moveTick()
+    assert.is_false(addon.named("LittleThingsMoveLock"):IsShown())
+    assert.is_false(addon.named("LittleThingsMoveOutlineraidMarkers"):IsShown())
+    assert.is_false(addon.named("LittleThingsMovePanels"):IsShown())
+    Move.Toggle()
+    assert.is_false(Move.Moving())
     state.targetIndex = 4
     addon.fire("RAID_TARGET_UPDATE")
     state.leader, state.assistant = true, false
@@ -1067,7 +1169,38 @@ describe("RaidMarkers", function()
     panel.scripts.OnDragStart(panel)
     panel.scripts.OnDragStop(panel)
     panel.scripts.OnShow(panel)
+    local handle = addon.handle()
+    handle.scripts.OnEnter(handle)
+    handle.scripts.OnLeave(handle)
+    handle.scripts.OnDragStart(handle)
+    handle.scripts.OnDragStop(handle)
+    onclick(handle, "LeftButton", false)
+    handle.scripts.PostClick(handle, "LeftButton", false)
+    onclick(handle, "LeftButton", false)
+    handle.scripts.PostClick(handle, "LeftButton", false)
+    local folded = 0
+    state.dockMembers = { "partyCalls" }
+    _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() folded = folded + 1 end } }
+    state.mergeFrame = { SetAlpha = noop }
+    addon.ns.db.raidMarkerPanel.merge = true
+    onclick(handle, "LeftButton", false)
+    handle.scripts.PostClick(handle, "LeftButton", false)
+    assert.equals(1, folded)
+    onclick(handle, "LeftButton", false)
+    handle.scripts.PostClick(handle, "LeftButton", false)
+    assert.equals(2, folded)
+    state.dockOptions.apply()
+    state.dockSpec.onChange()
     addon.tick()
+    assert.is_true(panel:IsShown())
+    addon.realFade("raidMarkers", panel, { fade = true, fadeAlpha = 0 })
+    assert.equals(0, panel.alpha)
+    assert.equals(0.35, handle.alpha)
+    state.hovered = true
+    addon.realFade("raidMarkers", panel, { fade = true, fadeAlpha = 0 })
+    assert.equals(1, handle.alpha)
+    state.hovered, state.mergeFrame, state.dockMembers = false, nil, {}
+    addon.ns.db.raidMarkerPanel.merge = false
     local bar = addon.manaBar()
     assert.is_true(rawequal(MANA, bar.value))
     local formatted = addon.manaText().formatted
@@ -1088,6 +1221,68 @@ describe("RaidMarkers", function()
     assert.same({}, addon.blocked)
     assert.same({}, state.calls)
     assert.same({}, state.clearedBindings)
+    assert.equals("Move panels is available out of combat only.", state.printed[1])
+    for _, call in ipairs(state.dockCalls) do
+      assert.is_false(call.combat, call[1])
+    end
+  end)
+
+  it("shows solo in Move panels mode, drags only then, and hides again when the mode ends", function()
+    local panel, mover = addon.panel(), addon.mover()
+    assert.is_false(panel:IsShown())
+    panel.scripts.OnDragStart(panel)
+    assert.is_false(mover:IsShown())
+    addon.ns.PanelMove.Toggle()
+    assert.is_true(panel:IsShown())
+    panel.scripts.OnDragStart(panel)
+    assert.is_true(mover:IsShown())
+    addon.ns.PanelMove.Toggle()
+    assert.is_false(mover:IsShown())
+    assert.is_false(panel:IsShown())
+  end)
+
+  it("puts mouse-over fade in the panel group, keeps Merge and Undock in Docking, and drops Lock position and Move panels", function()
+    local groups = {}
+    local function group(title)
+      local g = { title = title, labels = {} }
+      for _, kind in ipairs({ "Check", "Slider", "Button", "Dropdown" }) do
+        g[kind] = function(_, spec) g.labels[#g.labels + 1] = spec.label end
+      end
+      groups[title] = g
+      return g
+    end
+    addon.ns.PanelDock.Options = nil
+    addon.module.Pages({ Group = function(_, title) return group(title) end })
+    local panelLabels = table.concat(groups["Panel"].labels, "|")
+    assert.is_nil(panelLabels:find("Lock position", 1, true))
+    assert.is_nil(panelLabels:find("Move", 1, true))
+    assert.is_truthy(panelLabels:find("Scale|Vertical", 1, true))
+    assert.is_truthy(panelLabels:find("Fade until mouse-over|Opacity when faded|Reset position", 1, true))
+    assert.same({ "Merge with docked panels", "Undock" }, groups["Docking to other panels"].labels)
+  end)
+
+  it("drops its own border in Move panels mode and paints it back after, and takes mouse-down for the ghost", function()
+    local panel = addon.panel()
+    assert.is_function(panel.scripts.OnMouseDown)
+    assert.is_function(addon.handle().scripts.OnMouseDown)
+    addon.ns.PanelMove.Toggle()
+    assert.equals(0, panel.border[4])
+    addon.ns.PanelMove.Toggle()
+    assert.equals(1, panel.border[4])
+  end)
+
+  it("hides the solo sample panel after combat when the mode ended under lockdown", function()
+    local panel = addon.panel()
+    addon.ns.PanelMove.Toggle()
+    assert.is_true(panel:IsShown())
+    state.combat = true
+    addon.fire("PLAYER_REGEN_DISABLED")
+    assert.is_false(addon.ns.PanelMove.Moving())
+    assert.is_true(panel:IsShown())
+    assert.same({}, addon.blocked)
+    state.combat = false
+    addon.fire("PLAYER_REGEN_ENABLED")
+    assert.is_false(panel:IsShown())
   end)
 
   it("fills defaults before any page exists", function()
@@ -1095,7 +1290,7 @@ describe("RaidMarkers", function()
     assert.equals(10, db.pullLeft)
     assert.equals(5, db.pullRight)
     assert.equals(1, db.scale)
-    assert.is_false(db.locked)
+    assert.is_nil(db.locked)
   end)
 
   it("shows in a party and hides solo", function()
@@ -1246,7 +1441,7 @@ describe("RaidMarkers", function()
       return found
     end
 
-    it("offers a Placement order group of 8 combat-locked dropdowns", function()
+    it("offers a World marker order group of 8 combat-locked dropdowns", function()
       _G.WORLD_MARKER1 = "Blue Square"
       local named = load(state)
       named.module.Enable()
@@ -1374,7 +1569,7 @@ describe("RaidMarkers", function()
       setOrder(addon, {})
       local m, b = mode(), {}
       assert.same({ 0.5, 0.5, 0.5 }, m.label.color)
-      assert.equals("Placement order is empty", m.reason)
+      assert.equals("World marker order is empty", m.reason)
       snippet(m, b, "LeftButton", true)
       assert.same({}, b)
       assert.is_nil(m.attrs["lt-active"])
@@ -1542,9 +1737,9 @@ describe("RaidMarkers", function()
   describe("tank helpers", function()
     local function helpers(a, mana, down, text)
       local _, byLabel = pages(a)
-      byLabel["Healer mana"].set(mana)
-      byLabel["Dead or offline count"].set(down)
-      if text then byLabel["Mana text"].set(text) end
+      byLabel["Healer mana bar"].set(mana)
+      byLabel["Dead and offline count"].set(down)
+      if text then byLabel["Mana bar text"].set(text) end
     end
 
     local function inParty(a)
@@ -1557,7 +1752,7 @@ describe("RaidMarkers", function()
 
     it("offers two combat-locked checkboxes, both off", function()
       local _, byLabel = pages(addon)
-      local mana, down = byLabel["Healer mana"], byLabel["Dead or offline count"]
+      local mana, down = byLabel["Healer mana bar"], byLabel["Dead and offline count"]
       assert.equals("A bar under the group buttons with your party healer's mana. Party only.", mana.tooltip)
       assert.equals("A red count next to the group buttons when party members are dead or offline. Party only.", down.tooltip)
       for _, spec in ipairs({ mana, down }) do
@@ -1647,7 +1842,7 @@ describe("RaidMarkers", function()
       inParty(addon)
       assert.is_false(addon.manaBar().shown)
       assert.is_false(addon.downText().shown)
-      assert.same({ 284 + 2 + 130 + 8, 54 + 8 }, { addon.panel().width, addon.panel().height })
+      assert.same({ 284 + 2 + 130 + 8 + 18, 54 + 8 }, { addon.panel().width, addon.panel().height })
     end)
 
     it("puts the bar under the group block and the count right of it in the horizontal layout", function()
@@ -1660,14 +1855,14 @@ describe("RaidMarkers", function()
       assert.is_false(a.downText().shown)
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, a.manaBar().lastPoint)
       assert.same({ 116, 4 }, { a.manaBar().width, a.manaBar().height })
-      assert.same({ 284 + 2 + 130 + 8, 60 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 284 + 2 + 130 + 8 + 18, 60 + 8 }, { a.panel().width, a.panel().height })
       helpers(a, true, true)
       assert.is_true(a.downText().shown)
       assert.same({ "LEFT", block, "RIGHT", 2, 0 }, a.downText().lastPoint)
-      assert.same({ 284 + 2 + 130 + 2 + 31 + 8, 60 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 284 + 2 + 130 + 2 + 31 + 8 + 18, 60 + 8 }, { a.panel().width, a.panel().height })
       helpers(a, false, true)
       assert.is_false(a.manaBar().shown)
-      assert.same({ 284 + 2 + 130 + 2 + 31 + 8, 54 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 284 + 2 + 130 + 2 + 31 + 8 + 18, 54 + 8 }, { a.panel().width, a.panel().height })
     end)
 
     it("stacks the bar and the count under the group block in the vertical layout", function()
@@ -1679,27 +1874,27 @@ describe("RaidMarkers", function()
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, bar.lastPoint)
       assert.same({ 50, 4 }, { bar.width, bar.height })
       assert.same({ "TOP", bar, "BOTTOM", 0, -2 }, text.lastPoint)
-      assert.same({ 64 + 8, 278 + 2 + 82 + 6 + 16 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 64 + 8 + 18, 278 + 2 + 82 + 6 + 16 + 8 }, { a.panel().width, a.panel().height })
       helpers(a, false, true)
       assert.same({ "TOP", block, "BOTTOM", 0, -2 }, text.lastPoint)
-      assert.same({ 64 + 8, 278 + 2 + 82 + 16 + 8 }, { a.panel().width, a.panel().height })
+      assert.same({ 64 + 8 + 18, 278 + 2 + 82 + 16 + 8 }, { a.panel().width, a.panel().height })
     end)
 
     it("offers a Mana text dropdown under Healer mana, Percent by default, greyed while the bar is off", function()
       local specs, byLabel = pages(addon)
-      local spec = byLabel["Mana text"]
+      local spec = byLabel["Mana bar text"]
       local index
       for i, entry in ipairs(specs) do
         if entry == spec then index = i end
       end
-      assert.equals(byLabel["Healer mana"], specs[index - 1])
+      assert.equals(byLabel["Healer mana bar"], specs[index - 1])
       assert.equals("percent", spec.default)
       assert.equals("percent", spec.get())
       assert.is_true(spec.combatLocked)
       assert.same({ { text = "None", value = "none" }, { text = "Percent", value = "percent" },
         { text = "Value", value = "value" }, { text = "Both", value = "both" } }, spec.options)
       assert.is_false(spec.enabled())
-      byLabel["Healer mana"].set(true)
+      byLabel["Healer mana bar"].set(true)
       assert.is_true(spec.enabled())
     end)
 
@@ -1756,14 +1951,14 @@ describe("RaidMarkers", function()
       assert.same({ "CENTER" }, text.lastPoint)
       assert.same({ 116, 12 }, { bar.width, bar.height })
       assert.same({ "TOPLEFT", block, "BOTTOMLEFT", 14, -2 }, bar.lastPoint)
-      assert.same({ 284 + 2 + 130 + 8, 54 + 2 + 12 + 8 }, { addon.panel().width, addon.panel().height })
+      assert.same({ 284 + 2 + 130 + 8 + 18, 54 + 2 + 12 + 8 }, { addon.panel().width, addon.panel().height })
       local _, specs = pages(addon)
-      specs["Vertical"].set(true)
+      specs["Vertical layout"].set(true)
       assert.same({ 50, 12 }, { bar.width, bar.height })
-      assert.same({ 64 + 8, 278 + 2 + 82 + 14 + 8 }, { addon.panel().width, addon.panel().height })
+      assert.same({ 64 + 8 + 18, 278 + 2 + 82 + 14 + 8 }, { addon.panel().width, addon.panel().height })
       helpers(addon, false, false, "both")
       assert.is_false(bar.shown)
-      assert.same({ 64 + 8, 278 + 2 + 82 + 8 }, { addon.panel().width, addon.panel().height })
+      assert.same({ 64 + 8 + 18, 278 + 2 + 82 + 8 }, { addon.panel().width, addon.panel().height })
     end)
 
     it("puts a 12 px healer role icon left of the bar, its alpha following the bar", function()
@@ -2006,6 +2201,257 @@ describe("RaidMarkers", function()
       assert.equals("Ready 1/2", addon.button("Ready check").label.text)
     end)
   end)
+
+  describe("docking and collapse", function()
+    local function block() return addon.button("Ready check").parent end
+    local function row2() return world(1).parent end
+    local function glyph(handle)
+      for _, child in ipairs(addon.children(handle)) do
+        if child.kind == "FontString" then return child end
+      end
+    end
+    local function calls(name)
+      local found = {}
+      for _, c in ipairs(state.dockCalls) do
+        if c[1] == name then found[#found + 1] = c end
+      end
+      return found
+    end
+
+    it("defaults merge, mouse-over and collapse off with a faded opacity of 0", function()
+      local db = addon.ns.db.raidMarkerPanel
+      assert.same({ false, false, 0, false }, { db.merge, db.fade, db.fadeAlpha, db.collapsed })
+    end)
+
+    it("registers the panel as the dock root reading its saved fields", function()
+      local spec, db = state.dockSpec, addon.ns.db.raidMarkerPanel
+      assert.equals(addon.panel(), spec.frame)
+      assert.is_true(spec.root)
+      assert.equals(db, spec.get())
+      assert.is_true(spec.locked())
+      assert.is_false(spec.merged())
+      db.locked, db.merge = false, true
+      assert.is_true(spec.locked())
+      assert.is_true(spec.merged())
+      addon.ns.PanelMove.Toggle()
+      assert.is_false(spec.locked())
+    end)
+
+    it("fades through the shared mouse-over helper from the start", function()
+      assert.same({ "raidMarkers", addon.panel(), addon.ns.db.raidMarkerPanel }, state.fades[1])
+    end)
+
+    it("snaps and drops a drag out of combat, and skips both when the drag ends by hiding", function()
+      local panel, mover = addon.panel(), addon.mover()
+      startDrag(panel)
+      mover.left, mover.bottom = 401, 301
+      panel.scripts.OnDragStop(panel)
+      assert.same({ { "Snap", "raidMarkers", combat = false } }, calls("Snap"))
+      assert.same({ { "Drop", "raidMarkers", combat = false } }, calls("Drop"))
+      startDrag(panel)
+      panel.scripts.OnHide(panel)
+      assert.equals(1, #calls("Snap"))
+      assert.equals(1, #calls("Drop"))
+    end)
+
+    it("re-applies docked members and refreshes the merge after the panel is placed", function()
+      local changed = 0
+      state.dockMembers = { "partyCalls" }
+      _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() changed = changed + 1 end } }
+      local _, specs = pages(addon)
+      state.dockCalls = {}
+      specs["Scale"].set(1.5)
+      assert.same({ { "Apply", "partyCalls", combat = false } }, calls("Apply"))
+      assert.equals(1, changed)
+      assert.same({ { "RefreshMerge", "raidMarkers", combat = false }, { "RefreshMerge", "raidMarkers", combat = false } }, calls("RefreshMerge"))
+    end)
+
+    it("refreshes the merge once more after the members changed, so the background measures their new size", function()
+      state.dockCalls = {}
+      addon.ns.RaidMarkerPanel.ApplyDock()
+      assert.equals(2, #calls("RefreshMerge"))
+      assert.equals("RefreshMerge", state.dockCalls[#state.dockCalls][1])
+    end)
+
+    it("hides its own background while merged and paints it back when unmerged", function()
+      local panel = addon.panel()
+      state.mergeFrame = {}
+      state.dockSpec.onChange()
+      assert.is_nil(panel.backdrop)
+      state.mergeFrame = nil
+      state.dockSpec.onChange()
+      assert.is_truthy(panel.backdrop)
+      assert.same({ 0, 0, 0, 0.6 }, panel.bg)
+    end)
+
+    it("adds the docking options after the panel group and applies the dock part only out of combat", function()
+      pages(addon)
+      assert.equals("raidMarkers", state.dockOptions.id)
+      assert.equals(addon.ns.db.raidMarkerPanel, state.dockOptions.db)
+      state.dockCalls = {}
+      local fades = #state.fades
+      state.combat = true
+      state.dockOptions.apply()
+      assert.equals(fades + 1, #state.fades)
+      assert.same({}, state.dockCalls)
+      assert.same({}, addon.blocked)
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.equals(2, #calls("RefreshMerge"))
+    end)
+
+    it("builds a secure fold handle strip inside the left edge with refs to the panel, the world row and the group block", function()
+      local handle, panel = addon.handle(), addon.panel()
+      assert.equals("SecureHandlerClickTemplate", handle.template)
+      assert.equals(panel, handle.parent)
+      assert.equals(panel, handle.attrs["frameref-panel"])
+      assert.equals(row2(), handle.attrs["frameref-row2"])
+      assert.equals(block(), handle.attrs["frameref-block"])
+      assert.equals("SecureFrameTemplate", block().template)
+      assert.equals("SecureFrameTemplate", row2().template)
+      assert.equals("SecureFrameTemplate,BackdropTemplate", panel.template)
+      assert.same({ { "TOPLEFT", panel, "TOPLEFT", 0, 0 }, { "BOTTOMRIGHT", panel, "BOTTOMLEFT", 18, 0 } }, handle.points)
+      assert.equals(handle, panel.foldHandle)
+      assert.is_true(handle.ignoreParentAlpha)
+      assert.is_nil(rawget(handle, "alpha"))
+      assert.equals(block(), addon.manaBar().parent)
+      assert.equals(block(), addon.downText().parent)
+      assert.same({ "LeftButtonUp" }, handle.clicks)
+      assert.equals("-", glyph(handle).text)
+      handle.scripts.OnEnter(handle)
+      assert.same({ 1, 0.82, 0 }, glyph(handle).color)
+      handle.scripts.OnLeave(handle)
+      assert.same({ 0.72, 0.74, 0.78 }, glyph(handle).color)
+    end)
+
+    it("starts the content right of the strip in both layouts", function()
+      local row1 = addon.ns.RaidMarkerPanel.row1
+      assert.same({ "TOPLEFT", addon.panel(), "TOPLEFT", 22, -4 }, row1.lastPoint)
+      local _, specs = pages(addon)
+      specs["Vertical layout"].set(true)
+      assert.same({ "TOPLEFT", addon.panel(), "TOPLEFT", 22, -4 }, row1.lastPoint)
+    end)
+
+    it("stores the full and collapsed sizes with the strip for both layouts", function()
+      local handle, panel = addon.handle(), addon.panel()
+      assert.same({ panel.width, panel.height, 310, 34 },
+        { handle.attrs["lt-full-w"], handle.attrs["lt-full-h"], handle.attrs["lt-collapsed-w"], handle.attrs["lt-collapsed-h"] })
+      local _, specs = pages(addon)
+      specs["Vertical layout"].set(true)
+      assert.same({ panel.width, panel.height, 62, 258 },
+        { handle.attrs["lt-full-w"], handle.attrs["lt-full-h"], handle.attrs["lt-collapsed-w"], handle.attrs["lt-collapsed-h"] })
+      assert.equals(18 + 64 + 8, panel.width)
+    end)
+
+    it("folds and unfolds in combat through the secure snippet and saves the state after the click", function()
+      local handle, panel, db = addon.handle(), addon.panel(), addon.ns.db.raidMarkerPanel
+      local full = { panel.width, panel.height }
+      state.dockCalls = {}
+      state.combat = true
+      onclick(handle, "LeftButton", false)
+      handle.scripts.PostClick(handle, "LeftButton", false)
+      assert.is_false(row2():IsShown())
+      assert.is_false(block():IsShown())
+      assert.same({ 310, 34 }, { panel.width, panel.height })
+      assert.is_true(db.collapsed)
+      assert.equals("+", glyph(handle).text)
+      onclick(handle, "LeftButton", false)
+      handle.scripts.PostClick(handle, "LeftButton", false)
+      assert.is_true(row2():IsShown())
+      assert.is_true(block():IsShown())
+      assert.same(full, { panel.width, panel.height })
+      assert.is_false(db.collapsed)
+      assert.equals("-", glyph(handle).text)
+      assert.same({}, addon.blocked)
+      assert.same({}, state.dockCalls)
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.equals(2, #calls("RefreshMerge"))
+    end)
+
+    it("folds the merged members from the click in combat, and leaves unmerged members alone", function()
+      local handle, changed = addon.handle(), 0
+      state.dockMembers = { "partyCalls" }
+      _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() changed = changed + 1 end } }
+      addon.panel():Show()
+      state.dockCalls = {}
+      state.combat = true
+      onclick(handle, "LeftButton", false)
+      handle.scripts.PostClick(handle, "LeftButton", false)
+      assert.equals(0, changed)
+      addon.ns.db.raidMarkerPanel.merge = true
+      onclick(handle, "LeftButton", false)
+      handle.scripts.PostClick(handle, "LeftButton", false)
+      assert.equals(1, changed)
+      assert.same({}, addon.blocked)
+      assert.same({}, state.dockCalls)
+    end)
+
+    it("restores a saved collapse when the panel is built", function()
+      local saved = load(state, { raidMarkerPanel = { collapsed = true } })
+      saved.module.Enable()
+      local handle, panel = saved.named("LittleThingsRaidMarkersCollapse"), saved.panel()
+      assert.is_true(handle.attrs["lt-collapsed"])
+      assert.is_false(handle.attrs["frameref-row2"]:IsShown())
+      assert.is_false(handle.attrs["frameref-block"]:IsShown())
+      assert.same({ 310, 34 }, { panel.width, panel.height })
+      onclick(handle, "LeftButton", false)
+      assert.same({ handle.attrs["lt-full-w"], handle.attrs["lt-full-h"] }, { panel.width, panel.height })
+    end)
+
+    for _, case in ipairs({
+      { "a saved bottom-left corner", { point = "BOTTOMLEFT", relativePoint = "BOTTOMLEFT", x = 201, y = 151 } },
+      { "the default centre", {} },
+    }) do
+      it("re-anchors " .. case[1] .. " to the top-left so a collapse keeps the target row in place", function()
+        case[2].scale = 2
+        state.rects = { LittleThingsRaidMarkers = { left = 300, top = 700 } }
+        local saved = load(state, { raidMarkerPanel = case[2] })
+        saved.module.Enable()
+        local panel = saved.panel()
+        local db = saved.ns.db.raidMarkerPanel
+        assert.same({ "TOPLEFT", "TOPLEFT", 300, 160 }, { db.point, db.relativePoint, db.x, db.y })
+        assert.same({ "TOPLEFT", _G.UIParent, "TOPLEFT", 300, 160 }, panel.lastPoint)
+        local points = #panel.points
+        state.combat = true
+        onclick(saved.named("LittleThingsRaidMarkersCollapse"), "LeftButton", false)
+        assert.equals(points, #panel.points)
+        assert.same({}, saved.blocked)
+      end)
+    end
+
+    it("hides the merged background when combat starts with Hide in combat on, and refreshes it after combat", function()
+      local merged = { shown = true }
+      function merged:Hide() self.shown = false end
+      state.mergeFrame = merged
+      addon.fire("PLAYER_REGEN_DISABLED")
+      assert.is_true(merged.shown)
+      addon.ns.db.raidMarkerPanel.hideInCombat = true
+      state.dockCalls = {}
+      addon.fire("PLAYER_REGEN_DISABLED")
+      state.combat = true
+      assert.is_false(merged.shown)
+      assert.same({}, state.dockCalls)
+      state.combat = false
+      addon.fire("PLAYER_REGEN_ENABLED")
+      assert.equals(2, #calls("RefreshMerge"))
+    end)
+
+    it("tells docked members when it hides the merged background at combat start", function()
+      local changed = 0
+      state.dockMembers = { "partyCalls" }
+      _G.LibStub("LibVelvet-1.0").dock.panels.partyCalls = { spec = { onChange = function() changed = changed + 1 end } }
+      local merged = { shown = true }
+      function merged:Hide() self.shown = false end
+      state.mergeFrame = merged
+      addon.ns.db.raidMarkerPanel.hideInCombat = true
+      state.dockCalls = {}
+      addon.fire("PLAYER_REGEN_DISABLED")
+      assert.equals(1, changed)
+      assert.same({}, state.dockCalls)
+    end)
+
+  end)
 end)
 
 describe("RaidMarkers preview", function()
@@ -2078,13 +2524,13 @@ describe("RaidMarkers preview", function()
     addon.module.Preview.Refresh()
     local panel = previewPanel()
     assert.is_true(panel.width > panel.height)
-    byLabel["Vertical"].set(true)
+    byLabel["Vertical layout"].set(true)
     assert.is_true(panel.height > panel.width)
     byLabel["Scale"].set(1.5)
     assert.equals(1.5, panel.scale)
     assert.same({ panel.width * 1.5, panel.height * 1.5 }, { pane.fit[2], pane.fit[3] })
-    byLabel["Healer mana"].set(true)
-    byLabel["Mana text"].set("value")
+    byLabel["Healer mana bar"].set(true)
+    byLabel["Mana bar text"].set("value")
     local bar
     for _, f in ipairs(addon.children(panel)) do
       if f.kind == "StatusBar" then bar = f end
@@ -2105,7 +2551,7 @@ describe("RaidMarkers preview", function()
     local live = addon.panel()
     local sized = live.calls.SetSize
     state.combat = true
-    byLabel["Vertical"].set(true)
+    byLabel["Vertical layout"].set(true)
     local panel = previewPanel()
     assert.is_true(panel.height > panel.width)
     assert.equals(sized, live.calls.SetSize)

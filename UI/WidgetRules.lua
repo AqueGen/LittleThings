@@ -16,6 +16,15 @@ function Rules.Columns(columns, cellWidth, room)
     return math.max(1, math.min(columns, math.floor(room / cellWidth)))
 end
 
+Rules.HINT_GAP = 16
+Rules.HINT_MIN = 180
+
+function Rules.HintX(room, columnEnd, hintWidth, forceBelow)
+    if forceBelow then return nil end
+    local x = columnEnd + Rules.HINT_GAP
+    if room <= 0 or room - x >= math.max(hintWidth, Rules.HINT_MIN) then return x end
+end
+
 function Rules.Stack(items, gap)
     local offsets, y, any = {}, 0, false
     for index, item in ipairs(items) do

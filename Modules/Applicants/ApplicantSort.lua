@@ -9,7 +9,7 @@ local ApplicantSort = {}
 
 local CHOICES = {
     option = "by",
-    label = "Mythic+ sort by",
+    label = "Sort applicants by",
     order = { "rating", "itemLevel", "dungeon" },
     names = {
         rating = "Rating, then item level",
@@ -82,6 +82,7 @@ end
 function ApplicantSort.Pages(page)
     page:Group():Dropdown({ label = CHOICES.label, options = SortOptions, reload = true,
         default = ApplicantSort.defaults.by,
+        hint = "How applicants are ordered after the filter",
         tooltip = CHOICES.tooltip .. " A group that applies together counts as the player who sent the application.",
         get = function() return Options().by end,
         set = function(value) Options().by = value end })

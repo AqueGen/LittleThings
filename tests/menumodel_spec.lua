@@ -40,6 +40,32 @@ describe("MenuModel.Build", function()
     assert.equals("Meter windows", groups[2].entries[2].label)
   end)
 
+  it("moves modules without a page of their own onto the group page", function()
+    local hasPage = function(key) return key ~= "groupLeader" and key ~= "journalLoot" end
+    local groups = MenuModel.Build(MODULES, EXTRAS, function() return false end, hasPage)
+    assert.same({
+      "Group content:groupFinder",
+      "Combat:damageMeter",
+      "Combat:damageMeterWindows",
+    }, flatten(groups))
+    assert.same({ "groupLeader" }, groups[1].switches)
+    assert.equals("group:Group content", groups[1].page)
+    assert.same({ "journalLoot" }, groups[3].switches)
+  end)
+
+  it("keeps a group page-less when every module has settings", function()
+    local groups = MenuModel.Build(MODULES, EXTRAS, function() return false end, function() return true end)
+    for _, group in ipairs(groups) do
+      assert.same({}, group.switches)
+      assert.is_nil(group.page)
+    end
+  end)
+
+  it("keeps a module with child switches on the menu", function()
+    local groups = MenuModel.Build(MODULES, EXTRAS, function() return false end, function() return false end)
+    assert.equals("groupFinder", groups[1].entries[1].key)
+  end)
+
   it("marks each entry on or off from the switch lookup", function()
     local groups = MenuModel.Build(MODULES, EXTRAS, function(key) return key == "groupFinder" or key == "damageMeterWindows" end)
     assert.is_true(groups[1].entries[1].on)

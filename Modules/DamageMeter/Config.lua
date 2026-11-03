@@ -26,9 +26,10 @@ local function Db(key, spec, onChange)
     return spec
 end
 
-local function AddBlizzardCVarCheck(group, cvar, label, tooltip)
+local function AddBlizzardCVarCheck(group, cvar, label, hint, tooltip)
     group:Check({
         label = label,
+        hint = hint,
         combatLocked = true,
         tooltip = function()
             local isAvailable, failureReason = C_DamageMeter.IsDamageMeterAvailable()
@@ -60,26 +61,26 @@ local function BuildBehaviourOptions(page)
     local group = page:Group("Behaviour")
 
     group:Check(Db("format", { label = "Readable numbers",
-        tooltip = "Show 56.72M instead of 56716 K. The percentage is shown only out of combat, because it is the one part that needs arithmetic on values that are Secret in combat." },
+        hint = "Show 56.72M instead of 56716 K", tooltip = "Show 56.72M instead of 56716 K. The percentage is shown only out of combat, because it is the one part that needs arithmetic on values that are Secret in combat." },
         function()
             if not ns.db.format then
                 ns.Format.Restore()
             end
         end))
 
-    group:Check(Db("snap", { label = "Snap windows together",
-        tooltip = "Dragging a window near another attaches it, and they move and resize together." }))
+    group:Check(Db("snap", { label = "Snap windows",
+        hint = "Windows attach when dragged close together", tooltip = "Dragging a window near another attaches it, and they move and resize together." }))
 
     group:Slider(Db("snapThreshold", { label = "Snap distance", min = 5, max = 50,
-        tooltip = "How close an edge must be, in pixels, before it snaps." }))
+        hint = "How close an edge must be to snap, in pixels", tooltip = "How close an edge must be, in pixels, before it snaps." }))
 
-    group:Slider(Db("idleAlpha", { label = "Idle transparency", min = 0.1, max = 1, step = 0.05, format = "%.2f",
-        tooltip = "How visible the meter is when the mouse is not on it, as a fraction of the Edit Mode transparency. "
+    group:Slider(Db("idleAlpha", { label = "Opacity when idle", min = 0.1, max = 1, step = 0.05, format = "%.2f",
+        hint = "How visible the meter is while the mouse is away", tooltip = "How visible the meter is when the mouse is not on it, as a fraction of the Edit Mode transparency. "
             .. "A window set to uninteractable stays at the idle value, because its mouse is disabled." },
         function() ns.Presence.ApplyAlphaToAll() end))
 
-    group:Dropdown({ label = "Layer", default = ns.defaults.strata, options = StrataOptions,
-        tooltip = "Which layer the meter draws on. Raise it if another addon covers it.",
+    group:Dropdown({ label = "Draw layer", default = ns.defaults.strata, options = StrataOptions,
+        hint = "Raise it if another addon covers the meter", tooltip = "Which layer the meter draws on. Raise it if another addon covers it.",
         get = function() return ns.Presence.ResolveStrata(ns.db.strata) end,
         set = function(value)
             ns.db.strata = value
@@ -87,8 +88,8 @@ local function BuildBehaviourOptions(page)
         end })
 
     local blizzard = page:Group(DAMAGE_METER_LABEL .. " (Blizzard)")
-    AddBlizzardCVarCheck(blizzard, "damageMeterEnabled", ENABLE_DAMAGE_METER, ENABLE_DAMAGE_METER_TOOLTIP)
-    AddBlizzardCVarCheck(blizzard, "damageMeterResetOnNewInstance", AUTO_RESET_DAMAGE_METER, AUTO_RESET_DAMAGE_METER_TOOLTIP)
+    AddBlizzardCVarCheck(blizzard, "damageMeterEnabled", ENABLE_DAMAGE_METER, "Turns Blizzard's damage meter on or off", ENABLE_DAMAGE_METER_TOOLTIP)
+    AddBlizzardCVarCheck(blizzard, "damageMeterResetOnNewInstance", AUTO_RESET_DAMAGE_METER, "Clears the meter data when you enter a new instance", AUTO_RESET_DAMAGE_METER_TOOLTIP)
 end
 
 function Config.Open()
@@ -346,15 +347,19 @@ local function BuildWindowsPage(page)
         return
     end
 
+    page.hintsBelow = true
     page:Group("Meter windows"):Note("The size boxes, and match height on stacked windows (match width on side-by-side ones) go through Blizzard's code and need a /reload afterwards - the addon offers one. Until then the meter can log errors in combat. Sizes stay as set after the reload. Dragging, snapping, the gap and the other match are always safe.")
 
     for _, index in ipairs(PanelIndices()) do
         local group = page:Group(index == 1 and "Window 1 (primary)" or ("Window " .. index))
         local row = CreateRow(group.frame, index)
         rows[index] = row
-        group:Add(row.sizeLine, LINE_H, function() RefreshRow(row, index) end)
-        group:Add(row.linkLine, LINE_H)
-        group:Add(row.buttonLine, LINE_H)
+        local sizeHeight = ns.Widgets.AddHint(group, { hint = "Type a size and press Enter; it takes a reload" }, row.sizeLine, 520, LINE_H, 0)
+        local linkHeight = ns.Widgets.AddHint(group, { hint = "Gap to the attached window, and which sizes follow it" }, row.linkLine, 520, LINE_H, 0)
+        local buttonHeight = ns.Widgets.AddHint(group, { hint = "Detach unlinks this window; Hide closes it" }, row.buttonLine, 170, LINE_H, 0)
+        group:Add(row.sizeLine, sizeHeight, function() RefreshRow(row, index) end)
+        group:Add(row.linkLine, linkHeight)
+        group:Add(row.buttonLine, buttonHeight)
     end
 
     windowPage = page.frame

@@ -6,7 +6,7 @@ local Rules = ns.SaveRules
 local SaveIndicator = {}
 ns.SaveIndicator = SaveIndicator
 
-local DEFAULTS = { x = 0, y = -140, scale = 1, locked = false,
+local DEFAULTS = { x = 0, y = -140, scale = 1, fade = false, fadeAlpha = 0,
     showTime = true, showDR = true, off = {} }
 
 local events
@@ -26,8 +26,28 @@ function SaveIndicator.Refresh()
     if ns.SaveCenter then ns.SaveCenter.Apply(center) end
 end
 
+local function Place()
+    if ns.SaveCenter then ns.SaveCenter.Place() end
+end
+
+local function ResetPosition()
+    local db = ns.db.saveIndicatorRow
+    db.x, db.y = DEFAULTS.x, DEFAULTS.y
+    Place()
+    ns.Window.Refresh()
+end
+
+local function Fade()
+    if ns.SaveCenter then ns.SaveCenter.Fade() end
+end
+
 function SaveIndicator.Enable()
     InitializeDb()
+    if not events and ns.SaveCenter then
+        ns.PanelMove.Register("saveIndicator", { name = "Save indicator", frame = ns.SaveCenter.PreviewFrame,
+            setMoving = function(on) ns.SaveCenter.SetMoving(on and ns.IsOn("saveIndicator")) end,
+            reset = ResetPosition, stopDrag = ns.SaveCenter.StopDrag })
+    end
     if not events then
         events = CreateFrame("Frame")
         events:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -66,10 +86,6 @@ local function Option(key, spec, apply)
     return spec
 end
 
-local function Place()
-    if ns.SaveCenter then ns.SaveCenter.Place() end
-end
-
 function SaveIndicator.Pages(page)
     InitializeDb()
     if page.frame then
@@ -78,39 +94,33 @@ function SaveIndicator.Pages(page)
         page.frame:HookScript("OnHide", SyncPreview)
     end
 
-    local row = page:Group("Centre row")
+    local row = page:Group("Save row")
     row:Check(Option("showTime", { label = "Time left", reload = true,
-        tooltip = "Seconds left inside each icon." }))
+        hint = "Seconds left inside each icon", tooltip = "Seconds left inside each icon." }))
     row:Check(Option("showDR", { label = "Damage reduction", reload = true,
-        tooltip = "The reduction under each icon, orange under 20%." }))
-    row:Check(Option("locked", { label = "Lock position",
-        tooltip = "Drag the row while this page is open to place it, then lock it." }))
+        hint = "Reduction shown under each icon", tooltip = "The reduction under each icon, orange under 20%." }))
     row:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f",
-        tooltip = "Size of the whole row." }, Place))
-    row:Slider(Option("x", { label = "X", min = -1000, max = 1000,
-        tooltip = "Pixels right of the screen centre; 0 is centred. Dragging the row sets it for you." }, Place))
-    row:Slider(Option("y", { label = "Y", min = -600, max = 600,
-        tooltip = "Pixels above the screen centre. Dragging the row sets it for you." }, Place))
+        hint = "Size of the whole row", tooltip = "Size of the whole row." }, Place))
+    row:Slider(Option("x", { label = "Horizontal offset", min = -1000, max = 1000,
+        hint = "Pixels right of the screen centre", tooltip = "Pixels right of the screen centre; 0 is centred. Dragging the row sets it for you." }, Place))
+    row:Slider(Option("y", { label = "Vertical offset", min = -600, max = 600,
+        hint = "Pixels above the screen centre", tooltip = "Pixels above the screen centre. Dragging the row sets it for you." }, Place))
     row:Button({ label = "Test",
-        tooltip = "Shows a sample row (Sentinel -24%, Pain Suppression -40%) that stays after this window closes, so you can see it over the game. Press again to hide it.",
+        hint = "Shows a sample row over the game", tooltip = "Shows a sample row (Sentinel -24%, Pain Suppression -40%) that stays after this window closes, so you can see it over the game. Press again to hide it.",
         onClick = function()
             if ns.SaveCenter then ns.SaveCenter.ToggleDemo() end
         end })
     row:Button({ label = "Center horizontally", combatLocked = true,
-        tooltip = "Puts the row in the middle of the screen, keeping its height.",
+        hint = "Centres the row on the screen", tooltip = "Puts the row in the middle of the screen, keeping its height.",
         onClick = function()
             ns.db.saveIndicatorRow.x = 0
             Place()
             ns.Window.Refresh()
         end })
     row:Button({ label = "Reset position", combatLocked = true,
-        tooltip = "Moves the row back below the centre of the screen.",
-        onClick = function()
-            local db = ns.db.saveIndicatorRow
-            db.x, db.y = DEFAULTS.x, DEFAULTS.y
-            Place()
-            ns.Window.Refresh()
-        end })
+        hint = "Puts the row back at its default place", tooltip = "Moves the row back below the centre of the screen.",
+        onClick = ResetPosition })
+    ns.PanelDock.FadeOptions(row, ns.db.saveIndicatorRow, Fade)
 
     local tracked = Rules.Groups(ns.SaveData, select(2, UnitClass("player")))
     local group = page:Group("Tracked saves")

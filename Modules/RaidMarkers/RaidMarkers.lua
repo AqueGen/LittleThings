@@ -8,9 +8,9 @@ local RaidMarkers = {}
 
 local ORDINALS ={ "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th" }
 
-local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, locked = false, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
+local DEFAULTS = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 220, scale = 1, vertical = false, pullLeft = 10, pullRight = 5,
     showSolo = false, partyLeaderOnly = false, raidWithoutRank = false, hideInCombat = false,
-    healerMana = false, manaText = "percent", groupDown = false }
+    healerMana = false, manaText = "percent", groupDown = false, merge = false, fade = false, fadeAlpha = 0, collapsed = false }
 
 local events
 
@@ -29,11 +29,12 @@ local function RequestVisibility()
         inRaid = IsInRaid(),
         leader = Shared.HasRank(UnitIsGroupLeader),
         assistant = Shared.HasRank(UnitIsGroupAssistant),
-        preview = Shared.previewing,
+        preview = Shared.previewing or Shared.moving,
         showSolo = ns.db.raidMarkerPanel.showSolo,
         partyLeaderOnly = ns.db.raidMarkerPanel.partyLeaderOnly,
         raidWithoutRank = ns.db.raidMarkerPanel.raidWithoutRank,
     }
+    local wasShown = Shared.panel:IsShown()
     local allowed = Rules.CanMark(group)
     Shared.modeButton:SetAttribute("lt-allowed", allowed or nil)
     if not allowed then
@@ -44,6 +45,23 @@ local function RequestVisibility()
     else
         Shared.panel:Hide()
     end
+    if wasShown ~= Shared.panel:IsShown() then
+        Shared.ApplyDock()
+    end
+end
+
+local function ResetPosition()
+    local db = ns.db.raidMarkerPanel
+    db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
+    if Shared.panel then
+        Shared.ApplyOutOfCombat(Shared.Place)
+    end
+end
+
+local function SetMoving(on)
+    Shared.moving = on
+    RequestVisibility()
+    Shared.PaintBackground()
 end
 
 local function Build()
@@ -52,14 +70,19 @@ local function Build()
     end
     Shared.BuildFrame()
     local header = Shared.BuildBindings()
-    Shared.row1, Shared.row2, Shared.block = Shared.NewRow(Shared.panel), Shared.NewRow(Shared.panel), Shared.NewRow(Shared.panel)
+    Shared.row1 = Shared.NewRow(Shared.panel)
+    Shared.row2, Shared.block = Shared.NewRow(Shared.panel, "SecureFrameTemplate"), Shared.NewRow(Shared.panel, "SecureFrameTemplate")
     Shared.BuildTargetButtons()
     Shared.BuildGroupButtons()
     Shared.BuildHelpers()
     Shared.BuildWorldButtons(header)
+    Shared.BuildHandle()
+    ns.PanelMove.Register(Shared.DOCK_ID, { name = "Raid marker panel", frame = function() return Shared.panel end, strip = ns.PanelDock.STRIP,
+        setMoving = SetMoving, reset = ResetPosition, stopDrag = Shared.StopDragging })
     Shared.ApplyOrder()
     Shared.Layout()
     Shared.Place()
+    ns.PanelDock.Fade(Shared.DOCK_ID, Shared.panel, ns.db.raidMarkerPanel)
 end
 
 local function RolesChanged()
@@ -97,6 +120,9 @@ local handlers = {
             if pending[Shared.ApplyOrder] then
                 Shared.ApplyOrder()
             end
+            if pending[Shared.ApplyDock] then
+                Shared.ApplyDock()
+            end
             Shared.pending = {}
         end
         Build()
@@ -104,6 +130,9 @@ local handlers = {
         Refresh()
     end,
     PLAYER_REGEN_DISABLED = function()
+        if Shared.panel then
+            Shared.HideMergeInCombat()
+        end
         C_Timer.After(0, Shared.PaintGroupButtons)
     end,
     RAID_TARGET_UPDATE = Shared.RefreshTarget,
@@ -157,6 +186,13 @@ local function Option(key, spec, apply)
     return spec
 end
 
+local function ApplyDockOptions()
+    if Shared.panel then
+        ns.PanelDock.Fade(Shared.DOCK_ID, Shared.panel, ns.db.raidMarkerPanel)
+        Shared.ApplyOutOfCombat(Shared.ApplyDock)
+    end
+end
+
 local function Preview(shown)
     Shared.previewing = shown
     if Shared.panel then
@@ -174,54 +210,49 @@ function RaidMarkers.Pages(page)
 
     local visibility = page:Group("Visibility")
     visibility:Check(Option("showSolo", { label = "Show when solo",
-        tooltip = "Shows the panel outside a group too. Markers and group buttons do nothing there." }, RequestVisibility))
+        hint = "Show the panel outside a group too", tooltip = "Shows the panel outside a group too. Markers and group buttons do nothing there." }, RequestVisibility))
     visibility:Check(Option("partyLeaderOnly", { label = "In a party, only as leader",
-        tooltip = "In a party the panel shows only while you lead the group." }, RequestVisibility))
+        hint = "Hide the panel in a party unless you lead", tooltip = "In a party the panel shows only while you lead the group." }, RequestVisibility))
     visibility:Check(Option("raidWithoutRank", { label = "In a raid, also without lead or assist",
-        tooltip = "In a raid the panel shows to everyone; markers and group buttons work only with lead or assist." }, RequestVisibility))
+        hint = "Show the panel to everyone in a raid", tooltip = "In a raid the panel shows to everyone; markers and group buttons work only with lead or assist." }, RequestVisibility))
     visibility:Check(Option("hideInCombat", { label = "Hide in combat", combatLocked = true,
-        tooltip = "Hides the panel while you are in combat. The game hides it, so this is safe in combat." }, Shared.ApplyCombatHide))
+        hint = "Hide the panel while in combat", tooltip = "Hides the panel while you are in combat. The game hides it, so this is safe in combat." }, Shared.ApplyCombatHide))
 
-    local group = page:Group("Raid marker panel")
-    group:Check(Option("locked", { label = "Lock position", combatLocked = true,
-        tooltip = "Drag the panel to place it, then lock it so it cannot be dragged." }))
+    local group = page:Group("Panel")
     group:Slider(Option("scale", { label = "Scale", min = 0.5, max = 2, step = 0.05, format = "%.2f", combatLocked = true,
-        tooltip = "Size of the whole panel." }, Shared.Place))
-    group:Check(Option("vertical", { label = "Vertical", combatLocked = true,
-        tooltip = "One column: each target marker next to the world marker of the same symbol, the other buttons below." }, Shared.Layout))
-    group:Slider(Option("pullLeft", { label = "Pull, left click (seconds)", min = 3, max = 60,
-        tooltip = "Countdown length when the pull button is left-clicked." }))
-    group:Slider(Option("pullRight", { label = "Pull, right click (seconds)", min = 3, max = 60,
-        tooltip = "Countdown length when the pull button is right-clicked." }))
+        hint = "Size of the whole panel", tooltip = "Size of the whole panel." }, Shared.Place))
+    group:Check(Option("vertical", { label = "Vertical layout", combatLocked = true,
+        hint = "One column instead of a row", tooltip = "One column: each target marker next to the world marker of the same symbol, the other buttons below." }, Shared.Layout))
+    group:Slider(Option("pullLeft", { label = "Pull timer, left click", min = 3, max = 60, format = "%d s",
+        hint = "Countdown on a left click of the pull button", tooltip = "Countdown length when the pull button is left-clicked." }))
+    group:Slider(Option("pullRight", { label = "Pull timer, right click", min = 3, max = 60, format = "%d s",
+        hint = "Countdown on a right click of the pull button", tooltip = "Countdown length when the pull button is right-clicked." }))
+    ns.PanelDock.FadeOptions(group, ns.db.raidMarkerPanel, ApplyDockOptions)
     group:Button({ label = "Reset position", combatLocked = true,
-        tooltip = "Moves the panel back above the centre of the screen.",
-        onClick = function()
-            local db = ns.db.raidMarkerPanel
-            db.point, db.relativePoint, db.x, db.y = DEFAULTS.point, DEFAULTS.relativePoint, DEFAULTS.x, DEFAULTS.y
-            if Shared.panel then
-                Shared.ApplyOutOfCombat(Shared.Place)
-            end
-        end })
+        hint = "Puts the panel back at its default place", tooltip = "Moves the panel back above the centre of the screen.",
+        onClick = ResetPosition })
 
-    local helpers = page:Group("Tank helpers")
-    helpers:Check(Option("healerMana", { label = "Healer mana", combatLocked = true,
-        tooltip = "A bar under the group buttons with your party healer's mana. Party only." }, Shared.Layout))
-    helpers:Dropdown(Option("manaText", { label = "Mana text", combatLocked = true,
+    ns.PanelDock.Options(page, ns.db.raidMarkerPanel, ApplyDockOptions, Shared.DOCK_ID)
+
+    local helpers = page:Group("Tank extras")
+    helpers:Check(Option("healerMana", { label = "Healer mana bar", combatLocked = true,
+        hint = "Healer mana bar under the group buttons", tooltip = "A bar under the group buttons with your party healer's mana. Party only." }, Shared.Layout))
+    helpers:Dropdown(Option("manaText", { label = "Mana bar text", combatLocked = true,
         options = { { text = "None", value = "none" }, { text = "Percent", value = "percent" },
             { text = "Value", value = "value" }, { text = "Both", value = "both" } },
         enabled = function() return ns.db.raidMarkerPanel.healerMana end,
-        tooltip = "What the healer mana bar shows on top of it. None keeps the bar thin." }, Shared.Layout))
-    helpers:Check(Option("groupDown", { label = "Dead or offline count", combatLocked = true,
-        tooltip = "A red count next to the group buttons when party members are dead or offline. Party only." }, Shared.Layout))
+        hint = "What the healer mana bar shows", tooltip = "What the healer mana bar shows on top of it. None keeps the bar thin." }, Shared.Layout))
+    helpers:Check(Option("groupDown", { label = "Dead and offline count", combatLocked = true,
+        hint = "Count of dead or offline party members", tooltip = "A red count next to the group buttons when party members are dead or offline. Party only." }, Shared.Layout))
 
     local options = { { text = "None", value = 0 } }
     for n = 1, 8 do
         options[n + 1] = { text = _G["WORLD_MARKER" .. n] or ("World marker " .. n), value = n }
     end
-    local placement = page:Group("Placement order")
+    local placement = page:Group("World marker order")
     for i, label in ipairs(ORDINALS) do
         placement:Dropdown({ label = label, options = options, default = i, combatLocked = true,
-            tooltip = "World marker placed at this step by the placement mode and the next world marker key. None skips the step.",
+            hint = "World marker placed at this step", tooltip = "World marker placed at this step by the placement mode and the next world marker key. None skips the step.",
             get = function() return ns.db.raidMarkerPanel.order[i] end,
             set = function(value)
                 ns.db.raidMarkerPanel.order[i] = value

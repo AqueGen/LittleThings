@@ -92,5 +92,14 @@ function Rules.Cycle(order)
     return cycle
 end
 
+function Rules.CollapsedSize(layout)
+    local size, gap, pad, strip = layout.size, layout.gap, layout.pad, layout.strip or 0
+    if layout.vertical then
+        local step = size + gap
+        return layout.width - step + 2 * pad + strip, 9 * step - gap + 2 * pad
+    end
+    return layout.width + 2 * pad + strip, size + 2 * pad
+end
+
 if ns then ns.MarkerRules = Rules end
 return Rules

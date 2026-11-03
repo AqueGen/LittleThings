@@ -62,6 +62,7 @@ describe("save indicator preview", function()
         created, on = {}, true
         _G.CreateFrame = function(kind, name, parent, template) return newFrame(kind, name, parent, template) end
         _G.InCombatLockdown = function() return false end
+        _G.GetCursorPosition = function() return 0, 0 end _G.IsMouseButtonDown = function() return true end
         _G.UIParent = newFrame("Frame")
         _G.C_Spell = { GetSpellTexture = function(id) return id end }
         _G.UnitClass = function() return "Priest", "PRIEST" end
@@ -76,6 +77,11 @@ describe("save indicator preview", function()
                 end
             end,
         }
+        _G.C_Timer = { NewTicker = function() return {} end }
+        _G.UISpecialFrames, _G.tinsert = {}, table.insert
+        ns.Widgets, ns.Print = { FLAT = {} }, function() end
+        assert(loadfile("Modules/PanelDock.lua"))("LittleThings", ns)
+        assert(loadfile("Modules/PanelMove.lua"))("LittleThings", ns)
         for _, path in ipairs({ "SaveRules", "SaveData", "Center", "RowPreview", "SaveIndicator" }) do
             assert(loadfile("Modules/SaveIndicator/" .. path .. ".lua"))("LittleThings", ns)
         end
@@ -95,6 +101,64 @@ describe("save indicator preview", function()
         for _, f in ipairs(created) do
             assert.is_nil(f.name)
         end
+    end)
+
+    it("offers mouse-over fade next to Scale, and no Lock position or Move panels", function()
+        local byLabel = options()
+        assert.is_nil(byLabel["Lock position"])
+        assert.is_truthy(byLabel["Fade until mouse-over"])
+        assert.is_truthy(byLabel["Opacity when faded"])
+        assert.is_nil(byLabel["Move panels"])
+        assert.is_false(ns.db.saveIndicatorRow.fade)
+        assert.equals(0, ns.db.saveIndicatorRow.fadeAlpha)
+    end)
+
+    it("shows the sample row in Move panels mode and lets it drag only then", function()
+        local function preview()
+            for _, f in ipairs(created) do
+                if f.name == "LittleThingsSaveRowPreview" then return f end
+            end
+        end
+        _G.AuraContainerSortMethod = {}
+        _G.C_StringUtil = { CreateNumericRuleFormatter = function() return { SetBreakpoints = function() end } end }
+        _G.LibStub = function() return { dock = { panels = {} }, Dock = { MergeFrame = function() end } } end
+        ns.SaveIndicator.Enable()
+        ns.SaveCenter.ToggleDemo()
+        local p = preview()
+        local live
+        for _, f in ipairs(created) do
+            if f.name == "LittleThingsSaveRow" then live = f end
+        end
+        assert.is_truthy(live.hoverPart)
+        assert.equals(live, live.hoverPart.parentFrame)
+        local function mover()
+            for _, f in ipairs(created) do
+                if f.name == "LittleThingsSaveRowMover" then return f end
+            end
+        end
+        for _, f in ipairs({ p, UIParent }) do
+            function f:GetEffectiveScale() return 1 end
+            function f:GetLeft() return 0 end
+            function f:GetTop() return 1080 end
+            function f:GetBottom() return 1000 end
+        end
+        function p:GetCenter() return 600, 500 end
+        function UIParent:GetCenter() return 500, 500 end
+        p.scripts.OnDragStart(p)
+        assert.is_false(mover().shown)
+        ns.SaveCenter.ToggleDemo()
+        assert.is_false(p.shown)
+        ns.PanelMove.Toggle()
+        assert.is_true(p.shown)
+        p.scripts.OnDragStart(p)
+        assert.is_true(mover().shown)
+        local m = mover()
+        function m:GetLeft() return 100 end
+        function m:GetTop() return 600 end
+        ns.PanelMove.Toggle()
+        assert.is_false(m.shown)
+        assert.equals(100, ns.db.saveIndicatorRow.x)
+        assert.is_false(p.shown)
     end)
 
     it("follows the time, reduction and scale settings", function()
