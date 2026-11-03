@@ -4,13 +4,18 @@ local addonName, ns = ...
 local PanelMove = {}
 ns.PanelMove = PanelMove
 
-local LOCK, TICK, SEAM = 12, 0.1, 2
+local LOCK, TICK, SEAM = 12, 0.1, 1
 local GOLD = { 1, 0.82, 0, 1 }
-local EDGE = { edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 }
 
 local MODULES = { "raidMarkers", "partyCalls", "saveIndicator" }
 local panels, order, unlocked, overlays, seams = {}, {}, {}, {}, {}
 local NO_DOCKS = {}
+local EDGES = {
+    top = { "TOPLEFT", "BOTTOMRIGHT", "TOPRIGHT", 0, -1 },
+    bottom = { "BOTTOMLEFT", "TOPRIGHT", "BOTTOMRIGHT", 0, 1 },
+    left = { "TOPLEFT", "BOTTOMRIGHT", "BOTTOMLEFT", 1, 0 },
+    right = { "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT", -1, 0 },
+}
 local moving, hoverId = false, nil
 local bar, lock, catcher, events
 
@@ -25,19 +30,26 @@ function PanelMove.LockSpot(l, t, r, b, screenTop, strip)
 end
 
 function PanelMove.SeamRect(side, m, t)
-    if side == "Below" then return math.max(m.l, t.l), t.b, math.min(m.r, t.r), t.b - SEAM end
-    if side == "Above" then return math.max(m.l, t.l), t.t + SEAM, math.min(m.r, t.r), t.t end
-    if side == "Right" then return t.r, math.min(m.t, t.t), t.r + SEAM, math.max(m.b, t.b) end
-    return t.l - SEAM, math.min(m.t, t.t), t.l, math.max(m.b, t.b)
+    local half = SEAM / 2
+    if side == "Below" or side == "Above" then
+        local c = side == "Below" and (t.b + m.t) / 2 or (t.t + m.b) / 2
+        return math.max(m.l, t.l), c + half, math.min(m.r, t.r), c - half
+    end
+    local c = side == "Right" and (t.r + m.l) / 2 or (t.l + m.r) / 2
+    return c - half, math.min(m.t, t.t), c + half, math.max(m.b, t.b)
 end
 
-function PanelMove.LabelSide(id, docks)
+local MEMBER_SIDE = { Below = "top", Above = "bottom", Right = "left", Left = "right" }
+local TARGET_SIDE = { Below = "bottom", Above = "top", Right = "right", Left = "left" }
+
+function PanelMove.SharedSides(id, docks)
+    local shared = {}
     local own = docks[id]
-    if own and own.dockTo and own.side == "Below" then return "below" end
+    if own and own.dockTo and MEMBER_SIDE[own.side or ""] then shared[MEMBER_SIDE[own.side]] = true end
     for other, d in pairs(docks) do
-        if other ~= id and d.dockTo == id and d.side == "Above" then return "below" end
+        if other ~= id and d.dockTo == id and TARGET_SIDE[d.side or ""] then shared[TARGET_SIDE[d.side]] = true end
     end
-    return "above"
+    return shared
 end
 
 function PanelMove.CanDrag(id)
@@ -74,10 +86,16 @@ end
 local function Overlay(id)
     local o = overlays[id]
     if o then return o end
-    o = CreateFrame("Frame", "LittleThingsMoveOutline" .. id, UIParent, "BackdropTemplate")
+    o = CreateFrame("Frame", "LittleThingsMoveOutline" .. id, UIParent)
     o:SetFrameStrata("FULLSCREEN_DIALOG")
-    o:SetBackdrop(EDGE)
-    o:SetBackdropBorderColor(unpack(GOLD))
+    o.edges = {}
+    for side, pts in pairs(EDGES) do
+        local e = o:CreateTexture(nil, "OVERLAY")
+        e:SetPoint(pts[1], o, pts[1], 0, 0)
+        e:SetPoint(pts[2], o, pts[3], pts[4], pts[5])
+        e:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], GOLD[4])
+        o.edges[side] = e
+    end
     o.label = o:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     o.label:SetText(panels[id].name)
     overlays[id] = o
@@ -106,7 +124,7 @@ local function Seam(id)
     s:SetFrameStrata("TOOLTIP")
     local line = s:CreateTexture(nil, "OVERLAY")
     line:SetAllPoints()
-    line:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], 1)
+    line:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], 0.8)
     seams[id] = s
     return s
 end
@@ -141,8 +159,10 @@ local function PaintOverlays(combat)
         if f then l, t, r, b = Rect(f) end
         if l then
             local o = Overlay(id)
+            local shared = PanelMove.SharedSides(id, docks)
+            for side, e in pairs(o.edges) do e:SetShown(not shared[side]) end
             o.label:ClearAllPoints()
-            if PanelMove.LabelSide(id, docks) == "above" then
+            if not shared.top then
                 o.label:SetPoint("BOTTOMLEFT", o, "TOPLEFT", 0, 2)
             else
                 o.label:SetPoint("TOPLEFT", o, "BOTTOMLEFT", 0, -2)

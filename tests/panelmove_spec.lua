@@ -53,22 +53,28 @@ describe("PanelMove.SeamRect", function()
   local Move = load({ printed = {} })
   local target = { l = 100, t = 500, r = 400, b = 440 }
 
-  it("draws a 2 px line along the target's edge, spanning the shared part", function()
-    assert.same({ 100, 440, 300, 438 }, { Move.SeamRect("Below", { l = 100, t = 434, r = 300, b = 380 }, target) })
-    assert.same({ 150, 502, 400, 500 }, { Move.SeamRect("Above", { l = 150, t = 560, r = 450, b = 506 }, target) })
-    assert.same({ 400, 500, 402, 470 }, { Move.SeamRect("Right", { l = 406, t = 520, r = 500, b = 470 }, target) })
-    assert.same({ 98, 490, 100, 440 }, { Move.SeamRect("Left", { l = 0, t = 490, r = 94, b = 400 }, target) })
+  it("draws a 1 px line centred in the gap, spanning only the shared part of the two edges", function()
+    assert.same({ 100, 437.5, 300, 436.5 }, { Move.SeamRect("Below", { l = 100, t = 434, r = 300, b = 380 }, target) })
+    assert.same({ 150, 503.5, 400, 502.5 }, { Move.SeamRect("Above", { l = 150, t = 560, r = 450, b = 506 }, target) })
+    assert.same({ 402.5, 500, 403.5, 470 }, { Move.SeamRect("Right", { l = 406, t = 520, r = 500, b = 470 }, target) })
+    assert.same({ 96.5, 490, 97.5, 440 }, { Move.SeamRect("Left", { l = 0, t = 490, r = 94, b = 400 }, target) })
+  end)
+
+  it("centres on the shared edge when there is no gap", function()
+    assert.same({ 100, 440.5, 300, 439.5 }, { Move.SeamRect("Below", { l = 100, t = 440, r = 300, b = 380 }, target) })
   end)
 end)
 
-describe("PanelMove.LabelSide", function()
+describe("PanelMove.SharedSides", function()
   local Move = load({ printed = {} })
 
-  it("puts the name above unless the top edge is a seam", function()
-    assert.equals("above", Move.LabelSide("raid", {}))
-    assert.equals("below", Move.LabelSide("calls", { calls = { dockTo = "raid", side = "Below" } }))
-    assert.equals("below", Move.LabelSide("raid", { calls = { dockTo = "raid", side = "Above" } }))
-    assert.equals("above", Move.LabelSide("raid", { calls = { dockTo = "raid", side = "Below" } }))
+  it("names the sides of a docked pair that touch, for the member and the target", function()
+    for side, pair in pairs({ Below = { "top", "bottom" }, Above = { "bottom", "top" }, Right = { "left", "right" }, Left = { "right", "left" } }) do
+      local docks = { calls = { dockTo = "raid", side = side } }
+      assert.same({ [pair[1]] = true }, Move.SharedSides("calls", docks))
+      assert.same({ [pair[2]] = true }, Move.SharedSides("raid", docks))
+    end
+    assert.same({}, Move.SharedSides("raid", {}))
   end)
 end)
 
@@ -264,8 +270,16 @@ describe("PanelMove", function()
       if f.name == "LittleThingsMoveSeampartyCalls" then seam = f end
     end
     assert.is_true(seam:IsShown())
-    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 440 } }, seam.points)
-    assert.same({ 200, 2 }, { seam.width, seam.height })
+    assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 100, 437.5 } }, seam.points)
+    assert.same({ 200, 1 }, { seam.width, seam.height })
+    local function outline(id)
+      for _, f in ipairs(tracker.all) do
+        if f.name == "LittleThingsMoveOutline" .. id then return f end
+      end
+    end
+    local calls, raid = outline("partyCalls"), outline("raidMarkers")
+    assert.same({ false, true, true, true }, { calls.edges.top.shown, calls.edges.bottom.shown, calls.edges.left.shown, calls.edges.right.shown })
+    assert.same({ true, false, true, true }, { raid.edges.top.shown, raid.edges.bottom.shown, raid.edges.left.shown, raid.edges.right.shown })
     assert.equals("TOPLEFT", tracker.text("Party calls").points[1][1])
     assert.equals("BOTTOMLEFT", tracker.text("Raid marker panel").points[1][1])
     Move.Toggle()

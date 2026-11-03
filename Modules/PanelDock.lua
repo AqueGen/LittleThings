@@ -59,8 +59,35 @@ function PanelDock.Hovered(id, frame)
     return lib.Dock.Hovered(id)
 end
 
+function PanelDock.Align(raw, start, size, own, current, snap, hold)
+    if current and math.abs(raw - current) <= snap + hold then return current end
+    local best
+    for _, c in ipairs({ start, start + size - own, start + (size - own) / 2 }) do
+        if math.abs(raw - c) <= snap and (not best or math.abs(raw - c) < math.abs(raw - best)) then best = c end
+    end
+    return best
+end
+
+function PanelDock.Holds(side, x, y, raw, target, snap, hold)
+    if side == "Below" or side == "Above" then
+        return math.abs(raw.y - y) <= snap + hold and raw.x < target.x + target.w and raw.x + raw.w > target.x
+    end
+    return math.abs(raw.x - x) <= snap + hold and raw.y < target.y + target.h and raw.y + raw.h > target.y
+end
+
+local SNAP, HOLD = 16, 8
 local seam
-local seamGhost, seamTarget = {}, {}
+local seamGhost, seamTarget, held = {}, {}, { x = 0, y = 0, w = 0, h = 0 }
+
+local function HeldRect(tid)
+    local p = Lib().dock.panels[tid]
+    local f = p and p.spec.frame
+    if not (f and f:IsVisible() and f:GetLeft()) then return nil end
+    local s = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    held.x, held.y = f:GetLeft() * s - UIParent:GetLeft(), UIParent:GetTop() - f:GetTop() * s
+    held.w, held.h = f:GetWidth() * s, f:GetHeight() * s
+    return held
+end
 
 local function SeamFrame()
     if seam then return seam end
@@ -68,7 +95,7 @@ local function SeamFrame()
     seam:SetFrameStrata("TOOLTIP")
     local line = seam:CreateTexture(nil, "OVERLAY")
     line:SetAllPoints()
-    line:SetColorTexture(1, 0.82, 0, 1)
+    line:SetColorTexture(1, 0.82, 0, 0.8)
     seam:Hide()
     return seam
 end
@@ -110,7 +137,29 @@ function PanelDock.GhostDrag(id, panel, opts)
     outline:SetColorTexture(1, 0.82, 0, 0.3)
     local drag = { mover = mover, active = false }
     local rect = { x = 0, y = 0, w = 0, h = 0 }
+    local stick = {}
     local grabX, grabY, lastX, lastY
+
+    local function Stick()
+        local t = stick.tid and HeldRect(stick.tid)
+        if t and not PanelDock.Holds(stick.side, stick.x, stick.y, rect, t, SNAP, HOLD) then t = nil end
+        local x, y = rect.x, rect.y
+        if not t then
+            stick.tid, stick.align = nil, nil
+            local tid, side
+            x, y, tid, side = Lib().Dock.Snap(id, rect)
+            t = tid and HeldRect(tid)
+            if not t then return x, y end
+            stick.tid, stick.side, stick.x, stick.y = tid, side, x, y
+        end
+        if stick.side == "Below" or stick.side == "Above" then
+            stick.align = PanelDock.Align(rect.x, t.x, t.w, rect.w, stick.align, SNAP, HOLD)
+            return stick.align or rect.x, stick.y
+        end
+        stick.align = PanelDock.Align(rect.y, t.y, t.h, rect.h, stick.align, SNAP, HOLD)
+        return stick.x, stick.align or rect.y
+    end
+
     function drag.Follow()
         if not IsMouseButtonDown("LeftButton") then
             drag.Stop()
@@ -120,16 +169,14 @@ function PanelDock.GhostDrag(id, panel, opts)
         if cx == lastX and cy == lastY then return end
         lastX, lastY = cx, cy
         local left, top = cx - grabX, cy - grabY
-        local tid, side
         if opts.snapped then
             rect.x, rect.y = left - UIParent:GetLeft(), UIParent:GetTop() - top
-            local x, y
-            x, y, tid, side = Lib().Dock.Snap(id, rect)
+            local x, y = Stick()
             left, top = x + UIParent:GetLeft(), UIParent:GetTop() - y
         end
         mover:ClearAllPoints()
         mover:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
-        PanelDock.ShowSeam(tid, side, left, top, rect.w, rect.h)
+        PanelDock.ShowSeam(stick.tid, stick.side, left, top, rect.w, rect.h)
     end
     function drag.Start()
         if drag.active or not ns.PanelMove.CanDrag(id) or not panel:GetLeft() then return end
@@ -140,6 +187,7 @@ function PanelDock.GhostDrag(id, panel, opts)
         mover:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", panel:GetLeft() * s, panel:GetBottom() * s)
         local cx, cy = Cursor()
         grabX, grabY, lastX, lastY = cx - panel:GetLeft() * s, cy - panel:GetTop() * s, cx, cy
+        stick.tid, stick.align = nil, nil
         mover:Show()
         mover:SetScript("OnUpdate", drag.Follow)
         drag.active = true
@@ -153,9 +201,10 @@ function PanelDock.GhostDrag(id, panel, opts)
         opts.release(mover, deferred)
         mover:Hide()
         if not deferred and opts.snapped then
-            opts.snapped(Lib().Dock.Snap(id))
+            if not stick.tid then opts.snapped(Lib().Dock.Snap(id)) end
             Lib().Dock.Drop(id)
         end
+        stick.tid, stick.align = nil, nil
         if opts.after then opts.after() end
     end
     return drag

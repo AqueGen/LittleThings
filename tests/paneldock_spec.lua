@@ -30,6 +30,45 @@ describe("PanelDock.HandleAlpha", function()
   end)
 end)
 
+describe("PanelDock.Align", function()
+  local function align(raw, current)
+    return ns.PanelDock.Align(raw, 100, 200, 120, current, 16, 8)
+  end
+
+  it("lines the ghost up with the target's left edge, right edge or centre, whichever is nearest within 16 px", function()
+    assert.equals(100, align(105))
+    assert.equals(140, align(150))
+    assert.equals(180, align(190))
+    assert.is_nil(align(120))
+  end)
+
+  it("keeps a chosen alignment until the raw spot is more than 24 px away", function()
+    assert.equals(100, align(120, 100))
+    assert.equals(100, align(124, 100))
+    assert.equals(140, align(130, 100))
+    assert.equals(180, align(165, 100))
+    assert.is_nil(align(75, 100))
+  end)
+end)
+
+describe("PanelDock.Holds", function()
+  local target = { x = 100, y = 100, w = 200, h = 60 }
+  local function raw(x, y) return { x = x, y = y, w = 120, h = 40 } end
+
+  it("keeps a Below or Above snap while the raw spot stays within 24 px of it and overlaps the edge", function()
+    assert.is_true(ns.PanelDock.Holds("Below", 100, 166, raw(130, 182), target, 16, 8))
+    assert.is_true(ns.PanelDock.Holds("Below", 100, 166, raw(130, 150), target, 16, 8))
+    assert.is_false(ns.PanelDock.Holds("Below", 100, 166, raw(130, 191), target, 16, 8))
+    assert.is_false(ns.PanelDock.Holds("Below", 100, 166, raw(310, 170), target, 16, 8))
+  end)
+
+  it("keeps a Left or Right snap along x the same way", function()
+    assert.is_true(ns.PanelDock.Holds("Right", 306, 100, raw(328, 120), target, 16, 8))
+    assert.is_false(ns.PanelDock.Holds("Right", 306, 100, raw(331, 120), target, 16, 8))
+    assert.is_false(ns.PanelDock.Holds("Left", 174, 100, raw(174, 170), target, 16, 8))
+  end)
+end)
+
 describe("PanelDock.HandleShown", function()
   it("keeps the handle on the root and on every panel that is not merged", function()
     assert.is_true(ns.PanelDock.HandleShown(true, true))
@@ -192,7 +231,7 @@ describe("PanelDock.GhostDrag", function()
     drag.mover.scripts.OnUpdate(drag.mover)
     local seam = seamFrame()
     assert.is_true(seam.shown)
-    assert.same({ "Below", 40, 1020, 100, 980, 10, 20, 30, 5 }, state.seamArgs)
+    assert.same({ "Below", 300, 1020, 360, 980, 10, 20, 30, 5 }, state.seamArgs)
     assert.same({ { "TOPLEFT", UIParent, "BOTTOMLEFT", 8, 4 } }, seam.points)
     assert.same({ 16, 2 }, { seam.width, seam.height })
     state.cursor, state.tid, state.side = { 90, 90 }, nil, nil
@@ -203,6 +242,61 @@ describe("PanelDock.GhostDrag", function()
     assert.is_true(seam.shown)
     drag.Stop()
     assert.is_false(seam.shown)
+  end)
+
+  it("holds a snap and an alignment against jitter until the raw spot moves clearly away", function()
+    function state.target:GetLeft() return 100 end
+    function state.target:GetTop() return 980 end
+    function state.target:GetRight() return 300 end
+    function state.target:GetBottom() return 920 end
+    function state.target:GetWidth() return 200 end
+    function state.target:GetHeight() return 60 end
+    state.snapTo = nil
+    _G.LibStub = function() return { dock = { panels = { raidMarkers = { spec = { frame = state.target } } } }, Dock = {
+      Snap = function(_, rect)
+        calls[#calls + 1] = "Snap"
+        if rect and math.abs(rect.y - 166) <= 16 and rect.x < 300 and rect.x + rect.w > 100 then
+          return rect.x, 166, "raidMarkers", "Below"
+        end
+        return rect and rect.x or 0, rect and rect.y or 0
+      end,
+      Drop = function() calls[#calls + 1] = "Drop" end,
+    } } end
+    make(true)
+    drag.Start()
+    local seen = {}
+    local function at(x, y)
+      state.cursor = { (x - 200) * 0.8, (940 - y) * 0.8 }
+      drag.mover.scripts.OnUpdate(drag.mover)
+      local p = drag.mover.points[1]
+      seen[#seen + 1] = { p[4], 1080 - p[5] }
+    end
+    at(110, 181)
+    at(110, 185)
+    at(122, 181)
+    at(122, 185)
+    at(122, 189)
+    at(130, 189)
+    at(130, 192)
+    for _, v in ipairs(seen) do v[1], v[2] = math.floor(v[1] + 0.5), math.floor(v[2] + 0.5) end
+    assert.same({ { 100, 166 }, { 100, 166 }, { 100, 166 }, { 100, 166 }, { 100, 166 }, { 130, 166 }, { 130, 192 } }, seen)
+    local snaps = 0
+    for _, c in ipairs(calls) do if c == "Snap" then snaps = snaps + 1 end end
+    assert.equals(2, snaps)
+  end)
+
+  it("drops at the held spot without a second snap", function()
+    function state.target:GetLeft() return 100 end
+    function state.target:GetTop() return 980 end
+    function state.target:GetWidth() return 200 end
+    function state.target:GetHeight() return 60 end
+    make(true)
+    drag.Start()
+    state.cursor, state.tid, state.side, state.snapTo = { 80, 80 }, "raidMarkers", "Below", { 100, 166 }
+    drag.mover.scripts.OnUpdate(drag.mover)
+    calls = {}
+    drag.Stop()
+    assert.same({ { "release", drag.mover, false }, { "Drop", "panelId" }, { "after" } }, calls)
   end)
 
   it("ends the drag when the mouse button is up", function()
