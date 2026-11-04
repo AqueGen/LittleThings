@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/AqueGen/LittleThings/compare/v0.23.0...v0.23.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* show Party calls in New in LittleThings only once ([#73](https://github.com/AqueGen/LittleThings/issues/73)) ([3290fad](https://github.com/AqueGen/LittleThings/commit/3290fadcde69a07ae0e431401e868baa76f76639))
+
 ## [0.23.0](https://github.com/AqueGen/LittleThings/compare/v0.22.0...v0.23.0) (2026-11-03)
 
 
