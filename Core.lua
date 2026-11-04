@@ -21,6 +21,7 @@ ns.defaults = {
     partySolo = false,
     groupChat = false,
     raidMarkers = false,
+    partyCalls = false,
     battleResGuard = false,
     bagGear = true,
     lowLevelGear = false,
