@@ -33,6 +33,27 @@ describe("Rules.NewRows", function()
   it("lists a new parent row", function()
     assert.same({ "groupFinder" }, keys(Rules.NewRows({ signUpRoles = true, battleResGuard = true }, MODULES)))
   end)
+
+  it("goes by the seen list once it exists, whatever the switches hold", function()
+    local db = { seenModules = { groupFinder = true, signUpRoles = true }, battleResGuard = false }
+    assert.same({ "battleResGuard" }, keys(Rules.NewRows(db, MODULES)))
+  end)
+
+  it("shows a row once and stays empty on every later login", function()
+    local db = { groupFinder = true }
+    assert.same({ "signUpRoles", "battleResGuard" }, keys(Rules.NewRows(db, MODULES)))
+    Rules.MarkSeen(db, MODULES)
+    assert.same({}, Rules.NewRows(db, MODULES))
+    assert.same({}, Rules.NewRows(db, MODULES))
+  end)
+
+  it("shows a module added in a later release once", function()
+    local db = {}
+    Rules.MarkSeen(db, { MODULES[1], MODULES[2] })
+    assert.same({ "battleResGuard" }, keys(Rules.NewRows(db, MODULES)))
+    Rules.MarkSeen(db, MODULES)
+    assert.same({}, Rules.NewRows(db, MODULES))
+  end)
 end)
 
 describe("Rules.Title", function()
