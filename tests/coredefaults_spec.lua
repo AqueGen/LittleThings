@@ -1,6 +1,6 @@
 -- Copyright (c) 2026 AqueGen. All rights reserved. See LICENSE.
 describe("Core defaults", function()
-  it("give every module switch a saved default, so New in LittleThings shows it once", function()
+  it("give every module switch a saved default", function()
     _G.StaticPopupDialogs = {}
     _G.CreateFrame = function()
       return { RegisterEvent = function() end, SetScript = function() end }

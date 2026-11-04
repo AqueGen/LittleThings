@@ -257,6 +257,7 @@ local function InitializeSavedVariables()
 
     LittleThingsDB = LittleThingsDB or {}
     LittleThingsCharDB = LittleThingsCharDB or {}
+    ns.WhatsNewRules.MarkSeen(LittleThingsDB, ns.MODULES)
 
     if LittleThingsDB.groupFinder == nil then
         for _, row in ipairs(ns.MODULES) do
